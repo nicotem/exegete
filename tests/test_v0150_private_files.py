@@ -752,8 +752,7 @@ class TestNothingLeaks:
             answers.append(server.get_current_project())
         server._apply_toolset("full")
         answers.append(server.select_project(str(selected)))
-        answers.append(server.create_code(name="A code",
-                                          create_backup=True))
+        answers.append(server.create_code(name="A code"))
         answers.append(server.list_backups())
         copied = server.copy_project_to_workspace(
             source_path=str(selected))

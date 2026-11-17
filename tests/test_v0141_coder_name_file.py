@@ -535,14 +535,13 @@ class TestThroughTheServer:
         assert report["earlier_file_not_marked"]["name_it_holds"] == "Before"
         # a write still under the lock goes ahead under the project's
         # name, and the file stays as it is
-        out = json.loads(server.create_code("StillLocked",
-                                            create_backup=False))
+        out = json.loads(server.create_code("StillLocked"))
         assert out.get("success") is True, out
         assert code_owner(folder, "StillLocked") == "After"
         assert as_0140_reads(path) == "writable"
         # the lock lifted: the next write marks it
         earlier_file_locked()
-        out = json.loads(server.create_code("Unlocked", create_backup=False))
+        out = json.loads(server.create_code("Unlocked"))
         assert out.get("success") is True, out
         assert as_0140_reads(path) == "newer_format"
         assert json.loads(path.read_text(encoding="utf-8"))[
@@ -558,7 +557,7 @@ class TestThroughTheServer:
         path = old_file(folder, name="Written By 0.14")
         before = path.read_bytes()
         monkeypatch.setenv("EXEGETE_AI_CODER_NAME", "Someone Else")
-        out = json.loads(server.create_code("Refused", create_backup=False))
+        out = json.loads(server.create_code("Refused"))
         assert ("The AI coder name in Exegete's settings is \"Someone "
                 "Else\"") in out["error"], out
         assert path.read_bytes() == before
@@ -585,8 +584,7 @@ class TestThroughTheServer:
         (folder / NEW).unlink()
         path = old_file(folder, name="Coder From 0.14")
         before = path.read_bytes()
-        out = json.loads(server.create_code("ViaTheEarlierFile",
-                                            create_backup=False))
+        out = json.loads(server.create_code("ViaTheEarlierFile"))
         assert out.get("success") is True, out
         assert path.read_bytes() == before
         assert not (folder / NEW).exists()
@@ -624,15 +622,13 @@ class TestThroughTheServer:
             out = json.loads(server.set_project_ai_coder_name(name))
             assert out["success"] is True, out
         (folder / NEW).write_text("{damaged", encoding="utf-8")
-        out = json.loads(server.create_code("WhileDamaged",
-                                            create_backup=False))
+        out = json.loads(server.create_code("WhileDamaged"))
         assert f"({NEW} in the project folder) could not be read" in \
             out["error"]
         assert "the next write will then ask for the name again" in \
             out["error"]
         (folder / NEW).unlink()
-        out = json.loads(server.create_code("AfterRemoval",
-                                            create_backup=False))
+        out = json.loads(server.create_code("AfterRemoval"))
         assert out.get("action_required") == "set_project_ai_coder_name", out
         assert out["ai_coder_name"] is None
         assert "No AI coder name is set" in out["error"]
@@ -647,8 +643,7 @@ class TestThroughTheServer:
         assert out["success"] is True and out["previous_name"] is None
         assert out["moved_from"] == OLD
         assert any(f"{NEW} was missing" in w for w in out["warnings"])
-        out = json.loads(server.create_code("AfterTheAsk",
-                                            create_backup=False))
+        out = json.loads(server.create_code("AfterTheAsk"))
         assert out.get("success") is True, out
         assert code_owner(folder, "AfterTheAsk") == "Model D"
 
@@ -668,7 +663,7 @@ class TestThroughTheServer:
         assert out["earlier_file_not_marked"] == str(path), out
         (folder / NEW).write_text("{damaged", encoding="utf-8")
         refused = json.loads(server.create_code(
-            "WhileDamaged", create_backup=False))["error"]
+            "WhileDamaged"))["error"]
         hint = json.loads(server.get_current_project())[
             "ai_coder_name"]["hint"]
         for said in (refused, hint):
@@ -688,15 +683,14 @@ class TestThroughTheServer:
         else:
             (folder / NEW).unlink()
             path.unlink()
-            out = json.loads(server.create_code("Asked",
-                                                create_backup=False))
+            out = json.loads(server.create_code("Asked"))
             assert out.get("action_required") == \
                 "set_project_ai_coder_name", out
             assert code_owner(folder, "Asked") is None
             chosen = "Chosen"
             out = json.loads(server.set_project_ai_coder_name(chosen))
             assert out["success"] is True, out
-        out = json.loads(server.create_code("Next", create_backup=False))
+        out = json.loads(server.create_code("Next"))
         assert out.get("success") is True, out
         assert code_owner(folder, "Next") == chosen
 
@@ -715,7 +709,7 @@ class TestThroughTheServer:
         data["format_version"] = 99
         (folder / NEW).write_text(json.dumps(data), encoding="utf-8")
         for said in (json.loads(server.create_code(
-                "WhileNewer", create_backup=False))["error"],
+                "WhileNewer"))["error"],
                 json.loads(server.set_project_ai_coder_name("Other"))[
                     "error"]):
             assert (f"move both {NEW} and {OLD} aside: {OLD} beside it is "
@@ -726,12 +720,12 @@ class TestThroughTheServer:
         # is the one used
         (folder / NEW).rename(folder / "newer-aside.json")
         path.rename(folder / "earlier-aside.json")
-        out = json.loads(server.create_code("Asked", create_backup=False))
+        out = json.loads(server.create_code("Asked"))
         assert out.get("action_required") == "set_project_ai_coder_name", out
         assert code_owner(folder, "Asked") is None
         out = json.loads(server.set_project_ai_coder_name("Chosen"))
         assert out["success"] is True, out
-        out = json.loads(server.create_code("Next", create_backup=False))
+        out = json.loads(server.create_code("Next"))
         assert out.get("success") is True, out
         assert code_owner(folder, "Next") == "Chosen"
 
@@ -755,7 +749,7 @@ class TestThroughTheServer:
         # followed: both removed, the next write asks
         (folder / NEW).unlink()
         path.unlink()
-        out = json.loads(server.create_code("Asked", create_backup=False))
+        out = json.loads(server.create_code("Asked"))
         assert out.get("action_required") == "set_project_ai_coder_name", out
         assert code_owner(folder, "Asked") is None
         # an unmarked earlier file holding no name needs no such warning
@@ -782,7 +776,7 @@ class TestThroughTheServer:
             f"names are kept, is missing from the project folder, so no "
             f"name is set now.")
         assert "move" not in report["hint"] and OLD not in report["hint"]
-        out = json.loads(server.create_code("Asked", create_backup=False))
+        out = json.loads(server.create_code("Asked"))
         assert out.get("action_required") == "set_project_ai_coder_name", out
         out = json.loads(server.set_project_ai_coder_name("Second Name"))
         assert out["success"] is True and out["previous_name"] is None, out
@@ -834,7 +828,7 @@ class TestThroughTheServer:
         role = server._coder_role("Named In 0.14",
                                   server._ai_names_for_project())
         assert role == "ai_this_server"
-        out = json.loads(server.create_code("AnyWrite", create_backup=False))
+        out = json.loads(server.create_code("AnyWrite"))
         assert out.get("success") is True, out
         assert "Named In 0.14" in history_names(folder)
         assert as_0140_reads(folder / OLD) == "newer_format"
@@ -857,7 +851,7 @@ class TestThroughTheServer:
         # one named before the marker existed, or whose marker was
         # removed, gets it back at its next write
         (folder / OLD).unlink()
-        out = json.loads(server.create_code("NextWrite", create_backup=False))
+        out = json.loads(server.create_code("NextWrite"))
         assert out.get("success") is True, out
         assert as_0140_reads(folder / OLD) == "newer_format"
         assert json.loads((folder / OLD).read_text(
@@ -866,7 +860,7 @@ class TestThroughTheServer:
     def test_an_unnamed_project_gets_no_marker_from_a_refused_write(
             self, setup_server_unset, qualcoder_db_path):
         folder = Path(qualcoder_db_path)
-        out = json.loads(server.create_code("Asked", create_backup=False))
+        out = json.loads(server.create_code("Asked"))
         assert out.get("action_required") == "set_project_ai_coder_name"
         assert not (folder / OLD).exists() and not (folder / NEW).exists()
         out = json.loads(server.set_project_ai_coder_name("First Name"))

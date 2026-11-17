@@ -209,12 +209,10 @@ class TestTheRoute:
                  ("CREATE TABLE coder_names (name TEXT UNIQUE NOT NULL)", ()),
                  ("INSERT INTO coder_names (name) VALUES ('V17Test')", ()),
                  ("UPDATE project SET databaseversion = 'v14'", ()))
-        refused = json.loads(server.set_memo("code", 1, "x",
-                                             create_backup=False))
+        refused = json.loads(server.set_memo("code", 1, "x"))
         assert refused["error"] == PRE_V14
         assert _select(folder).get("success") is True
-        written = json.loads(server.set_memo("code", 1, "x",
-                                             create_backup=False))
+        written = json.loads(server.set_memo("code", 1, "x"))
         assert written.get("success") is True, written
 
     def test_core_marks_the_tool_in_both_refusals(self, opened):
@@ -310,8 +308,7 @@ class TestThePreV14WriteRefusal:
         folder = opened("v13")
         out = _select(folder)
         assert out.get("success") is True, out
-        refused = json.loads(server.set_memo("code", 1, "x",
-                                             create_backup=False))
+        refused = json.loads(server.set_memo("code", 1, "x"))
         assert refused["error"] == PRE_V14
         for phrase in OLD:
             assert phrase not in refused["error"], phrase
@@ -346,8 +343,7 @@ class TestThePreV14WriteRefusal:
         assert NO_QUALCODER in out["error"]
         folder = opened("v13")
         _select(folder)
-        refused = json.loads(server.set_memo("code", 1, "x",
-                                             create_backup=False))
+        refused = json.loads(server.set_memo("code", 1, "x"))
         assert NO_QUALCODER in refused["error"]
 
 
@@ -474,8 +470,7 @@ class TestTheValueReadOneWay:
     def test_another_scripts_digits_are_not_repeated(self, opened, value):
         values, answers = _described(_with_version(opened, value))
         assert values == dict.fromkeys(values, NOT_IN_FORM)
-        refused = json.loads(server.set_memo("code", 1, "refused write",
-                                             create_backup=False))
+        refused = json.loads(server.set_memo("code", 1, "refused write"))
         assert CANNOT_TELL in refused["error"], refused
         for text in answers + [refused["error"]]:
             assert value not in text
@@ -489,8 +484,7 @@ class TestTheValueReadOneWay:
         selected = _select(folder)
         assert selected.get("success") is True, selected
         assert selected["project_info"]["database_version"] == NOT_IN_FORM
-        refused = json.loads(server.set_memo("code", 1, "refused write",
-                                             create_backup=False))
+        refused = json.loads(server.set_memo("code", 1, "refused write"))
         assert CANNOT_TELL in refused["error"], refused
         assert _memo_of_code_1(folder) != "refused write"
         for tool in (server.get_current_project, server.get_project_summary):
@@ -506,8 +500,7 @@ class TestTheValueReadOneWay:
         """Named as a guard: the override works as before."""
         _with_version(opened, "v17\n")
         monkeypatch.setenv(OVERRIDE, "1")
-        out = json.loads(server.set_memo("code", 1, "override write",
-                                         create_backup=False))
+        out = json.loads(server.set_memo("code", 1, "override write"))
         assert out.get("success") is True, out
         assert "cannot tell" in out["schema_warning"]
 

@@ -419,8 +419,7 @@ class TestLadderWiring:
         ai = Path(qualcoder_db_path) / "ai_data"
         ai.mkdir()
         (ai / "search.sqlite-wal").write_bytes(b"w")
-        out = json.loads(server.set_memo("code", 1, "still writable",
-                                         create_backup=False))
+        out = json.loads(server.set_memo("code", 1, "still writable"))
         assert out["success"] is True
 
 
@@ -539,7 +538,7 @@ class TestDatabaseOpenErrorIsGeneric:
             for call in (
                 lambda: server.get_current_project(),
                 lambda: server.list_backups(),
-                lambda: server.create_code("Doomed", create_backup=False),
+                lambda: server.create_code("Doomed"),
                 lambda: server.copy_project_to_workspace(qualcoder_db_path),
             ):
                 self._assert_generic(call(), qualcoder_db_path)

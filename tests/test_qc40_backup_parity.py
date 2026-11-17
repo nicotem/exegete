@@ -146,8 +146,7 @@ class TestBackupIncludesAiData:
 
     def test_pre_write_backup_parity(self, setup_server, qualcoder_db_path):
         _plant_ai_data(qualcoder_db_path)
-        out = json.loads(server.set_memo("code", 1, "note",
-                                         create_backup=True))
+        out = json.loads(server.set_memo("code", 1, "note"))
         assert out["success"] is True
         _assert_parity_tree(Path(out["backup_path"]))
 
@@ -170,8 +169,7 @@ class TestRestoreWithoutSearchSqlite:
         # The stale lock would make the write path warn; remove it so the
         # backup comes from a clean write
         (Path(qualcoder_db_path) / "project_in_use.lock").unlink()
-        out = json.loads(server.set_memo("code", 1, "before restore",
-                                         create_backup=True))
+        out = json.loads(server.set_memo("code", 1, "before restore"))
         backup_path = out["backup_path"]
         assert not (Path(backup_path) / "ai_data" / "search.sqlite").exists()
 
@@ -307,8 +305,7 @@ class TestCopyFailureCleanup:
         # also leaves no half-copied backup folder behind
         locked = _plant_unreadable_file(qualcoder_db_path)
         try:
-            out = json.loads(server.set_memo("code", 1, "note",
-                                             create_backup=True))
+            out = json.loads(server.set_memo("code", 1, "note"))
             assert "error" in out
             assert "Nothing was written" in out["error"]
             assert _backup_siblings(qualcoder_db_path) == []
@@ -437,8 +434,7 @@ class TestOutwardSymlinksNotFollowed:
         docs = Path(qualcoder_db_path) / "documents"
         docs.mkdir()
         _symlink(outside / "id_ed25519", docs / "leak.txt")
-        out = json.loads(server.set_memo("code", 1, "note",
-                                         create_backup=True))
+        out = json.loads(server.set_memo("code", 1, "note"))
         assert out["success"] is True
         assert out["backup_skipped_symlinks"] == 1
         assert out["backup_skipped_symlink_names"] == [
@@ -446,8 +442,7 @@ class TestOutwardSymlinksNotFollowed:
         assert not (Path(out["backup_path"]) / "documents" / "leak.txt").exists()
         # A clean project carries no such keys
         docs.joinpath("leak.txt").unlink()
-        out = json.loads(server.set_memo("code", 1, "note2",
-                                         create_backup=True))
+        out = json.loads(server.set_memo("code", 1, "note2"))
         assert "backup_skipped_symlinks" not in out
 
     def test_tool_descriptions_disclose_the_rule(self):
@@ -580,8 +575,7 @@ class TestSymlinkLoopsNotFollowed:
         assert "loop" in out["skipped_symlinks_note"]
         copy = Path(out["workspace_copy"])
         assert len(_one_of_each(copy, "data.qda")) == 1
-        out = json.loads(server.set_memo("code", 1, "note",
-                                         create_backup=True))
+        out = json.loads(server.set_memo("code", 1, "note"))
         assert out["success"] is True
         assert out["backup_skipped_symlinks"] == 1
         assert out["backup_skipped_symlink_names"] == [
@@ -637,8 +631,7 @@ class TestSkippedSymlinksSurfacedByEveryBackupTaker:
     def test_import_text_file_reports_skipped(self, setup_server,
                                               qualcoder_db_path, tmp_path):
         link = self._plant(qualcoder_db_path, tmp_path)
-        out = json.loads(server.import_text_file(
-            "r3.txt", "some text", create_backup=True))
+        out = json.loads(server.import_text_file("r3.txt", "some text"))
         assert out["success"] is True
         assert out["backup_skipped_symlinks"] == 1
         assert out["backup_skipped_symlink_names"] == [
@@ -648,28 +641,15 @@ class TestSkippedSymlinksSurfacedByEveryBackupTaker:
         assert not (Path(out["backup_path"]) / "documents" / "leak.txt").exists()
         assert "SECRET-KEY-BYTES" not in json.dumps(out)
         link.unlink()
-        out = json.loads(server.import_text_file(
-            "r3b.txt", "more text", create_backup=True))
+        out = json.loads(server.import_text_file("r3b.txt", "more text"))
         assert out["success"] is True
         assert "backup_skipped_symlinks" not in out
-
-    def test_import_text_file_with_create_backup_false_reports_skipped(
-            self, setup_server, qualcoder_db_path, tmp_path):
-        """v0.15.1: Exegete takes a backup before every change, so
-        create_backup=false takes one too, and it reports the links it
-        left out as any backup does."""
-        self._plant(qualcoder_db_path, tmp_path)
-        out = json.loads(server.import_text_file(
-            "r3c.txt", "text", create_backup=False))
-        assert out["success"] is True
-        assert Path(out["backup_path"]).is_dir()
-        assert out["backup_skipped_symlinks"] == 1
 
     def test_apply_codings_reports_skipped(self, setup_server,
                                            qualcoder_db_path, tmp_path):
         link = self._plant(qualcoder_db_path, tmp_path)
         session = _approved_session(setup_server, qualcoder_db_path)
-        text = server.apply_codings(session.session_id, create_backup=True)
+        text = server.apply_codings(session.session_id)
         assert "Codings applied" in text
         assert "Backup created" in text
         assert "backup_skipped_symlinks: 1 (" in text
@@ -681,7 +661,7 @@ class TestSkippedSymlinksSurfacedByEveryBackupTaker:
         link.unlink()
         session = _approved_session(setup_server, qualcoder_db_path,
                                     span=(57, 77), text="I cope by exercising")
-        text = server.apply_codings(session.session_id, create_backup=True)
+        text = server.apply_codings(session.session_id)
         assert "Codings applied" in text
         assert "skipped" not in text
 

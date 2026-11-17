@@ -146,7 +146,7 @@ def test_a_long_tool_write_stays_active(setup_server, qualcoder_db_path,
     _during_add_code(monkeypatch, lambda db: seen.update(
         zip(("states", "lengths", "refused"),
             _watch(qualcoder_db_path, 2.5))))
-    answer = json.loads(server.create_code(name="Long", create_backup=False))
+    answer = json.loads(server.create_code(name="Long"))
     assert answer.get("success") is True, answer
     assert seen["states"] == {"active"}
     assert len(seen["lengths"]) == 1
@@ -175,8 +175,7 @@ def test_a_lock_taken_over_mid_write_refuses_the_commit(
         time.sleep(3 * INTERVAL)
     _during_add_code(monkeypatch, take_over)
     try:
-        answer = json.loads(server.create_code(name="Over",
-                                               create_backup=True))
+        answer = json.loads(server.create_code(name="Over"))
         assert "someone else" in answer["error"], answer
         assert answer["backup_path"], answer
         assert Path(answer["backup_path"]).is_dir()
@@ -208,8 +207,7 @@ def test_a_lock_gone_or_stale_before_the_commit_lets_it_through(
         time.sleep(3 * INTERVAL)
     _during_add_code(monkeypatch, change)
     try:
-        answer = json.loads(server.create_code(name="Through",
-                                               create_backup=True))
+        answer = json.loads(server.create_code(name="Through"))
         _assert_committed(answer, qualcoder_db_path, "Through")
         if found == "gone":
             assert not lock.exists()
@@ -296,8 +294,7 @@ def test_no_refresh_outlives_a_hold(tmp_path, fast, monkeypatch):
 
 def test_no_refresh_outlives_a_tool_write(setup_server, qualcoder_db_path,
                                           fast, captured):
-    answer = json.loads(server.create_code(name="Short",
-                                           create_backup=False))
+    answer = json.loads(server.create_code(name="Short"))
     assert answer.get("success") is True, answer
     assert not _lock(qualcoder_db_path).exists()
     _unchanged_after_the_hold(_lock(qualcoder_db_path), captured[-1].text)
@@ -383,7 +380,7 @@ def test_a_full_disk_keeps_the_last_lines_and_logs_once(
         seen["first"] = first
         seen["text"] = captured[-1].text
     _during_add_code(monkeypatch, disk_full)
-    answer = json.loads(server.create_code(name="Full", create_backup=False))
+    answer = json.loads(server.create_code(name="Full"))
     assert answer.get("success") is True, answer
     assert seen["lines"] == seen["first"] == seen["text"]
     assert "Full" in _codes(qualcoder_db_path)
@@ -455,8 +452,7 @@ def test_the_check_cannot_read_the_lock(setup_server, qualcoder_db_path,
     monkeypatch.setattr(database, "open", opening, raising=False)
     _around_the_check(monkeypatch,
                       lambda held: refusals.update(left=2))
-    answer = json.loads(server.create_code(name="Unread",
-                                           create_backup=True))
+    answer = json.loads(server.create_code(name="Unread"))
     _assert_committed(answer, qualcoder_db_path, "Unread")
     assert refusals["left"] == 0
     assert not lock.exists()
@@ -475,7 +471,7 @@ def test_the_check_cannot_take_the_mutex(setup_server, qualcoder_db_path,
         taken.append(held)
     _around_the_check(monkeypatch, take,
                       lambda: taken and taken[-1]._mutex.release())
-    answer = json.loads(server.create_code(name="Busy", create_backup=True))
+    answer = json.loads(server.create_code(name="Busy"))
     _assert_committed(answer, qualcoder_db_path, "Busy")
     assert taken
     assert not _lock(qualcoder_db_path).exists()
@@ -492,7 +488,7 @@ def test_a_restore_keeps_the_refresh_through_the_clear(
     passes over the file it holds, so on Windows it never meets the
     refresh's open file), and the hold's end removes both. Red with the
     stop this test once pinned put back before the clear."""
-    made = json.loads(server.create_code(name="Kept", create_backup=True))
+    made = json.loads(server.create_code(name="Kept"))
     backup = made["backup_path"]
     alive = []
     real = server._clear_all_but_exegete_folder

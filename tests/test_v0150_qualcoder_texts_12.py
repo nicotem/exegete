@@ -86,9 +86,8 @@ CASE_NOTES = (
 CASE_FILES = ("in the names of files named after the case (their ids are "
               "in old_name_left_in.file_ids, and rename_file renames them)")
 # "Including the one just taken" always since v0.15.1: Exegete takes a
-# backup before every change, whatever create_backup says (fix round 1
-# said it only when the rename took one); the tests below rename with
-# create_backup=False unless they say otherwise
+# backup before every change (fix round 1 said it only when the rename
+# took one)
 TAKEN = ", including the one just taken"
 CASE_BACKUPS = ("in every backup" + TAKEN + " (list_backups lists them; "
                 "prune_backups removes Exegete's")
@@ -251,11 +250,11 @@ def project(setup_server, qualcoder_db_path, home):
 
 
 def _case():
-    return json.loads(server.rename_case(1, "P01", create_backup=False))
+    return json.loads(server.rename_case(1, "P01"))
 
 
 def _file(file_id=1, name="P01.txt"):
-    return json.loads(server.rename_file(file_id, name, create_backup=False))
+    return json.loads(server.rename_file(file_id, name))
 
 
 def _stored_sql(folder):
@@ -442,8 +441,10 @@ class TestTheSentenceOnQualCodersImports:
 
 class TestTheBackupJustTaken:
     """Both notes say "including the one just taken": since v0.15.1
-    Exegete takes a backup before every change, whatever create_backup
-    says (fix round 1 said it only when the rename took one)."""
+    Exegete takes a backup before every change (fix round 1 said it only
+    when the rename took one). v0.15.5: the case of create_backup=false,
+    which a call could give until then, went with the argument
+    (tests/test_v0155_retired_names.py)."""
 
     def test_rename_case_with_a_backup(self, project):
         out = json.loads(server.rename_case(1, "P01"))
@@ -454,12 +455,6 @@ class TestTheBackupJustTaken:
         out = json.loads(server.rename_file(1, "P01.txt"))
         assert out["backup_path"]
         assert out["note"] == FILE_NONE
-
-    def test_with_create_backup_false(self, project):
-        case, file = _case(), _file()
-        assert case["backup_path"] and file["backup_path"]
-        assert TAKEN in case["note"]
-        assert TAKEN in file["note"]
 
 
 # ---------------------------------------------------------------------------
@@ -658,7 +653,7 @@ def unset(setup_server_unset, qualcoder_db_path, home, monkeypatch):
 
 
 def _asked():
-    return json.loads(server.create_code("Asked", create_backup=False))
+    return json.loads(server.create_code("Asked"))
 
 
 def _rows_under_ai_agent(folder):

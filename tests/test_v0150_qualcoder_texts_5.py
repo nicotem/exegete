@@ -434,8 +434,7 @@ class TestTheFailureMessages:
         write_faults(
             commit_exc=sqlite3.OperationalError("Injected: disk I/O error"),
             rollback_exc=sqlite3.OperationalError("Injected: no rollback"))
-        out = json.loads(server.apply_codings(session.session_id,
-                                              create_backup=False))
+        out = json.loads(server.apply_codings(session.session_id))
         assert out["error"] == UNCERTAIN
 
     def test_a_write_the_database_refused(self, fi_env, monkeypatch):
@@ -502,8 +501,7 @@ class TestFixRound1:
         write_faults(
             commit_exc=sqlite3.OperationalError("Injected: disk I/O error"),
             rollback_exc=sqlite3.OperationalError("Injected: no rollback"))
-        out = json.loads(server.apply_codings(session.session_id,
-                                              create_backup=False))
+        out = json.loads(server.apply_codings(session.session_id))
         assert out["error"].endswith(" " + BY_HAND), out
         assert "list_backups" not in out["error"]
 

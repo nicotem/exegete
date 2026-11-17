@@ -215,7 +215,7 @@ def test_successful_import_makes_one_backup(spec, content):
 
         raw = server.import_text_file(
             filename=f"imported_{uuid.uuid4().hex[:6]}.txt",
-            content=content, create_backup=True,
+            content=content,
         )
         _assert_read_only()
         obj = json.loads(raw)
@@ -262,7 +262,7 @@ def test_rejected_import_makes_no_backup(spec, idx):
         before_backups = H.count_mcp_backups(path)
         before_hash = H.db_content_hash(path)
 
-        raw = server.import_text_file(create_backup=True, **kwargs)
+        raw = server.import_text_file(**kwargs)
         _assert_read_only()
         assert _is_error(raw), f"expected rejection for {_label}, got: {raw}"
 
@@ -349,7 +349,7 @@ def test_unicode_vectors_apply_codings_seltext(fulltext, segment, p0, p1):
             reasoning="r", reading="explicit", status="approved",
         )
         sess = H.make_session(path, [sugg])
-        raw = server.apply_codings(sess.session_id, create_backup=True)
+        raw = server.apply_codings(sess.session_id)
         _assert_read_only()
         assert not _is_error(raw), f"apply failed: {raw}"
         # the written row must satisfy seltext == fulltext[pos0:pos1]
@@ -390,7 +390,7 @@ def test_duplicate_apply_is_idempotent_no_write_no_backup():
         sess = H.make_session(path, [sugg])
         folder = Path(path)
         backups_before = sorted(folder.parent.glob(f"{folder.stem}_backup_*"))
-        raw = server.apply_codings(sess.session_id, create_backup=True)
+        raw = server.apply_codings(sess.session_id)
         _assert_read_only()
         assert not _is_error(raw), f"duplicate apply must not error: {raw}"
         assert "every approved coding is already in the database" in raw
@@ -487,7 +487,7 @@ class QualcoderWriteMachine(RuleBasedStateMachine):
         before_rows = H.row_counts(self.path)
         raw = server.import_text_file(
             filename=f"imp_{self._imp}_{uuid.uuid4().hex[:4]}.txt",
-            content=content, create_backup=True,
+            content=content,
         )
         _assert_read_only()
         if _is_error(raw):
@@ -528,7 +528,7 @@ class QualcoderWriteMachine(RuleBasedStateMachine):
         before_b = H.count_mcp_backups(self.path)
         before_rows = H.row_counts(self.path)
         sess = H.make_session(self.path, suggs)
-        raw = server.apply_codings(sess.session_id, create_backup=True)
+        raw = server.apply_codings(sess.session_id)
         _assert_read_only()
         if _is_error(raw):
             assert H.row_counts(self.path)["code_text"] == before_rows["code_text"], \
@@ -548,7 +548,7 @@ class QualcoderWriteMachine(RuleBasedStateMachine):
         f = data.draw(st.sampled_from(files))
         c = data.draw(st.sampled_from(cases))
         before_rows = H.row_counts(self.path)
-        raw = server.link_file_to_case(file_id=f["id"], case_id=c["id"], create_backup=True)
+        raw = server.link_file_to_case(file_id=f["id"], case_id=c["id"])
         _assert_read_only()
         if _is_error(raw):
             assert H.row_counts(self.path)["case_text"] == before_rows["case_text"], \
@@ -564,7 +564,7 @@ class QualcoderWriteMachine(RuleBasedStateMachine):
             st.sampled_from(ctids) if ctids else st.integers(10**6, 10**6 + 5),
             st.integers(10**6, 10**6 + 5)))
         before_rows = H.row_counts(self.path)
-        raw = server.delete_coding(coding_id=target, create_backup=True)
+        raw = server.delete_coding(coding_id=target)
         _assert_read_only()
         if _is_error(raw):
             assert H.row_counts(self.path)["code_text"] == before_rows["code_text"], \

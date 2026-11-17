@@ -44,8 +44,7 @@ class TestT13ImportNormalization:
     def test_crlf_cr_and_bom_normalized(self, setup_server,
                                         qualcoder_db_path):
         out = json.loads(server.import_text_file(
-            "norm.txt", "﻿line one\r\ntwo\rthree",
-            create_backup=False))
+            "norm.txt", "﻿line one\r\ntwo\rthree"))
         assert out["success"] is True
         row = _sql(qualcoder_db_path,
                    "SELECT fulltext FROM source WHERE name='norm.txt'")[0]
@@ -55,7 +54,7 @@ class TestT13ImportNormalization:
     def test_positions_validate_against_normalized_text(self, setup_server,
                                                         qualcoder_db_path):
         json.loads(server.import_text_file(
-            "norm2.txt", "alpha\rbeta gamma\r\ndelta", create_backup=False))
+            "norm2.txt", "alpha\rbeta gamma\r\ndelta"))
         fid = _sql(qualcoder_db_path,
                    "SELECT id FROM source WHERE name='norm2.txt'")[0]["id"]
         # the session covers the file coded (v0.14: its scope holds)
@@ -87,8 +86,7 @@ class TestT14BackupSidecars:
         (proj / "project_in_use.lock").write_text("x\n0", encoding="utf-8")
         (proj / "keepme.txt").write_text("keep", encoding="utf-8")
 
-        out = json.loads(server.set_memo("code", 1, "trigger backup",
-                                         create_backup=True))
+        out = json.loads(server.set_memo("code", 1, "trigger backup"))
         assert out.get("success") is True
         backup = Path(out["backup_path"])
         names = {p.name for p in backup.rglob("*")}
@@ -180,8 +178,7 @@ class TestT16JournalAndOwnerTolerance:
 
     def test_import_placeholders_exclude_journal_domain(
             self, master_touched_project):
-        out = json.loads(server.import_text_file("t16.txt", "body",
-                                                 create_backup=False))
+        out = json.loads(server.import_text_file("t16.txt", "body"))
         assert out["success"] is True
         # no placeholder for the journal attribute on a FILE
         rows = _sql(master_touched_project,

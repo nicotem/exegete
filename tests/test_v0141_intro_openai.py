@@ -266,9 +266,9 @@ class TestTheIntroduction:
                 # file (v0.15.1 removed export_code_report, as announced)
                 "export_codebook", "export_coded_segments_report",
                 "export_frequencies_csv", "export_case_code_matrix_csv"],
-            # v0.15.1: before every change, whatever create_backup says;
-            # the backup's moment: Exegete takes it itself, before each
-            # change to the project's database
+            # v0.15.1: before every change; the backup's moment: Exegete
+            # takes it itself, before each change to the project's
+            # database
             "**Go back**: before every change to the project's database, "
             "Exegete takes a backup, a copy of the project kept beside it, "
             "and can restore one.": [
@@ -331,7 +331,7 @@ class TestTheIntroduction:
                                 r"journal)|(update|edit)_journal|"
                                 r"rename_attribute|unlink", name), name
         assert set(inspect.signature(server.link_file_to_case).parameters) \
-            <= {"file_id", "case_id", "case_name", "create_backup"}
+            <= {"file_id", "case_id", "case_name"}
         assert "not on a journal entry" in _flat("TOOLS.md")
 
     def test_the_whole_life_of_a_project_is_the_aim(self):

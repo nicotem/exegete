@@ -78,24 +78,21 @@ def _reopen(project_path):
 # that the approvals and the proposals survive the refusal.
 ASK_WRITES = {
     "import_text_file":
-        lambda s: s.import_text_file("asked.txt", "Body.",
-                                     create_backup=False),
+        lambda s: s.import_text_file("asked.txt", "Body."),
     "link_file_to_case":
-        lambda s: s.link_file_to_case(1, case_id=1, create_backup=False),
+        lambda s: s.link_file_to_case(1, case_id=1),
     "add_journal_entry":
-        lambda s: s.add_journal_entry("J", "text", create_backup=False),
-    "create_code": lambda s: s.create_code("AskedCode", create_backup=False),
+        lambda s: s.add_journal_entry("J", "text"),
+    "create_code": lambda s: s.create_code("AskedCode"),
     "create_category":
-        lambda s: s.create_category("AskedCat", create_backup=False),
+        lambda s: s.create_category("AskedCat"),
     "add_annotation":
-        lambda s: s.add_annotation(1, 0, 4, "note", create_backup=False),
-    "create_case": lambda s: s.create_case("AskedCase", create_backup=False),
+        lambda s: s.add_annotation(1, 0, 4, "note"),
+    "create_case": lambda s: s.create_case("AskedCase"),
     "create_attribute_type":
-        lambda s: s.create_attribute_type("AskedAttr", "case",
-                                          create_backup=False),
+        lambda s: s.create_attribute_type("AskedAttr", "case"),
     "set_attribute":
-        lambda s: s.set_attribute("case", 1, "Site", "x",
-                                  create_backup=False),
+        lambda s: s.set_attribute("case", 1, "Site", "x"),
 }
 
 # D7 3.1's full list, so a further write tool cannot land uncovered and
@@ -209,13 +206,13 @@ class TestSuiteHygiene:
     def test_an_ambient_declaration_equal_to_the_name_never_nags(
             self, setup_server, qualcoder_db_path, monkeypatch):
         monkeypatch.setenv(AI_CODER_NAME_ENV, DEFAULT_AI_CODER_NAME)
-        out = json.loads(server.create_code("Ambient", create_backup=False))
+        out = json.loads(server.create_code("Ambient"))
         assert out.get("success") is True, out
 
     def test_a_different_ambient_declaration_does_nag(
             self, setup_server, qualcoder_db_path, monkeypatch):
         monkeypatch.setenv(AI_CODER_NAME_ENV, "Someone Else")
-        out = json.loads(server.create_code("Ambient2", create_backup=False))
+        out = json.loads(server.create_code("Ambient2"))
         assert out["host_declared_ai_coder_name"] == "Someone Else"
         assert "error" in out
 
@@ -297,7 +294,7 @@ class TestUpstreamParity:
         write rows under appears in its coder list by itself.
         """
         json.loads(server.set_project_ai_coder_name("Qwen 3.8 6bit"))
-        server.create_code("Harvested", create_backup=False)
+        server.create_code("Harvested")
         con = sqlite3.connect(str(Path(qualcoder_db_path) / "data.qda"))
         _run_upstream_coder_names_ddl(con, self.CODER_NAMES_DDL)
         # The harvest runs against the tables this fixture has; the two
@@ -398,8 +395,7 @@ class TestTheAsk:
     def test_apply_codings_asks_and_keeps_the_approvals(
             self, setup_server_unset, qualcoder_db_path):
         session = _approved_session(server, qualcoder_db_path)
-        out = json.loads(server.apply_codings(session.session_id,
-                                              create_backup=False))
+        out = json.loads(server.apply_codings(session.session_id))
         assert out["error"] == EXPECTED_ASK
         reloaded = server.session_manager.load_session(session.session_id)
         assert len(reloaded.filter_by_status("approved")) == 1
@@ -415,8 +411,7 @@ class TestTheAsk:
         proposal.status = "approved"
         session.add_proposal(proposal)
         server.session_manager.save_session(session)
-        out = json.loads(server.create_proposed_codes(session.session_id,
-                                                      create_backup=False))
+        out = json.loads(server.create_proposed_codes(session.session_id))
         assert out["error"] == EXPECTED_ASK
         reloaded = server.session_manager.load_session(session.session_id)
         assert reloaded.proposed_codes[0].status == "approved"
@@ -450,7 +445,7 @@ class TestTheAsk:
 
     def test_the_ask_repeats_byte_identically(self, setup_server_unset,
                                               qualcoder_db_path):
-        answers = [server.create_code("Repeated", create_backup=False)
+        answers = [server.create_code("Repeated")
                    for _ in range(3)]
         assert answers[0] == answers[1] == answers[2]
 
@@ -458,11 +453,11 @@ class TestTheAsk:
             self, setup_server_unset, qualcoder_db_path):
         out = json.loads(server.set_project_ai_coder_name("Qwen 3.8 6bit"))
         assert out["success"] is True
-        server.create_code("AfterCode", create_backup=False)
-        server.create_category("AfterCat", create_backup=False)
-        server.create_case("AfterCase", create_backup=False)
-        server.add_journal_entry("AfterJournal", "t", create_backup=False)
-        server.add_annotation(1, 0, 4, "note", create_backup=False)
+        server.create_code("AfterCode")
+        server.create_category("AfterCat")
+        server.create_case("AfterCase")
+        server.add_journal_entry("AfterJournal", "t")
+        server.add_annotation(1, 0, 4, "note")
         for sql in ("SELECT owner FROM code_name WHERE name='AfterCode'",
                     "SELECT owner FROM code_cat WHERE name='AfterCat'",
                     "SELECT owner FROM cases WHERE name='AfterCase'",
@@ -479,7 +474,7 @@ class TestTheAsk:
         con.commit()
         con.close()
         _reopen(qualcoder_db_path)
-        out = json.loads(server.create_code("X", create_backup=False))
+        out = json.loads(server.create_code("X"))
         assert out["existing_ai_coder_names_in_project"] == \
             [KNOWN_AI_ASSISTANT_OWNER]
         assert out["quick_picks"][0] == KNOWN_AI_ASSISTANT_OWNER
@@ -501,7 +496,7 @@ class TestTheAsk:
         con.commit()
         con.close()
         _reopen(qualcoder_db_path)
-        text = server.create_code("Leaky", create_backup=False)
+        text = server.create_code("Leaky")
         assert "Hidden Coder" not in text
         assert "#####" not in text
         assert "private part" not in text
@@ -565,7 +560,7 @@ class TestMismatchRule:
         monkeypatch.delenv("EXEGETE_INSTALLED_AS", raising=False)
         json.loads(server.set_project_ai_coder_name("A"))
         monkeypatch.setenv(AI_CODER_NAME_ENV, "B")
-        out = json.loads(server.create_code("Blocked", create_backup=False))
+        out = json.loads(server.create_code("Blocked"))
         assert out["error"] == (
             "The AI coder name in Exegete's settings is \"B\", but this "
             "project's AI coder name is \"A\". Nothing was written. Ask the "
@@ -583,13 +578,13 @@ class TestMismatchRule:
         out = json.loads(server.set_project_ai_coder_name("B"))
         assert out["previous_name"] == "A"
         assert out["names_used_count"] == 2
-        server.create_code("Unblocked", create_backup=False)
+        server.create_code("Unblocked")
         assert _row(qualcoder_db_path,
                     "SELECT owner FROM code_name WHERE name='Unblocked'"
                     )["owner"] == "B"
 
         monkeypatch.delenv(AI_CODER_NAME_ENV, raising=False)
-        server.create_code("Undeclared", create_backup=False)
+        server.create_code("Undeclared")
         assert _row(qualcoder_db_path,
                     "SELECT owner FROM code_name WHERE name='Undeclared'"
                     )["owner"] == "B"
@@ -601,10 +596,10 @@ class TestMismatchRule:
         monkeypatch.setenv(AI_CODER_NAME_ENV, "B")
         out = json.loads(server.set_project_ai_coder_name("A"))
         assert out["ai_coder_name"]["host_declaration"] == "B"
-        out = json.loads(server.create_code("Acked", create_backup=False))
+        out = json.loads(server.create_code("Acked"))
         assert out.get("success") is True, out
         monkeypatch.setenv(AI_CODER_NAME_ENV, "C")
-        out = json.loads(server.create_code("Nagged", create_backup=False))
+        out = json.loads(server.create_code("Nagged"))
         assert "error" in out
         assert out["host_declared_ai_coder_name"] == "C"
 
@@ -613,7 +608,7 @@ class TestMismatchRule:
         # v0.15.0: the setting is called what it is, the AI coder name in
         # Exegete's settings, no longer this host's declaration
         monkeypatch.setenv(AI_CODER_NAME_ENV, "Qwen 3.8 6bit")
-        out = json.loads(server.create_code("Declared", create_backup=False))
+        out = json.loads(server.create_code("Declared"))
         assert ("\"Qwen 3.8 6bit\" (the AI coder name in Exegete's "
                 "settings)") in out["error"]
         assert "declared in this host's" not in out["error"]
@@ -623,7 +618,7 @@ class TestMismatchRule:
                                                 qualcoder_db_path,
                                                 monkeypatch):
         monkeypatch.setenv("QUALCODER_PROJECT_PATH", qualcoder_db_path)
-        out = json.loads(server.create_code("Fixed", create_backup=False))
+        out = json.loads(server.create_code("Fixed"))
         assert out["error"] == EXPECTED_ASK
 
 
@@ -648,9 +643,9 @@ class TestSwitchingAndHistory:
     def test_rows_written_under_the_old_name_keep_it(
             self, setup_server_unset, qualcoder_db_path):
         server.set_project_ai_coder_name("A")
-        server.create_code("UnderA", create_backup=False)
+        server.create_code("UnderA")
         server.set_project_ai_coder_name("B")
-        server.create_code("UnderB", create_backup=False)
+        server.create_code("UnderB")
         assert _row(qualcoder_db_path,
                     "SELECT owner FROM code_name WHERE name='UnderA'"
                     )["owner"] == "A"
@@ -882,7 +877,7 @@ class TestSidecarReader:
         self._corrupt(qualcoder_db_path, payload)
         before = _sidecar(qualcoder_db_path).read_bytes()
         assert read_sidecar(qualcoder_db_path).status == "unreadable"
-        out = json.loads(server.create_code("Blocked", create_backup=False))
+        out = json.loads(server.create_code("Blocked"))
         assert out["error"] == ps.UNREADABLE_MESSAGE
         report = json.loads(server.get_current_project())
         assert report["ai_coder_name"] == {
@@ -921,7 +916,7 @@ class TestSidecarReader:
         state = read_sidecar(qualcoder_db_path)
         assert state.status == "newer_format"
         assert state.name == "From The Future"
-        out = json.loads(server.create_code("Blocked", create_backup=False))
+        out = json.loads(server.create_code("Blocked"))
         assert out["error"] == ps.NEWER_FORMAT_MESSAGE
         out = json.loads(server.set_project_ai_coder_name("Anything"))
         assert out["error"] == ps.NEWER_FORMAT_MESSAGE
@@ -1071,7 +1066,7 @@ class TestSidecarWriter:
         assert state.name is None
         # The write tools refuse rather than writing under a name that
         # came from outside the project.
-        out = json.loads(server.create_code("Linked", create_backup=False))
+        out = json.loads(server.create_code("Linked"))
         assert out["error"] == ps.UNREADABLE_MESSAGE
         assert outside.read_bytes() == original_bytes
         # The setter clears it (fix round 4). The LINK is what moves
@@ -1247,12 +1242,12 @@ class TestRestartResilience:
     def test_the_refusal_repeats_across_a_recycle(self, setup_server_unset,
                                                   qualcoder_db_path,
                                                   tmp_path):
-        first = server.create_code("Recycled", create_backup=False)
+        first = server.create_code("Recycled")
         # The host recycled the process: globals gone, project re-selected
         server.db = None
         server.current_project_path = None
         json.loads(server.select_project(qualcoder_db_path))
-        second = server.create_code("Recycled", create_backup=False)
+        second = server.create_code("Recycled")
         assert first == second
 
     def test_a_name_set_before_the_recycle_is_read_after_it(
@@ -1261,7 +1256,7 @@ class TestRestartResilience:
         server.db = None
         server.current_project_path = None
         json.loads(server.select_project(qualcoder_db_path))
-        server.create_code("AfterRecycle", create_backup=False)
+        server.create_code("AfterRecycle")
         assert _row(qualcoder_db_path,
                     "SELECT owner FROM code_name WHERE name='AfterRecycle'"
                     )["owner"] == "Survivor"
@@ -1278,7 +1273,7 @@ class TestRestartResilience:
         """Two hosts, one project: the second host's change is read by the
         first on its next write, because nothing is cached."""
         write_ai_coder_name(qualcoder_db_path, "Other Host")
-        server.create_code("Coherent", create_backup=False)
+        server.create_code("Coherent")
         assert _row(qualcoder_db_path,
                     "SELECT owner FROM code_name WHERE name='Coherent'"
                     )["owner"] == "Other Host"
@@ -1295,7 +1290,7 @@ class TestRestartResilience:
             segment_text="This is in", reasoning="r", reading="explicit",
             status="approved"))
         server.session_manager.save_session(session)
-        out = server.apply_codings(session.session_id, create_backup=False)
+        out = server.apply_codings(session.session_id)
         assert ("These suggestions were recorded while the project's AI "
                 "coder name was 'Qwen 3.8 6bit'; they are being written "
                 f"under '{DEFAULT_AI_CODER_NAME}'.") in out
@@ -1308,7 +1303,7 @@ class TestRestartResilience:
         session = _approved_session(server, qualcoder_db_path)
         session.ai_coder_name_at_record = DEFAULT_AI_CODER_NAME
         server.session_manager.save_session(session)
-        out = server.apply_codings(session.session_id, create_backup=False)
+        out = server.apply_codings(session.session_id)
         assert "were recorded while the project's AI coder name" not in out
 
     def test_a_0_11_session_file_without_the_field_still_applies(
@@ -1319,7 +1314,7 @@ class TestRestartResilience:
         data = json.loads(path.read_text(encoding="utf-8"))
         del data["ai_coder_name_at_record"]
         path.write_text(json.dumps(data), encoding="utf-8")
-        out = server.apply_codings(session.session_id, create_backup=False)
+        out = server.apply_codings(session.session_id)
         assert "Codings applied" in out
         assert "were recorded while the project's AI coder name" not in out
 
@@ -1384,8 +1379,7 @@ class TestTravel:
         assert out.get("success") is True, out
         assert "no longer has one" in out["ai_coder_name_note"]
         assert read_sidecar(qualcoder_db_path).status == "unset"
-        out = json.loads(server.create_code("AfterRestore",
-                                            create_backup=False))
+        out = json.loads(server.create_code("AfterRestore"))
         assert out["error"] == EXPECTED_ASK
 
 
@@ -1473,11 +1467,11 @@ class TestTheWriteCapMatchesTheReadCap:
         and without asking the researcher to open a file manager."""
         _sidecar(qualcoder_db_path).write_bytes(b"{" * 30000)
         assert json.loads(server.create_code(
-            "Blocked", create_backup=False))["error"] == ps.UNREADABLE_MESSAGE
+            "Blocked"))["error"] == ps.UNREADABLE_MESSAGE
         out = json.loads(server.set_project_ai_coder_name("Qwen 3.8 6bit"))
         assert out.get("success") is True, out
         assert Path(out["replaced_unreadable_file"]).exists()
-        out = json.loads(server.create_code("Now Fine", create_backup=False))
+        out = json.loads(server.create_code("Now Fine"))
         assert out.get("error") is None, out
 
 

@@ -239,8 +239,7 @@ class TestAFileChangedDuringAWrite:
             return found
 
         monkeypatch.setattr(QualcoderDatabase, "get_file_content", stale_get)
-        out = json.loads(server.add_annotation(1, 0, 10, "note",
-                                               create_backup=False))
+        out = json.loads(server.add_annotation(1, 0, 10, "note"))
         assert CHANGED_TEXT in out["error"], out
         assert "confirm with the researcher" not in out["error"]
         assert _rows(qualcoder_db_path,
@@ -282,8 +281,7 @@ class TestTheMemoOfAProjectWithNoProjectRecord:
 
         monkeypatch.setattr(QualcoderDatabase, "check_set_memo",
                             record_gone)
-        out = json.loads(server.set_memo("project", None, "x",
-                                         create_backup=False))
+        out = json.loads(server.set_memo("project", None, "x"))
         assert out["error"] == NO_PROJECT_RECORD, out
         assert len(_rows(folder, "SELECT * FROM project")) == 1
 
@@ -306,11 +304,10 @@ class TestASubCodeBeforeSubCodes:
         at the top level, or in a category with create_code's category."""
         folder = opened(version)
         _select(folder)
-        top = json.loads(server.create_code("Deadlines",
-                                            create_backup=False))
+        top = json.loads(server.create_code("Deadlines"))
         assert top.get("success") is True, top
         within = json.loads(server.create_code(
-            "Workload", category="Category A", create_backup=False))
+            "Workload", category="Category A"))
         assert within.get("success") is True, within
         assert _rows(folder, "SELECT name, catid FROM code_name WHERE "
                              "name IN ('Deadlines', 'Workload') "
@@ -349,8 +346,7 @@ class TestTheSchemaValue:
             self, opened, monkeypatch):
         folder = _with_version(opened, "v18")
         monkeypatch.setenv(OVERRIDE, "1")
-        out = json.loads(server.set_memo("code", 1, "override write",
-                                         create_backup=False))
+        out = json.loads(server.set_memo("code", 1, "override write"))
         assert out.get("success") is True, out
         warning = out["schema_warning"]
         assert warning == (
@@ -365,8 +361,7 @@ class TestTheSchemaValue:
                                                     monkeypatch, value):
         folder = _with_version(opened, value)
         monkeypatch.setenv(OVERRIDE, "1")
-        out = json.loads(server.set_memo("code", 1, "override write",
-                                         create_backup=False))
+        out = json.loads(server.set_memo("code", 1, "override write"))
         assert out.get("success") is True, out
         assert out["schema_warning"] == WARNING_NOT_IN_FORM
         assert "QualCoder that upgraded" not in out["schema_warning"]
@@ -380,8 +375,7 @@ class TestTheSchemaValue:
     @pytest.mark.parametrize("value", [SENTINEL, None, "", "v12345"])
     def test_not_in_form_the_refusal_quotes_nothing(self, opened, value):
         folder = _with_version(opened, value)
-        out = json.loads(server.set_memo("code", 1, "refused write",
-                                         create_backup=False))
+        out = json.loads(server.set_memo("code", 1, "refused write"))
         assert REFUSAL_NOT_IN_FORM in out["error"], out
         assert "'unknown'" not in out["error"]
         reason = json.loads(server.get_current_project())["schema"]["reason"]
@@ -395,8 +389,7 @@ class TestTheSchemaValue:
         """Named as a guard, not counted: the newer-schema refusal's words
         do not change for a value in QualCoder's form."""
         _with_version(opened, "v18")
-        out = json.loads(server.set_memo("code", 1, "refused write",
-                                         create_backup=False))
+        out = json.loads(server.set_memo("code", 1, "refused write"))
         assert (
             "This project reports database schema 'v18', newer than the "
             "schemas Exegete is verified against (v14 through v17, up to "
@@ -505,7 +498,7 @@ class TestANameThatClashesInTheDocumentsFolder:
         _add_file(qualcoder_db_path, 5, "legacy.txt")
         _reload()
         listing.append("legacy.txt")
-        assert _rename(5, "legacy2.txt", create_backup=False)["changed"]
+        assert _rename(5, "legacy2.txt")["changed"]
         # (v0.15.1: the backup the rename took shows the earlier name, and
         # no backup is read for a rename back any more)
         out = _rename(5, "legacy.txt")

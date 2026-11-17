@@ -154,8 +154,7 @@ class TestALinkInTheFolderIsCountedNeverNamed:
 
     def test_a_write_with_a_backup(self, selected, tmp_path, caplog):
         _links(selected, tmp_path)
-        answer = json.loads(server.create_code(name="A code",
-                                               create_backup=True))
+        answer = json.loads(server.create_code(name="A code"))
         assert "error" not in answer, answer
         _counted(answer, "backup_")
         assert TOKEN not in caplog.text
@@ -170,8 +169,7 @@ class TestALinkInTheFolderIsCountedNeverNamed:
         assert not os.path.lexists(copy / "Exegete" / f"{TOKEN} link")
 
     def test_a_restores_safety_backup(self, selected, tmp_path):
-        backup = json.loads(server.create_code(name="A code",
-                                               create_backup=True))
+        backup = json.loads(server.create_code(name="A code"))
         assert backup.get("backup_path"), backup
         _links(selected, tmp_path)
         preview = json.loads(server.restore_backup(backup["backup_path"]))
@@ -190,8 +188,7 @@ class TestALinkInTheFolderIsCountedNeverNamed:
         reported. Should the folder be gone by then, the answer says the
         links are missing: tests/test_v0150_restore_keeps_folder.py."""
         import shutil
-        backup = json.loads(server.create_code(name="A code",
-                                               create_backup=True))
+        backup = json.loads(server.create_code(name="A code"))
         restore_point = Path(backup["backup_path"]).resolve()
         outside = tmp_path / "kept elsewhere.txt"
         outside.write_text("x", encoding="utf-8")
@@ -242,8 +239,7 @@ class TestALinkInTheFolderIsCountedNeverNamed:
         outside.write_text("x", encoding="utf-8")
         if not _symlink(selected / "Outside link", outside):
             pytest.skip("this system makes no symbolic link here")
-        answer = json.loads(server.create_code(name="A code",
-                                               create_backup=True))
+        answer = json.loads(server.create_code(name="A code"))
         assert answer["backup_skipped_symlinks"] == 1
         assert answer["backup_skipped_symlink_names"] == ["Outside link"]
         assert "backup_skipped_symlinks_in_exegete_folder" not in answer

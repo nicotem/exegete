@@ -140,8 +140,7 @@ class TestInductiveLoop:
         rec = _record_one(sid, 1, "I cope by exercising",
                           code="Recovery practices")
         server.update_suggestion_status(sid, approve=[rec["guid"]])
-        assert "Codings applied" in server.apply_codings(sid,
-                                                         create_backup=False)
+        assert "Codings applied" in server.apply_codings(sid)
 
     def test_evidence_comes_back_to_suggest_not_coded(self, setup_server,
                                                       qualcoder_db_path):
@@ -166,8 +165,7 @@ class TestInductiveLoop:
         guids = [_record_one(sid, 1, x["segment_text"],
                              code="Evidence code")["guid"] for x in passages]
         server.update_suggestion_status(sid, approve=guids)
-        assert "Codings applied" in server.apply_codings(sid,
-                                                         create_backup=False)
+        assert "Codings applied" in server.apply_codings(sid)
         # P1 invariant on the applied passages
         bad = _one(qualcoder_db_path,
                    "SELECT COUNT(*) FROM code_text ct JOIN source s ON ct.fid=s.id "
@@ -352,7 +350,7 @@ class TestEditSuggestionContract:
 
         r3 = _record_one(sid, 1, "This is interview text.")
         server.update_suggestion_status(sid, approve=[r3["guid"]])
-        server.apply_codings(sid, create_backup=False)
+        server.apply_codings(sid)
         out = json.loads(server.edit_suggestion(sid, r3["guid"],
                                                 segment_text="This is"))
         assert "error" in out
@@ -529,7 +527,7 @@ class TestSpanAlternativeDeltas:
                   "One clear sentence sits here. A second follows with much "
                   "more words than before. Third ends the paragraph.\n\n"
                   "Second paragraph exists too.")
-        json.loads(server.create_code("AffB", create_backup=False))
+        json.loads(server.create_code("AffB"))
         sid = _sid()
         offered = []
         for seg, code in (

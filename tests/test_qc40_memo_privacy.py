@@ -232,8 +232,7 @@ class TestSetMemoMergePreserving:
               (f"old public#####{SECRET}",))
         _reopen(qualcoder_db_path)
 
-        out = json.loads(server.set_memo("code", 1, "new public",
-                                         create_backup=False))
+        out = json.loads(server.set_memo("code", 1, "new public"))
         assert out["success"] is True
         stored = _row(qualcoder_db_path,
                       "SELECT memo FROM code_name WHERE cid = 1")["memo"]
@@ -252,8 +251,7 @@ class TestSetMemoMergePreserving:
 
         # v0.14 (the claims audit, item 4): refused, where it used to be
         # cut to its public part; either way the private zone is intact
-        out = json.loads(server.set_memo("code", 1, "evil#####fake",
-                                         create_backup=False))
+        out = json.loads(server.set_memo("code", 1, "evil#####fake"))
         assert "private-note marker" in out["error"]
         stored = _row(qualcoder_db_path,
                       "SELECT memo FROM code_name WHERE cid = 1")["memo"]
@@ -266,7 +264,7 @@ class TestSetMemoMergePreserving:
               (f"pub#####{SECRET}",))
         _reopen(qualcoder_db_path)
 
-        out = json.loads(server.set_memo("case", 1, "", create_backup=False))
+        out = json.loads(server.set_memo("case", 1, ""))
         assert out["cleared"] is True
         stored = _row(qualcoder_db_path,
                       "SELECT memo FROM cases WHERE caseid = 1")["memo"]
@@ -279,8 +277,7 @@ class TestSetMemoMergePreserving:
               (f"pub \n#####{SECRET}",))
         _reopen(qualcoder_db_path)
 
-        json.loads(server.set_memo("file", 1, "replaced",
-                                   create_backup=False))
+        json.loads(server.set_memo("file", 1, "replaced"))
         stored = _row(qualcoder_db_path,
                       "SELECT memo FROM source WHERE id = 1")["memo"]
         assert stored == f"replaced \n#####{SECRET}"
@@ -292,8 +289,7 @@ class TestSetMemoMergePreserving:
               (f"pub\r\n#####{SECRET}",))
         _reopen(qualcoder_db_path)
 
-        json.loads(server.set_memo("file", 1, "replaced",
-                                   create_backup=False))
+        json.loads(server.set_memo("file", 1, "replaced"))
         stored = _row(qualcoder_db_path,
                       "SELECT memo FROM source WHERE id = 1")["memo"]
         assert stored == f"replaced\r\n#####{SECRET}"
@@ -313,8 +309,7 @@ class TestSetMemoMergePreserving:
                   (f"p#####{SECRET}-{ttype}", tid))
         _reopen(qualcoder_db_path)
         for ttype, tid, table, idcol in targets:
-            out = json.loads(server.set_memo(ttype, tid, "np",
-                                             create_backup=False))
+            out = json.loads(server.set_memo(ttype, tid, "np"))
             assert out["success"] is True, (ttype, out)
             stored = _row(qualcoder_db_path,
                           f"SELECT memo FROM {table} WHERE {idcol} = ?",
@@ -330,7 +325,7 @@ class TestCreatePathsStripMarker:
     def test_create_code_memo_is_refused(self, setup_server,
                                          qualcoder_db_path):
         out = json.loads(server.create_code(
-            "Fresh", memo="definition#####not-a-zone", create_backup=False))
+            "Fresh", memo="definition#####not-a-zone"))
         assert "private-note marker" in out["error"]
         assert _row(qualcoder_db_path,
                     "SELECT memo FROM code_name WHERE name = 'Fresh'") is None
@@ -338,8 +333,7 @@ class TestCreatePathsStripMarker:
     def test_import_text_file_memo_is_refused(self, setup_server,
                                               qualcoder_db_path):
         out = json.loads(server.import_text_file(
-            "imported.txt", "Body text.", memo="note#####tail",
-            create_backup=False))
+            "imported.txt", "Body text.", memo="note#####tail"))
         assert "private-note marker" in out["error"]
         assert _row(qualcoder_db_path,
                     "SELECT memo FROM source WHERE name = 'imported.txt'"
@@ -348,14 +342,14 @@ class TestCreatePathsStripMarker:
     def test_create_case_memo_is_refused(self, setup_server,
                                          qualcoder_db_path):
         out = json.loads(server.create_case(
-            "CaseP1", memo="m#####t", create_backup=False))
+            "CaseP1", memo="m#####t"))
         assert "private-note marker" in out["error"]
         assert _row(qualcoder_db_path,
                     "SELECT memo FROM cases WHERE name = 'CaseP1'") is None
 
     def test_journal_entry_is_refused(self, setup_server, qualcoder_db_path):
         out = json.loads(server.add_journal_entry(
-            "P1 entry", "visible#####invisible", create_backup=False))
+            "P1 entry", "visible#####invisible"))
         assert "private-note marker" in out["error"]
         assert _row(qualcoder_db_path,
                     "SELECT jentry FROM journal WHERE name = 'P1 entry'"
@@ -364,7 +358,7 @@ class TestCreatePathsStripMarker:
     def test_annotation_all_private_refused(self, setup_server,
                                             qualcoder_db_path):
         out = json.loads(server.add_annotation(
-            1, 0, 4, "#####only private", create_backup=False))
+            1, 0, 4, "#####only private"))
         assert "private-note marker" in out["error"]
 
 
@@ -381,8 +375,7 @@ class TestAnnotationUpdateMergePreserving:
     def test_update_preserves_suffix(self, setup_server, qualcoder_db_path):
         anid = self._make_annotation(qualcoder_db_path,
                                      f"note#####{SECRET}")
-        out = json.loads(server.update_annotation(anid, "edited",
-                                                  create_backup=False))
+        out = json.loads(server.update_annotation(anid, "edited"))
         assert out["success"] is True
         assert out["memo"] == "edited"
         assert SECRET not in json.dumps(out)
@@ -395,8 +388,7 @@ class TestAnnotationUpdateMergePreserving:
                                             qualcoder_db_path):
         anid = self._make_annotation(qualcoder_db_path,
                                      f"note#####{SECRET}")
-        out = json.loads(server.update_annotation(anid, "",
-                                                  create_backup=False))
+        out = json.loads(server.update_annotation(anid, ""))
         assert out.get("deleted_because_cleared") is None
         assert out.get("cleared") is True
         stored = _row(qualcoder_db_path,
@@ -408,8 +400,7 @@ class TestAnnotationUpdateMergePreserving:
     def test_clearing_without_suffix_still_deletes(self, setup_server,
                                                    qualcoder_db_path):
         anid = self._make_annotation(qualcoder_db_path, "plain note")
-        out = json.loads(server.update_annotation(anid, "",
-                                                  create_backup=False))
+        out = json.loads(server.update_annotation(anid, ""))
         assert out.get("deleted_because_cleared") is True
         assert _row(qualcoder_db_path,
                     "SELECT anid FROM annotation WHERE anid = ?",
@@ -421,14 +412,14 @@ class TestAnnotationUpdateMergePreserving:
                                      f"note#####{SECRET}")
         # S-P2 (b): a row carrying a private note is refused without the
         # explicit override, content-free
-        refused = server.delete_annotation(anid, create_backup=False)
+        refused = server.delete_annotation(anid)
         assert SECRET not in refused
         assert json.loads(refused)["refused"] == ["private_note"]
         out = json.loads(server.delete_annotation(
-            anid, create_backup=False, confirm_private_note_deletion=True))
+            anid, confirm_private_note_deletion=True))
         assert out["success"] is True
         assert SECRET not in json.dumps(out)
-        # S-P2 (a): backed up despite create_backup=False
+        # S-P2 (a): backed up, as before every change since v0.15.1
         assert "backup_path" in out
 
 
@@ -497,8 +488,7 @@ class TestMergeProvenancePreservesSuffix:
               "UPDATE code_name SET memo = ? WHERE cid = 2",
               (f"target public#####{SECRET}",))
         _reopen(qualcoder_db_path)
-        out = json.loads(server.rename_code(1, "Stress ##### x",
-                                            create_backup=False))
+        out = json.loads(server.rename_code(1, "Stress ##### x"))
         assert out.get("success") is True, out
         out = json.loads(H.execute_destructive(server.merge_codes, 1, 2))
         assert out.get("merged") is True, out
@@ -519,8 +509,7 @@ class TestMergeProvenancePreservesSuffix:
         _exec(qualcoder_db_path,
               "UPDATE code_name SET memo = 'target note' WHERE cid = 2")
         _reopen(qualcoder_db_path)
-        out = json.loads(server.create_code("Probe #####y", memo="src public",
-                                            create_backup=False))
+        out = json.loads(server.create_code("Probe #####y", memo="src public"))
         cid = out["code"]["id"] if "code" in out else out["code_id"]
         out = json.loads(H.execute_destructive(server.merge_codes, cid, 2))
         assert out.get("merged") is True, out
@@ -858,10 +847,10 @@ class TestReadPathsStrip:
     def test_delete_coding_echo_stripped(self, private_everywhere):
         # ctid 1 carries a private note: refused without the override
         # (S-P2 (b)), and the refusal itself is clean
-        refused = server.delete_coding(1, create_backup=False)
+        refused = server.delete_coding(1)
         _assert_clean(refused)
         assert json.loads(refused)["refused"] == ["private_note"]
-        out = server.delete_coding(1, create_backup=False,
+        out = server.delete_coding(1,
                                    confirm_private_note_deletion=True)
         _assert_clean(out)
         assert json.loads(out)["success"] is True
@@ -935,7 +924,7 @@ class TestSearchDoesNotLeakPrivateZone:
               ("needle public",))
         _reopen(qualcoder_db_path)
         out = json.loads(server.create_code(
-            "Probe", memo="needle probe", create_backup=False))
+            "Probe", memo="needle probe"))
         assert out["success"] is True
         public_count = 1  # cid 2, before the probe
         outcomes = []
@@ -1057,10 +1046,9 @@ def _backups(project_path):
 
 
 class TestPrivateNoteDeleteGuards:
-    """(a) a row carrying a private note is backed up before a delete,
-    whatever create_backup says, as every row is since v0.15.1 (Exegete
-    takes a backup before every change, so the note that said so for
-    these rows is gone); (b) the delete is refused without
+    """(a) a row carrying a private note is backed up before a delete, as
+    every row is since v0.15.1 (Exegete takes a backup before every
+    change, so the note that said so for these rows is gone); (b) the delete is refused without
     confirm_private_note_deletion, with a content-free refusal; rows
     without a private note delete as before. A memo rule, not a
     visibility rule: pre-4.0 and 4.0 projects behave identically."""
@@ -1079,7 +1067,7 @@ class TestPrivateNoteDeleteGuards:
               "UPDATE code_text SET memo = ? WHERE ctid = 1",
               (f"pub#####{SECRET}",))
         _reopen(qualcoder_db_path)
-        raw = server.delete_coding(1, create_backup=False)
+        raw = server.delete_coding(1)
         out = json.loads(raw)
         assert "error" in out
         assert SECRET not in raw and "pub" not in out["error"]
@@ -1094,7 +1082,7 @@ class TestPrivateNoteDeleteGuards:
                     )["n"] == 1
         assert _backups(qualcoder_db_path) == []
 
-        raw = server.delete_coding(1, create_backup=False,
+        raw = server.delete_coding(1,
                                    confirm_private_note_deletion=True)
         out = json.loads(raw)
         assert out["success"] is True, out
@@ -1112,14 +1100,14 @@ class TestPrivateNoteDeleteGuards:
             self, setup_server, qualcoder_db_path):
         anid = self._annotation(qualcoder_db_path,
                                 f"public-wombat-part#####{SECRET}")
-        raw = server.delete_annotation(anid, create_backup=False)
+        raw = server.delete_annotation(anid)
         out = json.loads(raw)
         assert out["refused"] == ["private_note"]
         # Content-free: neither the private zone nor the public part is
         # quoted or characterized in the refusal
         assert SECRET not in raw and "wombat" not in out["error"]
         assert _backups(qualcoder_db_path) == []
-        raw = server.delete_annotation(anid, create_backup=False,
+        raw = server.delete_annotation(anid,
                                        confirm_private_note_deletion=True)
         out = json.loads(raw)
         assert out["success"] is True and out["deleted"] is True
@@ -1132,18 +1120,18 @@ class TestPrivateNoteDeleteGuards:
             self, setup_server, qualcoder_db_path):
         # ctid 2 has an empty memo: no override; one backup, as before
         # every change (v0.15.1)
-        out = json.loads(server.delete_coding(2, create_backup=False))
+        out = json.loads(server.delete_coding(2))
         assert out["success"] is True
         assert "backup_path" in out and "backup_note" not in out
         assert "private_note_removed" not in out["deleted_coding"]
         assert len(_backups(qualcoder_db_path)) == 1
         anid = self._annotation(qualcoder_db_path, "plain")
-        out = json.loads(server.delete_annotation(anid, create_backup=False))
+        out = json.loads(server.delete_annotation(anid))
         assert out["success"] is True and out["deleted"] is True
         assert "backup_path" in out and "backup_note" not in out
         assert len(_backups(qualcoder_db_path)) == 2
 
-    def test_create_backup_true_on_private_row_takes_one_backup(
+    def test_a_private_row_s_delete_takes_one_backup(
             self, setup_server, qualcoder_db_path):
         _exec(qualcoder_db_path,
               "UPDATE code_text SET memo = ? WHERE ctid = 1",
@@ -1179,8 +1167,7 @@ class TestPrivateNoteDeleteGuards:
         # update_annotation("") keeps a row that carries a private note
         # (P1-1), so no delete override applies and no refusal fires
         anid = self._annotation(qualcoder_db_path, f"n#####{SECRET}")
-        out = json.loads(server.update_annotation(anid, "",
-                                                  create_backup=False))
+        out = json.loads(server.update_annotation(anid, ""))
         assert out["success"] is True
         assert out.get("cleared") is True
         assert "refused" not in out
@@ -1198,10 +1185,10 @@ class TestPrivateNoteDeleteGuards:
               (f"pub#####{SECRET}",))
         _reopen(qualcoder_db_path)
         assert server.db.capabilities.has_coder_visibility is True
-        out = json.loads(server.delete_coding(1, create_backup=False))
+        out = json.loads(server.delete_coding(1))
         assert out["refused"] == ["private_note"]
         out = json.loads(server.delete_coding(
-            1, create_backup=False, confirm_private_note_deletion=True))
+            1, confirm_private_note_deletion=True))
         assert out["success"] is True and "backup_path" in out
         assert out["deleted_coding"]["owner"] == "TestCoder"   # visible row
 

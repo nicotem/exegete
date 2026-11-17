@@ -739,10 +739,9 @@ def _code_texts():
     return module
 
 
-# Calls whose positional arguments go into a tool's description: all of
-# them, or the first; "_deprecated" unless it says in_description=False
-SERVING = {"_with_guidance": None, "_with_paragraphs": None,
-           "_deprecated": 1}
+# Calls whose positional arguments go into a tool's description, each
+# with how many of them (None: all)
+SERVING = {"_with_guidance": None, "_with_paragraphs": None}
 TOOL_DECORATORS = ("mcp.tool", "mcp.prompt", "mcp.resource")
 SQL = re.compile(r"\s*(?:SELECT|INSERT|UPDATE|DELETE|CREATE|DROP|ALTER"
                  r"|PRAGMA|WITH|REPLACE|BEGIN|ATTACH|DETACH|VACUUM)\b")
@@ -810,10 +809,7 @@ def _serving(call: ast.Call) -> List[ast.AST]:
     found = [keyword.value for keyword in call.keywords
              if keyword.arg == "instructions"]
     name = _dotted(call.func)
-    if name in SERVING and not any(
-            keyword.arg == "in_description"
-            and isinstance(keyword.value, ast.Constant)
-            and keyword.value.value is False for keyword in call.keywords):
+    if name in SERVING:
         found += call.args[:SERVING[name]]
     return found
 

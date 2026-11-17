@@ -415,7 +415,7 @@ class TestUnusablePdfsInCodingTools:
                                                  use_alternative="longer"))
         assert "pdf_file_stored_as_text" in edit["error"]
         server.update_suggestion_status(sid, approve=[guid])
-        applied = json.loads(server.apply_codings(sid, create_backup=False))
+        applied = json.loads(server.apply_codings(sid))
         assert "pdf_file_stored_as_text" in json.dumps(applied)
         assert _rows(folder, "SELECT COUNT(*) FROM code_text WHERE fid = 2"
                      ) == [(0,)]
@@ -725,7 +725,7 @@ class TestAConfiguredProjectAtFirstUse:
         # the list, removed (the files design, piece 5)
         lambda: server.prepare_names_list(),
         lambda: server.set_project_ai_coder_name("Model A"),
-        lambda: server.set_memo("code", 1, "a note", create_backup=False),
+        lambda: server.set_memo("code", 1, "a note"),
     ])
     def test_the_other_tools_that_asked_first(self, configured, call):
         out = json.loads(call())
@@ -894,7 +894,7 @@ class TestBackupsMadeConsistently:
         monkeypatch.setattr(database, "_copy_database",
                             lambda *a, **k: (_ for _ in ()).throw(
                                 DatabaseLockedError("locked")))
-        out = json.loads(server.set_memo("code", 1, "new", create_backup=True))
+        out = json.loads(server.set_memo("code", 1, "new"))
         assert "database is busy" in out["error"] and "nothing was written" in \
             out["error"]
         assert _rows(folder, "SELECT memo FROM code_name WHERE cid = 1") == \
@@ -1377,7 +1377,7 @@ class TestAConfiguredProjectThatWillNotOpen:
         lambda: server.restore_backup("/nowhere/x_backup_1.qda"),
         lambda: server.get_current_project(),
         lambda: server.get_project_summary(),
-        lambda: server.set_memo("code", 1, "x", create_backup=False),
+        lambda: server.set_memo("code", 1, "x"),
         lambda: server.list_all_codes(),
     ])
     def test_one_text_in_every_tool_and_no_path(self, broken, call):
@@ -1423,8 +1423,7 @@ class TestTheOtherAdoptions:
             json.dumps([{"original": "Thomas", "pseudonym": "Alex"}]),
             encoding="utf-8")
         out = json.loads(server.import_text_file(
-            "new.txt", "Thomas said so.", apply_project_pseudonyms=True,
-            create_backup=False))
+            "new.txt", "Thomas said so.", apply_project_pseudonyms=True))
         assert "No project selected" not in json.dumps(out)
         assert out.get("success") is True, out
 

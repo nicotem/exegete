@@ -11,8 +11,9 @@ function, from 0.15.0 until 0.15.5 removed them, as announced
 backups are now listed with the kind `exegete` (it was `mcp`), and its
 texts say "Exegete's backups" where they said "MCP backups".
 
-What this file pins: no text Exegete serves naming an earlier name, the
-help tool's answers and the answers reached only in a state among them;
+What this file pins: no text Exegete serves naming an earlier name, or
+create_backup, removed in 0.15.5 too, the help tool's answers and the
+answers reached only in a state among them;
 the help tool's answer for each earlier name; the backups' kind, what a
 prune removes and the reworded texts; and the documents, which name the
 earlier names only in TOOLS.md's section "Earlier names" and the update
@@ -41,6 +42,12 @@ REPO = Path(__file__).resolve().parent.parent
 RENAMED = {"analyze_for_coding": "start_coding_session",
            "analyze_file_with_coding": "read_file_with_codings"}
 EARLIER = re.compile(r"\b(?:analyze_for_coding|analyze_file_with_coding)\b")
+# What the walk of served texts looks for: the earlier names, and
+# create_backup, the argument of 22 tools removed in 0.15.5 with them
+# (tests/test_v0155_retired_names.py, test 7). The documents are read for
+# the earlier names alone: TOOLS.md says that create_backup was removed.
+WALKED = re.compile(r"\b(?:analyze_for_coding|analyze_file_with_coding"
+                    r"|create_backup)\b")
 
 
 def _flat(text):
@@ -157,8 +164,7 @@ def _session_answers(registered):
         use_alternative="longer")
     texts["update_suggestion_status"] = _call(
         "update_suggestion_status", coding_session_id=sid, approve=[guid])
-    texts["apply_codings"] = _call("apply_codings", coding_session_id=sid,
-                                   create_backup=False)
+    texts["apply_codings"] = _call("apply_codings", coding_session_id=sid)
     texts["get_coding_session_info"] = _call("get_coding_session_info",
                                              coding_session_id=sid)
     texts["list_coding_sessions"] = _call("list_coding_sessions")
@@ -266,8 +272,8 @@ class TestNoEarlierNameServed:
     @pytest.mark.parametrize("mode", ["full", "core"])
     def test_every_served_text(self, walked_project, mode):
         texts = _served(mode)
-        found = {where: EARLIER.findall(text)
-                 for where, text in texts.items() if EARLIER.search(text)}
+        found = {where: WALKED.findall(text)
+                 for where, text in texts.items() if WALKED.search(text)}
         assert found == {}
         # and the walk reached the texts that name the tools
         named = {where for where, text in texts.items()

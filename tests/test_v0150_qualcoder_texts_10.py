@@ -347,8 +347,7 @@ class TestThePositionWarning:
         assert out["position_safety_warning"] == EVIDENCE
 
     def test_add_annotation(self, emoji_file):
-        out = json.loads(server.add_annotation(emoji_file, 0, 5, "a note",
-                                               create_backup=False))
+        out = json.loads(server.add_annotation(emoji_file, 0, 5, "a note"))
         assert out["success"] is True, out
         assert out["position_safety_warning"] == ANNOTATE
 

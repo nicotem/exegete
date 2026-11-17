@@ -85,7 +85,8 @@ class TestTheRemovalsInV0151:
         # 12 since read_pseudonym_list, and its sentence, were removed in
         # v0.15.0 (the files design, piece 5); 11 since v0.15.1 accepts
         # and ignores create_backup, import_text_file's false included
-        # (tests/test_v0151_ignored_argument.py); 7 since v0.15.1 removed
+        # (removed in v0.15.5: tests/test_v0155_retired_names.py); 7
+        # since v0.15.1 removed
         # three tools and four help topics, as announced, with their
         # sentences (tests/test_v0151_removed_tools.py); 6 since the
         # REFI-QDA export, kept, names its known faults under a name of

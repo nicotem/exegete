@@ -500,13 +500,13 @@ class TestApplyCodings:
         guid = session.suggestions[0].guid
         server.update_suggestion_status(session.session_id, approve=[guid])
 
-        result = server.apply_codings(session.session_id, create_backup=False)
+        result = server.apply_codings(session.session_id)
         assert "Codings applied" in result
         assert "1 codings" in result
 
     def test_apply_with_no_approved(self, session_with_suggestions):
         session = session_with_suggestions
-        result = server.apply_codings(session.session_id, create_backup=False)
+        result = server.apply_codings(session.session_id)
         assert "No approved suggestions" in result
 
     def test_apply_nonexistent_session(self, setup_server):
@@ -519,7 +519,7 @@ class TestApplyCodings:
         guid = session.suggestions[0].guid
         server.update_suggestion_status(session.session_id, approve=[guid])
 
-        result = server.apply_codings(session.session_id, create_backup=True)
+        result = server.apply_codings(session.session_id)
         assert "Codings applied" in result
         assert "Backup created" in result
 
@@ -630,8 +630,7 @@ class TestImportTextFile:
     def test_import_success(self, setup_server):
         result = server.import_text_file(
             filename="new_document.txt",
-            content="This is imported content for analysis.",
-            create_backup=False
+            content="This is imported content for analysis."
         )
         data = json.loads(result)
         assert data["success"] is True
@@ -643,8 +642,7 @@ class TestImportTextFile:
         result = server.import_text_file(
             filename="memo_file.txt",
             content="Content here.",
-            memo="From audio recording",
-            create_backup=False
+            memo="From audio recording"
         )
         data = json.loads(result)
         assert data["success"] is True
@@ -673,8 +671,7 @@ class TestImportTextFile:
         """The project's AI coder name, which owner could only repeat."""
         result = server.import_text_file(
             filename="same_owner.txt",
-            content="Content.",
-            create_backup=False
+            content="Content."
         )
         data = json.loads(result)
         assert data["success"] is True
@@ -683,8 +680,7 @@ class TestImportTextFile:
     def test_import_with_backup(self, setup_server):
         result = server.import_text_file(
             filename="backed_up.txt",
-            content="Content to import.",
-            create_backup=True
+            content="Content to import."
         )
         data = json.loads(result)
         assert data["success"] is True
@@ -694,8 +690,7 @@ class TestImportTextFile:
         # 'interview.txt' exists in the conftest fixture
         result = server.import_text_file(
             filename="interview.txt",
-            content="Different content.",
-            create_backup=False
+            content="Different content."
         )
         data = json.loads(result)
         assert "error" in data
@@ -704,8 +699,7 @@ class TestImportTextFile:
     def test_import_empty_filename(self, setup_server):
         result = server.import_text_file(
             filename="",
-            content="Content.",
-            create_backup=False
+            content="Content."
         )
         data = json.loads(result)
         assert "error" in data
@@ -713,8 +707,7 @@ class TestImportTextFile:
     def test_import_empty_content(self, setup_server):
         result = server.import_text_file(
             filename="empty.txt",
-            content="",
-            create_backup=False
+            content=""
         )
         data = json.loads(result)
         assert "error" in data
@@ -722,16 +715,14 @@ class TestImportTextFile:
     def test_downgrade_after_success(self, setup_server):
         server.import_text_file(
             filename="downgrade_test.txt",
-            content="Content.",
-            create_backup=False
+            content="Content."
         )
         assert server.db.read_only is True
 
     def test_downgrade_after_error(self, setup_server):
         server.import_text_file(
             filename="interview.txt",  # duplicate
-            content="Content.",
-            create_backup=False
+            content="Content."
         )
         assert server.db.read_only is True
 

@@ -306,7 +306,7 @@ class TestCoreModeEndToEnd:
 
                     out = _text_of(await session.call_tool(
                         "apply_codings",
-                        {"coding_session_id": sid, "create_backup": True}))
+                        {"coding_session_id": sid}))
                     assert "Codings applied" in out
 
                     # undo half of the safety pair works too

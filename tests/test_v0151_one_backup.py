@@ -5,7 +5,9 @@ The promise the backups chain makes true, pinned over every tool that
 writes a project: a call that changes the project leaves exactly one of
 Exegete's backups beside it; a call that is refused, or that changes
 nothing (a preview, an idempotent repeat, "nothing changed"), leaves
-none, and a refusal changes no row.
+none, and a refusal changes no row. No shipped text offers to skip a
+backup (with the ignored argument in 0.15.1; kept when 0.15.5 removed
+create_backup).
 
 The cases that do not hold yet are expected failures, each naming the
 piece of this release that turns it on. The marks are strict, so a case
@@ -14,9 +16,9 @@ expect `PromiseBroken` alone: a marked case whose set-up breaks, or
 whose race never happened, fails the suite as any other test does.
 """
 
-import inspect
 import json
 import os
+import re
 import sqlite3
 from contextlib import closing
 from pathlib import Path
@@ -31,7 +33,9 @@ import test_v014_server_wide as server_wide
 from test_v014_server_wide import (EXPECTED_HINTS, NOT_PROJECT_WRITES,
                                    QUOTE, TEXT_1, TEXT_2, HostRun,
                                    _database_rows, body_of, call_every_tool,
-                                   host_session, text_of)
+                                   host_session, served_texts, text_of)
+
+REPO = Path(__file__).resolve().parent.parent
 
 
 # Every tool that writes a project, from the tools' own marks: a new
@@ -758,93 +762,11 @@ def test_a_change_inside_the_window_leaves_no_backup(tmp_path, monkeypatch,
 
 
 # ---------------------------------------------------------------------------
-# Piece 2's cases: the argument no longer decides, and media stay out
+# Piece 2's cases: media stay out. (Its other case, that create_backup,
+# ignored from 0.15.1, no longer decided, went when 0.15.5 removed the
+# argument: tests/test_v0155_retired_names.py, test 5, holds that a call
+# passing it is refused, nothing done.)
 # ---------------------------------------------------------------------------
-
-def tools_taking_create_backup():
-    return {name for name, tool in server.mcp._tool_manager._tools.items()
-            if "create_backup" in inspect.signature(tool.fn).parameters}
-
-
-async def each_change_without_a_backup(client, root):
-    """A change by each tool that takes create_backup, every one called
-    with create_backup=false, every call measured."""
-    holder = Holder()
-    measured = Measured(client, holder)
-    holder.folder = await new_project(client, root)
-    calls = []
-
-    async def change(tool, arguments):
-        answer = await call(measured, tool, {**arguments,
-                                             "create_backup": False})
-        calls.append((tool, answer, holder.counted[-1]))
-        return answer
-
-    await change("import_text_file", {"filename": "int1.txt",
-                                      "content": TEXT_1})
-    await change("create_category", {"name": "Feelings"})
-    await change("create_category", {"name": "Other"})
-    await change("create_code", {"name": "Trust", "category": "Feelings"})
-    await change("create_code", {"name": "Doubt"})
-    await change("create_case", {"name": "P1"})
-    await change("link_file_to_case", {"file_id": 1, "case_name": "P1"})
-    await change("create_attribute_type", {"name": "Age",
-                                           "applies_to": "case",
-                                           "value_type": "numeric"})
-    await change("set_attribute", {"target_type": "case", "target_id": 1,
-                                   "attribute_name": "Age", "value": "30"})
-    note = await change("add_annotation", {"file_id": 1, "start_pos": 0,
-                                           "end_pos": 5,
-                                           "memo": "Opening words"})
-    annotation = note["annotation"]["annotation_id"]
-    await change("update_annotation", {"annotation_id": annotation,
-                                       "memo": "Opening"})
-    await change("delete_annotation", {"annotation_id": annotation})
-    await change("add_journal_entry", {"name": "Week one",
-                                       "entry": "First reading done."})
-    await change("set_memo", {"target_type": "code", "target_id": 1,
-                              "memo": "Reliance on others"})
-    await change("rename_code", {"code_id": 1, "new_name": "Trusting"})
-    await change("recolor_code", {"code_id": 1, "color": "#EB7333"})
-    await change("move_code_to_category", {"code_id": 2,
-                                           "category": "Feelings"})
-    await change("rename_category", {"category_id": 2, "new_name": "Misc"})
-    await change("move_category", {"category_id": 2,
-                                   "parent_category": "Feelings"})
-    await change("rename_case", {"case_id": 1, "new_name": "P01"})
-    await change("rename_file", {"file_id": 1, "new_name": "int1b.txt"})
-    session, _ = await approved_suggestion(client, "Doubt")
-    await change("apply_codings", {"coding_session_id": session})
-    segments = await call(client, "get_coded_segments", {"code_id": 2})
-    await change("delete_coding",
-                 {"coding_id": segments["segments"][0]["id"]})
-    session = (await call(client, "start_coding_session", {
-        "instruction": "test", "file_ids": [1]}))["coding_session_id"]
-    proposed = await call(client, "propose_codes", {
-        "coding_session_id": session, "proposals": [{
-            "name": "Reliance", "memo": "Leaning on others",
-            "rationale": "stated",
-            "example_segments": [{"file_id": 1, "segment_text": QUOTE}]}]})
-    await call(client, "update_proposal_status", {
-        "coding_session_id": session,
-        "approve": [proposed["recorded"][0]["guid"]]})
-    await change("create_proposed_codes", {"coding_session_id": session})
-    return calls
-
-
-def test_create_backup_false_still_backs_up(tmp_path):
-    server._apply_toolset("full")
-    calls = host_session(lambda client: each_change_without_a_backup(
-        client, tmp_path))
-    assert {tool for tool, _, _ in calls} == tools_taking_create_backup()
-    broken = []
-    for tool, answer, record in calls:
-        assert not record["refused"] and record["changed"], (tool, answer)
-        if len(record["new_backups"]) != 1:
-            broken.append(f"{tool} with create_backup=false left "
-                          f"{len(record['new_backups'])} backups")
-    promise(broken)
-
 
 MEGABYTE = 1 << 20
 
@@ -895,3 +817,86 @@ def test_backups_leave_media_out(tmp_path):
         return broken
 
     promise(host_session(drive))
+
+
+# ---------------------------------------------------------------------------
+# No shipped text offers to skip a backup (v0.15.1, with the ignored
+# argument; kept here when 0.15.5 removed create_backup)
+# ---------------------------------------------------------------------------
+
+# What offers to skip a backup: create_backup paired with false, a
+# backup "by default", a call or researcher asking for none, a backup
+# forced only for some rows, create_backup's old default of true
+OFFERS = [
+    re.compile(r"create_backup\W{0,3}(=|is)\W{0,3}false", re.I),
+    re.compile(r"(regardless of|even with|unless you pass)\W{0,3}"
+               r"create_backup", re.I),
+    re.compile(r"backups?\b[^.;:()]{0,60}\(?by default\b", re.I),
+    re.compile(r"\basks? for none\b", re.I),
+    re.compile(r"forced backup|always on, for a row|ALWAYS taken for "
+               r"such a row", re.I),
+    re.compile(r"create_backup:[^.]{0,80}\bdefault:? true\b", re.I),
+]
+
+DOCUMENTS = ["README.md", "TOOLS.md", "PRIVACY.md", "INSTALL.md",
+             "AI_CODING_GUIDE.md", "QUICKSTART.md",
+             "PROJECT_SELECTION_GUIDE.md", "SUPPORT.md", "CONTRIBUTING.md",
+             "pages/index.html"]
+
+
+def offers(texts):
+    found = []
+    for where, text in texts.items():
+        flat = " ".join(text.split())
+        for pattern in OFFERS:
+            for match in pattern.finditer(flat):
+                found.append(f"{where}: ..."
+                             f"{flat[max(0, match.start() - 60):match.end()]}")
+    return found
+
+
+def shipped_texts():
+    """Every served text in both tool sets, the modules' fixed texts,
+    the private note's refusal, the extension's descriptions and the
+    documents a researcher reads, the CHANGELOG aside."""
+    texts = {}
+    for mode in ("full", "core"):
+        served, _ = served_texts(mode)
+        texts.update({f"{mode}, {k}": v for k, v in served.items()})
+    for module in (server, database):
+        for key, value in vars(module).items():
+            if key.isupper() and isinstance(value, str):
+                texts[f"{module.__name__}.{key}"] = value
+    texts["the private note's refusal"] = database.private_note_refusal(
+        "Coding", 1)
+    manifest = json.loads((REPO / "packaging" / "desktop-extension" /
+                           "manifest.in.json").read_text(encoding="utf-8"))
+    for key in ("description", "long_description"):
+        texts[f"the extension's {key}"] = manifest[key]
+    for name in DOCUMENTS:
+        texts[name] = (REPO / name).read_text(encoding="utf-8")
+    return texts
+
+
+def test_no_shipped_text_offers_to_skip_a_backup():
+    texts = shipped_texts()
+    assert len(texts) > 200
+    assert offers(texts) == []
+
+
+def test_the_scan_finds_each_kind_of_offer():
+    """The six patterns each find what the texts said in 0.15.0."""
+    said_then = {
+        "manifest": "Every write is preceded by a backup of the project "
+                    "unless the call asks for none.",
+        "README": "Go back: a backup before each change, by default, and",
+        "help": "all-or-nothing, a backup first unless create_backup is "
+                "false)",
+        "refusal": "a backup is taken first regardless of create_backup.",
+        "delete_coding": "Note that this refusal, or the forced backup, "
+                         "tells you",
+        "Args": "create_backup: Create a timestamped backup before writing "
+                "(default True)",
+    }
+    for where, text in said_then.items():
+        assert offers({where: text}), where

@@ -55,8 +55,7 @@ class TestSetMemo:
         # case (caseid 1) all exist in the conftest fixture
         for ttype, tid in [("code", 1), ("category", 1), ("file", 1),
                            ("coding", 1), ("case", 1)]:
-            out = json.loads(server.set_memo(ttype, tid, f"memo for {ttype}",
-                                             create_backup=False))
+            out = json.loads(server.set_memo(ttype, tid, f"memo for {ttype}"))
             assert out["success"] is True, out
             assert out["cleared"] is False
 
@@ -65,7 +64,7 @@ class TestSetMemo:
         """gotcha #1/#5: memo edits touch ONLY memo — never date or owner."""
         before = _row(qualcoder_db_path,
                       "SELECT date, owner FROM code_name WHERE cid=1")
-        server.set_memo("code", 1, "new definition", create_backup=False)
+        server.set_memo("code", 1, "new definition")
         after = _row(qualcoder_db_path,
                      "SELECT date, owner, memo FROM code_name WHERE cid=1")
         assert after["date"] == before["date"]
@@ -81,7 +80,7 @@ class TestSetMemo:
         """
         before = _row(qualcoder_db_path,
                       "SELECT date FROM code_text WHERE ctid=1")
-        server.set_memo("coding", 1, "coding note", create_backup=False)
+        server.set_memo("coding", 1, "coding note")
         after = _row(qualcoder_db_path,
                      "SELECT date, memo FROM code_text WHERE ctid=1")
         assert after["date"] == before["date"]
@@ -100,7 +99,7 @@ class TestSetMemo:
     def test_clear_memo_writes_empty_string_not_null(self, setup_server,
                                                      qualcoder_db_path):
         """gotcha #4: '' clears the memo, never NULL."""
-        out = json.loads(server.set_memo("code", 1, "", create_backup=False))
+        out = json.loads(server.set_memo("code", 1, ""))
         assert out["cleared"] is True
         val = _row(qualcoder_db_path, "SELECT memo FROM code_name WHERE cid=1")[0]
         assert val == ""
@@ -110,7 +109,7 @@ class TestSetMemo:
                                                      qualcoder_db_path):
         """gotcha #8: reject over-length rather than silently truncate."""
         huge = "x" * 1_000_001
-        out = json.loads(server.set_memo("code", 1, huge, create_backup=False))
+        out = json.loads(server.set_memo("code", 1, huge))
         assert "error" in out and "too long" in out["error"]
         # not written
         assert _row(qualcoder_db_path, "SELECT memo FROM code_name WHERE cid=1")[0] != huge
@@ -118,7 +117,7 @@ class TestSetMemo:
     def test_bad_target_and_id(self, setup_server, qualcoder_db_path):
         assert "target_type must be" in json.loads(server.set_memo("nope", 1, "x"))["error"]
         assert "does not exist" in json.loads(
-            server.set_memo("code", 999, "x", create_backup=False))["error"]
+            server.set_memo("code", 999, "x"))["error"]
 
     def test_unknown_id_wording_is_uniform_across_targets(
             self, setup_server, qualcoder_db_path):
@@ -126,15 +125,13 @@ class TestSetMemo:
         # pre-check and the other four through the db layer; both spell
         # the house style "<Kind> ID N does not exist"
         for target in ("code", "category", "file", "coding", "case"):
-            err = json.loads(server.set_memo(target, 999, "x",
-                                             create_backup=False))["error"]
+            err = json.loads(server.set_memo(target, 999, "x"))["error"]
             assert err == f"{target.capitalize()} ID 999 does not exist", err
 
     def test_negative_id_names_the_tools_own_parameter(
             self, setup_server, qualcoder_db_path):
         for target in ("code", "coding"):
-            err = json.loads(server.set_memo(target, -1, "x",
-                                             create_backup=False))["error"]
+            err = json.loads(server.set_memo(target, -1, "x"))["error"]
             assert "target_id" in err and "coding_id" not in err, err
 
     def test_refused_while_qualcoder_open(self, setup_server, qualcoder_db_path):
@@ -151,8 +148,7 @@ class TestAddJournalEntry:
 
     def test_creates_entry_with_owner_and_date(self, setup_server,
                                                qualcoder_db_path):
-        out = json.loads(server.add_journal_entry("Week 1", "reflexive note",
-                                                  create_backup=False))
+        out = json.loads(server.add_journal_entry("Week 1", "reflexive note"))
         assert out["journal_entry"]["name"] == "Week 1"
         r = _row(qualcoder_db_path,
                  "SELECT jentry, owner, date FROM journal WHERE name='Week 1'")
@@ -162,8 +158,8 @@ class TestAddJournalEntry:
 
     def test_duplicate_name_rejected(self, setup_server, qualcoder_db_path):
         """unique(name) — app-side pre-check (§6.4)."""
-        server.add_journal_entry("Dup", "a", create_backup=False)
-        out = json.loads(server.add_journal_entry("Dup", "b", create_backup=False))
+        server.add_journal_entry("Dup", "a")
+        out = json.loads(server.add_journal_entry("Dup", "b"))
         assert "already exists" in out["error"]
         # only one row
         n = _row(qualcoder_db_path, "SELECT COUNT(*) FROM journal WHERE name='Dup'")[0]
@@ -172,15 +168,13 @@ class TestAddJournalEntry:
     def test_name_charset_enforced(self, setup_server, qualcoder_db_path):
         """gotcha #6: name restricted to ^[ \\w-]+$."""
         for bad in ["has/slash", "dot.name", "punc!", "emoji😀"]:
-            out = json.loads(server.add_journal_entry(bad, "x", create_backup=False))
+            out = json.loads(server.add_journal_entry(bad, "x"))
             assert "error" in out, bad
         # allowed charset works
-        assert json.loads(server.add_journal_entry("ok_Name 1-2", "x",
-                                                   create_backup=False)).get("journal_entry")
+        assert json.loads(server.add_journal_entry("ok_Name 1-2", "x")).get("journal_entry")
 
     def test_over_length_entry_rejected(self, setup_server, qualcoder_db_path):
-        out = json.loads(server.add_journal_entry("Big", "y" * 1_000_001,
-                                                  create_backup=False))
+        out = json.loads(server.add_journal_entry("Big", "y" * 1_000_001))
         assert "too long" in out["error"]
 
 
@@ -192,13 +186,12 @@ class TestCreateCode:
 
     def test_creates_with_palette_color(self, setup_server, qualcoder_db_path):
         """gotcha #15: default color is a QualCoder palette member."""
-        out = json.loads(server.create_code("Autonomy", create_backup=False))
+        out = json.loads(server.create_code("Autonomy"))
         assert out["success"] is True
         assert out["code"]["color"] in QUALCODER_COLORS
 
     def test_into_category_by_name(self, setup_server, qualcoder_db_path):
-        out = json.loads(server.create_code("Distrust", category="Category A",
-                                            create_backup=False))
+        out = json.loads(server.create_code("Distrust", category="Category A"))
         assert out["code"]["category"] == "Category A"
 
     def test_unknown_category_rejected(self, setup_server, qualcoder_db_path):
@@ -207,14 +200,13 @@ class TestCreateCode:
 
     def test_duplicate_name_is_idempotent(self, setup_server, qualcoder_db_path):
         """v0.12 (D5): a duplicate create is an answer, not an error."""
-        out = json.loads(server.create_code("Stress", create_backup=False))
+        out = json.loads(server.create_code("Stress"))
         assert "error" not in out
         assert out["created"] is False and out["reason"] == "already_exists"
         assert out["match"] == "exact" and out["code"]["id"] == 1
 
     def test_invalid_color_rejected(self, setup_server, qualcoder_db_path):
-        out = json.loads(server.create_code("Y", color="#zzzzzz",
-                                            create_backup=False))
+        out = json.loads(server.create_code("Y", color="#zzzzzz"))
         assert "hex format" in out["error"]
 
 
@@ -223,75 +215,67 @@ class TestRenameAndRecolorAndMove:
     def test_rename_precheck_collision(self, setup_server, qualcoder_db_path):
         """gotcha #14: rename pre-checks unique(name) with a clean error
         (v0.12: the collision rule is case-insensitive and names the id)."""
-        out = json.loads(server.rename_code(1, "Coping", create_backup=False))
+        out = json.loads(server.rename_code(1, "Coping"))
         assert "Another code already uses the name 'Coping' (id 2)" in out["error"]
         # unchanged
         assert _row(qualcoder_db_path, "SELECT name FROM code_name WHERE cid=1")[0] == "Stress"
 
     def test_rename_succeeds(self, setup_server, qualcoder_db_path):
-        out = json.loads(server.rename_code(1, "Workplace stress",
-                                            create_backup=False))
+        out = json.loads(server.rename_code(1, "Workplace stress"))
         assert out["new_name"] == "Workplace stress"
 
     def test_code_and_category_may_share_name(self, setup_server,
                                               qualcoder_db_path):
         """gotcha (code-edits #14 note): independent constraints."""
         # 'Category A' is a category; a code may take the same name
-        out = json.loads(server.create_code("Category A", create_backup=False))
+        out = json.loads(server.create_code("Category A"))
         assert out["success"] is True
 
     def test_recolor_strict_hex(self, setup_server, qualcoder_db_path):
         # v0.12 (D5): the stored colour is the nearest palette colour
         # (#00FF00 is off-palette; QualCoder's matcher lands on #00FF7F)
-        out = json.loads(server.recolor_code(1, "#00FF00", create_backup=False))
+        out = json.loads(server.recolor_code(1, "#00FF00"))
         assert out["new_color"] == "#00FF7F" and out["color_snapped"] is True
-        assert json.loads(server.recolor_code(1, "#00FF7F",
-                                              create_backup=False))["changed"] is False
+        assert json.loads(server.recolor_code(1, "#00FF7F"))["changed"] is False
         assert "hex format" in json.loads(
-            server.recolor_code(1, "blue", create_backup=False))["error"]
+            server.recolor_code(1, "blue"))["error"]
 
     def test_move_code_to_category_and_uncategorise(self, setup_server,
                                                     qualcoder_db_path):
         # cid 1 starts in Category A: a move there is a no-op (v0.12, D5)
-        assert json.loads(server.move_code_to_category(1, "Category A",
-                                                       create_backup=False))["changed"] is False
+        assert json.loads(server.move_code_to_category(1, "Category A"))["changed"] is False
         # None -> uncategorised (NULL)
-        out = json.loads(server.move_code_to_category(1, None, create_backup=False))
+        out = json.loads(server.move_code_to_category(1, None))
         assert out["new_category_id"] is None
         assert _row(qualcoder_db_path, "SELECT catid FROM code_name WHERE cid=1")[0] is None
-        assert json.loads(server.move_code_to_category(1, "Category A",
-                                                       create_backup=False))["new_category_id"] == 1
+        assert json.loads(server.move_code_to_category(1, "Category A"))["new_category_id"] == 1
 
 
 class TestCategoryCreateRenameMove:
 
     def test_create_category_nested(self, setup_server, qualcoder_db_path):
-        out = json.loads(server.create_category("Sub", parent_category="Category A",
-                                                create_backup=False))
+        out = json.loads(server.create_category("Sub", parent_category="Category A"))
         assert out["category"]["supercatid"] == 1
 
     def test_rename_category_precheck(self, setup_server, qualcoder_db_path):
-        other = json.loads(server.create_category("Other", create_backup=False))
-        out = json.loads(server.rename_category(1, "Other", create_backup=False))
+        other = json.loads(server.create_category("Other"))
+        out = json.loads(server.rename_category(1, "Other"))
         assert (f"Another category already uses the name 'Other' "
                 f"(id {other['category']['id']})") in out["error"]
 
     def test_move_category_cycle_refused(self, setup_server, qualcoder_db_path):
         """gotcha #17: reparent under a descendant is refused (cycle guard)."""
         # Build A(1) > B > C, then try to move A under C
-        b = json.loads(server.create_category("B", parent_category="Category A",
-                                               create_backup=False))["category"]["id"]
-        c = json.loads(server.create_category("C", parent_category="B",
-                                               create_backup=False))["category"]["id"]
-        out = json.loads(server.move_category(1, "C", create_backup=False))
+        b = json.loads(server.create_category("B", parent_category="Category A"))["category"]["id"]
+        c = json.loads(server.create_category("C", parent_category="B"))["category"]["id"]
+        out = json.loads(server.move_category(1, "C"))
         assert "cycle" in out["error"]
         # A's supercatid unchanged (still NULL/top)
         assert _row(qualcoder_db_path, "SELECT supercatid FROM code_cat WHERE catid=1")[0] is None
 
     def test_move_category_to_top_and_valid(self, setup_server, qualcoder_db_path):
-        b = json.loads(server.create_category("B", parent_category="Category A",
-                                               create_backup=False))["category"]["id"]
-        assert json.loads(server.move_category(b, None, create_backup=False))["new_supercatid"] is None
+        b = json.loads(server.create_category("B", parent_category="Category A"))["category"]["id"]
+        assert json.loads(server.move_category(b, None))["new_supercatid"] is None
 
     def test_global_case_insensitive_unique_name(self, setup_server,
                                                  qualcoder_db_path):
@@ -300,11 +284,10 @@ class TestCategoryCreateRenameMove:
         4.0's own MCP server does. 'category a' answers with the existing
         'Category A' (match: case_insensitive); a second 'Category A' is
         an exact duplicate. Neither creates a row or an error."""
-        out = json.loads(server.create_category("category a",
-                                                create_backup=False))
+        out = json.loads(server.create_category("category a"))
         assert out["created"] is False and out["match"] == "case_insensitive"
         assert out["category"]["id"] == 1 and out["requested"] == {"name": "category a"}
-        out = json.loads(server.create_category("Category A", create_backup=False))
+        out = json.loads(server.create_category("Category A"))
         assert out["created"] is False and out["match"] == "exact"
         assert _row(qualcoder_db_path, "SELECT COUNT(*) FROM code_cat")[0] == 1
 
@@ -406,8 +389,7 @@ class TestDeleteCategory:
         """gotcha #13: codes -> catid NULL, subcats -> supercatid NULL; coded
         data untouched."""
         # code 1 & 2 are in Category A (catid 1). Add a subcategory.
-        sub = json.loads(server.create_category("Sub", parent_category="Category A",
-                                                create_backup=False))["category"]["id"]
+        sub = json.loads(server.create_category("Sub", parent_category="Category A"))["category"]["id"]
         codings_before = _row(qualcoder_db_path, "SELECT COUNT(*) FROM code_text")[0]
         out = json.loads(H.execute_destructive(server.delete_category, 1))
         assert out["success"] is True

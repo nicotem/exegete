@@ -661,8 +661,7 @@ class TestApplyCodingsRollback:
 
         # Call apply_codings -- should fail and roll back
         result = server.apply_codings(
-            coding_session_id=session.session_id,
-            create_backup=False
+            coding_session_id=session.session_id
         )
 
         # Verify the result indicates failure: the invalid suggestion is now
@@ -733,8 +732,7 @@ class TestRWConnectionDowngrade:
 
         # Apply codings (should succeed)
         result = server.apply_codings(
-            coding_session_id=session.session_id,
-            create_backup=False
+            coding_session_id=session.session_id
         )
         assert "error" not in result.lower() or "rolled back" not in result.lower()
 
@@ -766,8 +764,7 @@ class TestRWConnectionDowngrade:
 
         # Apply codings (should fail)
         result = server.apply_codings(
-            coding_session_id=session.session_id,
-            create_backup=False
+            coding_session_id=session.session_id
         )
         data = json.loads(result)
         assert "error" in data
@@ -800,8 +797,7 @@ class TestRWConnectionDowngrade:
 
         # Apply codings (should succeed and downgrade)
         server.apply_codings(
-            coding_session_id=session.session_id,
-            create_backup=False
+            coding_session_id=session.session_id
         )
 
         # Attempt a direct write on the downgraded connection -- must be rejected

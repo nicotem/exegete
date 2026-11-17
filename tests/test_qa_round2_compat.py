@@ -68,7 +68,7 @@ def _apply_one(file_id=1, code_name="Stress", start=24, end=55,
     }]))
     assert rec["recorded_count"] == 1, rec
     server.update_suggestion_status(sid, approve=[rec["recorded"][0]["guid"]])
-    result = server.apply_codings(sid, create_backup=False)
+    result = server.apply_codings(sid)
     assert "Codings applied" in result, result
     return sid
 
@@ -93,9 +93,8 @@ class TestWriteRowContracts:
     def test_w2_w3_dates_and_empty_memos(self, setup_server, qualcoder_db_path):
         """W2: local wall-clock '%Y-%m-%d %H:%M:%S'; W3: memo '' never NULL."""
         _apply_one()
-        json.loads(server.import_text_file("w2file.txt", "content",
-                                           create_backup=False))
-        json.loads(server.link_file_to_case(2, case_id=1, create_backup=False))
+        json.loads(server.import_text_file("w2file.txt", "content"))
+        json.loads(server.link_file_to_case(2, case_id=1))
 
         checks = [
             ("code_text", "owner='AI Coding Assistant'"),
@@ -112,8 +111,7 @@ class TestWriteRowContracts:
         _exec(qualcoder_db_path,
               "INSERT INTO attribute_type VALUES ('Doc', '2024', 'T', '', 'file', 'character')")
         server.switch_project(qualcoder_db_path)
-        out = json.loads(server.import_text_file("w10file.txt", "content",
-                                                 create_backup=False))
+        out = json.loads(server.import_text_file("w10file.txt", "content"))
         attr = _sql(qualcoder_db_path,
                     "SELECT * FROM attribute WHERE id=? AND attr_type='file'",
                     (out["file_id"],))[0]
@@ -176,8 +174,7 @@ class TestWriteRowContracts:
     def test_w9_import_row_matches_qualcoder(self, setup_server,
                                              qualcoder_db_path):
         """W9: mediapath/av_text_id/risid NULL; nothing written to disk."""
-        out = json.loads(server.import_text_file("w9.txt", "content",
-                                                 create_backup=False))
+        out = json.loads(server.import_text_file("w9.txt", "content"))
         row = _sql(qualcoder_db_path,
                    "SELECT mediapath, av_text_id, risid FROM source WHERE id=?",
                    (out["file_id"],))[0]
@@ -198,9 +195,9 @@ class TestWriteRowContracts:
         new_project.py, never here."""
         before = _sql(qualcoder_db_path, "SELECT * FROM project")
         _apply_one()
-        json.loads(server.import_text_file("w14.txt", "x", create_backup=False))
-        json.loads(server.link_file_to_case(2, case_id=1, create_backup=False))
-        json.loads(server.delete_coding(1, create_backup=False))
+        json.loads(server.import_text_file("w14.txt", "x"))
+        json.loads(server.link_file_to_case(2, case_id=1))
+        json.loads(server.delete_coding(1))
         after = _sql(qualcoder_db_path, "SELECT * FROM project")
         assert [tuple(r) for r in before] == [tuple(r) for r in after]
         # static: no UPDATE in the db layer ever targets project or
@@ -232,8 +229,7 @@ class TestTextPositions:
                                            qualcoder_db_path):
         """P1: seltext == fulltext[pos0:pos1] incl. a multi-paragraph span."""
         multi = "First paragraph line.\nSecond paragraph line.\nThird one."
-        out = json.loads(server.import_text_file("multi.txt", multi,
-                                                 create_backup=False))
+        out = json.loads(server.import_text_file("multi.txt", multi))
         fid = out["file_id"]
         start = multi.index("paragraph line.\nSecond")
         _apply_one(file_id=fid, start=start,
@@ -267,7 +263,7 @@ class TestTextPositions:
         }]))
         assert rec["recorded_count"] == 1
         server.update_suggestion_status(sid, approve=[rec["recorded"][0]["guid"]])
-        assert "Codings applied" in server.apply_codings(sid, create_backup=False)
+        assert "Codings applied" in server.apply_codings(sid)
         row = _sql(qualcoder_db_path,
                    "SELECT seltext FROM code_text WHERE fid=75")[0]
         assert row["seltext"] == "one\npara"       # stored slice, not the U+2029 form
@@ -370,8 +366,7 @@ class TestTextPositions:
         ADJUDICATION for the checklist: marked 'unmet' at snapshot 9a2f1dc,
         implemented by e68559d — this test confirms the working tree."""
         raw = "﻿line one\r\nline two\r\nline three"
-        out = json.loads(server.import_text_file("p7.txt", raw,
-                                                 create_backup=False))
+        out = json.loads(server.import_text_file("p7.txt", raw))
         stored = _sql(qualcoder_db_path,
                       "SELECT fulltext FROM source WHERE id=?",
                       (out["file_id"],))[0]["fulltext"]
@@ -407,8 +402,7 @@ class TestTextPositions:
             self, setup_server, qualcoder_db_path):
         """P9: no NFC/NFD normalization, no trimming of fulltext."""
         nfd = unicodedata.normalize("NFD", "café menu here") + "  "
-        out = json.loads(server.import_text_file("p9.txt", nfd,
-                                                 create_backup=False))
+        out = json.loads(server.import_text_file("p9.txt", nfd))
         stored = _sql(qualcoder_db_path,
                       "SELECT fulltext FROM source WHERE id=?",
                       (out["file_id"],))[0]["fulltext"]
@@ -448,7 +442,7 @@ class TestValiditySemantics:
         # old-convention row instead.
         _exec(qualcoder_db_path,
               "INSERT INTO cases VALUES (2, 'Whole file', '', 'qa', '2024')")
-        json.loads(server.link_file_to_case(1, case_id=2, create_backup=False))
+        json.loads(server.link_file_to_case(1, case_id=2))
         _exec(qualcoder_db_path,
               "INSERT INTO code_text (cid, fid, seltext, pos0, pos1, owner) "
               "VALUES (1, 1, ?, 60, ?, 'qa')",
@@ -535,8 +529,7 @@ class TestRound2NewFindings:
 
     def test_qa2_1_bom_only_content_rejected(self, setup_server,
                                              qualcoder_db_path):
-        out = json.loads(server.import_text_file("bomonly.txt", "﻿",
-                                                 create_backup=False))
+        out = json.loads(server.import_text_file("bomonly.txt", "﻿"))
         assert "error" in out
 
     def test_qa2_2_applied_suggestions_not_reapprovable(self, setup_server):

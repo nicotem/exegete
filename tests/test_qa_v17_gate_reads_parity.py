@@ -215,8 +215,7 @@ class TestParityHardening:
     def test_p7_lone_cr_normalized_with_crlf_and_bom(self, setup_server,
                                                      qualcoder_db_path):
         out = json.loads(server.import_text_file(
-            "cr.txt", "﻿alpha\rbeta\r\ngamma\rdelta",
-            create_backup=False))
+            "cr.txt", "﻿alpha\rbeta\r\ngamma\rdelta"))
         stored = _one(qualcoder_db_path,
                       "SELECT fulltext FROM source WHERE id=?",
                       (out["file_id"],))[0]
@@ -266,8 +265,7 @@ class TestParityHardening:
         assert all(a["name"] != "Mood" for a in
                    json.loads(server.get_case_attributes(1))["attributes"])
         # import back-fill is domain-exact: no journal placeholder on files
-        out = json.loads(server.import_text_file("w15.txt", "x",
-                                                 create_backup=False))
+        out = json.loads(server.import_text_file("w15.txt", "x"))
         assert _one(qualcoder_db_path,
                     "SELECT COUNT(*) FROM attribute WHERE name='Mood' "
                     "AND id=? AND attr_type='file'", (out["file_id"],))[0] == 0

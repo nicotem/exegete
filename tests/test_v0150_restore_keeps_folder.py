@@ -148,8 +148,7 @@ def _backup(project: Path) -> Path:
     """A backup of the project as it is now, and then a change to the
     project (a code and a file at its top) that the restore takes back."""
     backup = database.backup_project(project)
-    answer = json.loads(server.create_code(name="After the backup",
-                                           create_backup=False))
+    answer = json.loads(server.create_code(name="After the backup"))
     assert "error" not in answer, answer
     (project / "after the backup.txt").write_text("later", encoding="utf-8")
     return backup
@@ -1087,8 +1086,7 @@ def _qualcoder_backup(project: Path) -> Path:
     made = database.backup_project(project)
     backup = made.with_name(f"{project.stem}_BKUP_20261016_120000.qda")
     made.rename(backup)
-    answer = json.loads(server.create_code(name="After the backup",
-                                           create_backup=False))
+    answer = json.loads(server.create_code(name="After the backup"))
     assert "error" not in answer, answer
     return backup
 

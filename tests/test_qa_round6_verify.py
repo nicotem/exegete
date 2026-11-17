@@ -96,8 +96,7 @@ class TestRestoreNeverHalfReplaced:
         backup must survive intact."""
         backup = self._seed_and_backup(qualcoder_db_path)
         # damage the project after the backup so old != backup
-        json.loads(server.import_text_file("post_backup.txt", "to be discarded",
-                                           create_backup=False))
+        json.loads(server.import_text_file("post_backup.txt", "to be discarded"))
         _reload()
         folder = Path(qualcoder_db_path)
         pre_state = _folder_state(folder)
@@ -142,7 +141,7 @@ class TestRestoreNeverHalfReplaced:
         """When the swap fails, the recovered project equals the pre-restore
         state byte-for-byte (the safety backup is the source of truth)."""
         backup = self._seed_and_backup(qualcoder_db_path)
-        json.loads(server.import_text_file("extra.txt", "x", create_backup=False))
+        json.loads(server.import_text_file("extra.txt", "x"))
         _reload()
         folder = Path(qualcoder_db_path)
         # closing(), not a bare connect(): an unclosed connection is a

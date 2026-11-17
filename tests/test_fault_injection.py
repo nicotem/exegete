@@ -382,8 +382,8 @@ def assert_structured_error(result: str, *needles: str) -> dict:
 
 
 def assert_one_backup_taken(env: Env, before: set) -> None:
-    """v0.15.1: Exegete takes one backup before every change, whatever
-    create_backup says, so a write that failed after it leaves one."""
+    """v0.15.1: Exegete takes one backup before every change, so a write
+    that failed after it leaves one."""
     assert len(env.backup_names() - before) == 1
 
 
@@ -442,7 +442,7 @@ class TestApplyCodingsFaults:
             rollback_exc=sqlite3.OperationalError("Injected: cannot rollback"),
         )
 
-        result = server.apply_codings(sess.session_id, create_backup=False)
+        result = server.apply_codings(sess.session_id)
 
         # v0.13 A5, fix round 1 (F2): a commit-time sqlite fault takes the
         # fixed-text arm now, and a rollback that did not go through is
@@ -476,7 +476,7 @@ class TestApplyCodingsFaults:
                       sqlite3.OperationalError(DISK_ERR), nth=2),
         ])
 
-        result = server.apply_codings(sess.session_id, create_backup=True)
+        result = server.apply_codings(sess.session_id)
 
         data = assert_structured_error(result, "rolled back")
         assert data["applied_before_failure"] == 1
@@ -499,7 +499,7 @@ class TestApplyCodingsFaults:
         before = env.backup_names()
         write_faults(env=env, plant_fresh_lock=True)
 
-        result = server.apply_codings(sess.session_id, create_backup=True)
+        result = server.apply_codings(sess.session_id)
 
         assert_structured_error(result, "is in use by another program")
         assert env.hash() == pre
@@ -519,7 +519,7 @@ class TestApplyCodingsFaults:
         pre = env.hash()
         before = env.backup_names()
 
-        result = server.apply_codings(sess.session_id, create_backup=False)
+        result = server.apply_codings(sess.session_id)
 
         assert_structured_error(result, "is in use by another program")
         assert env.hash() == pre, "batch inserts survived the lock re-check abort"
@@ -544,7 +544,7 @@ class TestImportTextFileFaults:
         before = env.backup_names()
 
         result = server.import_text_file(
-            "brand_new.txt", "Some new content.", create_backup=False)
+            "brand_new.txt", "Some new content.")
 
         assert_structured_error(result, "is in use by another program")
         assert env.hash() == pre, "import survived the lock re-check abort"
@@ -565,7 +565,7 @@ class TestImportTextFileFaults:
         ])
 
         result = server.import_text_file(
-            "brand_new.txt", "Some new content.", create_backup=False)
+            "brand_new.txt", "Some new content.")
 
         assert_structured_error(result, "already exists")
         assert env.hash() == pre
@@ -585,7 +585,7 @@ class TestImportTextFileFaults:
         ])
 
         result = server.import_text_file(
-            "brand_new.txt", "Some new content.", create_backup=False)
+            "brand_new.txt", "Some new content.")
 
         assert_structured_error(result, "Database error",
                                 "Failed to import text file")
@@ -607,7 +607,7 @@ class TestImportTextFileFaults:
         before = env.backup_names()
 
         result = server.import_text_file(
-            "brand_new.txt", "Some new content.", create_backup=False)
+            "brand_new.txt", "Some new content.")
 
         assert_structured_error(result, "is in use by another program")
         assert env.hash() == pre, "uncommitted INSERT survived the failed rollback"
@@ -630,7 +630,7 @@ class TestImportTextFileFaults:
         )
 
         result = server.import_text_file(
-            "brand_new.txt", "Some new content.", create_backup=False)
+            "brand_new.txt", "Some new content.")
 
         assert_structured_error(result, "already exists")
         assert env.hash() == pre
@@ -652,7 +652,7 @@ class TestImportTextFileFaults:
         )
 
         result = server.import_text_file(
-            "brand_new.txt", "Some new content.", create_backup=False)
+            "brand_new.txt", "Some new content.")
 
         assert_structured_error(result, "Database error",
                                 "Failed to import text file")
@@ -663,8 +663,8 @@ class TestImportTextFileFaults:
 
     def test_disk_error_mid_insert_keeps_backup(self, fi_env, write_faults):
         """Generic sqlite3.OperationalError mid-write (database.py:2875-2878
-        -> server.py:2412-2418) with create_backup=True: exactly one backup,
-        equal to the pre-call state."""
+        -> server.py:2412-2418): exactly one backup, equal to the pre-call
+        state."""
         env = fi_env
         pre = env.hash()
         before = env.backup_names()
@@ -673,7 +673,7 @@ class TestImportTextFileFaults:
         ])
 
         result = server.import_text_file(
-            "brand_new.txt", "Some new content.", create_backup=True)
+            "brand_new.txt", "Some new content.")
 
         assert_structured_error(result, "Database error",
                                 "Failed to import text file")
@@ -704,7 +704,7 @@ class TestLinkFileToCaseFaults:
         monkeypatch.setattr(QualcoderDatabase, "backup_before_write", boom)
 
         result = server.link_file_to_case(
-            file_id=2, case_name="Case A", create_backup=True)
+            file_id=2, case_name="Case A")
 
         data = assert_structured_error(result, "Failed to create a backup")
         assert "nothing was linked" in data.get("message", "")
@@ -722,7 +722,7 @@ class TestLinkFileToCaseFaults:
         before = env.backup_names()
 
         result = server.link_file_to_case(
-            file_id=2, case_name="Case A", create_backup=False)
+            file_id=2, case_name="Case A")
 
         assert_structured_error(result, "is in use by another program")
         assert env.hash() == pre, "case link survived the lock re-check abort"
@@ -741,7 +741,7 @@ class TestLinkFileToCaseFaults:
         ])
 
         result = server.link_file_to_case(
-            file_id=2, case_name="Case A", create_backup=False)
+            file_id=2, case_name="Case A")
 
         assert_structured_error(result, "Failed to link file to case")
         assert env.hash() == pre
@@ -762,7 +762,7 @@ class TestLinkFileToCaseFaults:
         ])
 
         result = server.link_file_to_case(
-            file_id=2, case_name="Case A", create_backup=False)
+            file_id=2, case_name="Case A")
 
         assert_structured_error(result, "database is busy")
         assert env.hash() == pre
@@ -785,7 +785,7 @@ class TestLinkFileToCaseFaults:
         )
 
         result = server.link_file_to_case(
-            file_id=2, case_name="Case A", create_backup=False)
+            file_id=2, case_name="Case A")
 
         assert_structured_error(result, "database is busy")
         assert env.hash() == pre
@@ -806,7 +806,7 @@ class TestLinkFileToCaseFaults:
         )
 
         result = server.link_file_to_case(
-            file_id=2, case_name="Case A", create_backup=False)
+            file_id=2, case_name="Case A")
 
         assert_structured_error(result, "Failed to link file to case")
         assert env.hash() == pre
@@ -841,7 +841,7 @@ class TestDeleteCodingFaults:
 
         monkeypatch.setattr(QualcoderDatabase, "backup_before_write", boom)
 
-        result = server.delete_coding(1, create_backup=True)
+        result = server.delete_coding(1)
 
         data = assert_structured_error(result, "Failed to create a backup")
         assert "nothing was deleted" in data.get("message", "")
@@ -860,7 +860,7 @@ class TestDeleteCodingFaults:
         pre = env.hash()
         before = env.backup_names()
 
-        result = server.delete_coding(1, create_backup=False)
+        result = server.delete_coding(1)
 
         assert_structured_error(result, "is in use by another program")
         assert env.hash() == pre, "DELETE survived the lock re-check abort"
@@ -879,7 +879,7 @@ class TestDeleteCodingFaults:
             ExecFault("delete from code_text", sqlite3.OperationalError(DISK_ERR)),
         ])
 
-        result = server.delete_coding(1, create_backup=False)
+        result = server.delete_coding(1)
 
         assert_structured_error(result, "Failed to delete coding")
         assert env.hash() == pre
@@ -899,7 +899,7 @@ class TestDeleteCodingFaults:
                       sqlite3.OperationalError("database is locked")),
         ])
 
-        result = server.delete_coding(1, create_backup=False)
+        result = server.delete_coding(1)
 
         assert_structured_error(result, "database is busy")
         assert env.hash() == pre
@@ -922,7 +922,7 @@ class TestDeleteCodingFaults:
             rollback_exc=sqlite3.OperationalError("Injected: cannot rollback"),
         )
 
-        result = server.delete_coding(1, create_backup=False)
+        result = server.delete_coding(1)
 
         assert_structured_error(result, "database is busy")
         assert env.hash() == pre
@@ -943,7 +943,7 @@ class TestDeleteCodingFaults:
             rollback_exc=sqlite3.OperationalError("Injected: cannot rollback"),
         )
 
-        result = server.delete_coding(1, create_backup=False)
+        result = server.delete_coding(1)
 
         assert_structured_error(result, "Failed to delete coding")
         assert env.hash() == pre
@@ -1290,7 +1290,7 @@ class TestPerformWriteUnconditionalCleanup:
         pre_hash = env.hash()
         self._inject_commit_error(monkeypatch)
 
-        out = server.set_memo("code", 1, "will not land", create_backup=False)
+        out = server.set_memo("code", 1, "will not land")
 
         # 1. sanitized structured error, no raw traceback
         data = json.loads(out)
@@ -1309,12 +1309,11 @@ class TestPerformWriteUnconditionalCleanup:
         UNRELATED write must not carry the failed op's changes with it."""
         env = fi_env
         self._inject_commit_error(monkeypatch)
-        server.set_memo("code", 1, "ghost memo", create_backup=False)
+        server.set_memo("code", 1, "ghost memo")
         monkeypatch.setattr(server, "_recheck_lock_before_commit",
                             _ORIG_RECHECK)
 
-        out = json.loads(server.set_memo("case", 1, "legit memo",
-                                         create_backup=False))
+        out = json.loads(server.set_memo("case", 1, "legit memo"))
         assert out.get("success") is True
 
         con = sqlite3.connect(str(env.folder / "data.qda"))
@@ -1530,8 +1529,9 @@ class TestAWriteThatFailsAfterItsBackupNamesIt:
         unheld, and the pre-commit re-check raises `DatabaseLockedError`
         after the backup was taken. That re-raised past every
         `_with_backup` arm into `_tool_guard`, which answered the lock
-        text alone. The older lock-flip tests pass `create_backup=False`,
-        so nothing covered the backup-present case.
+        text alone. The older lock-flip tests passed `create_backup=False`,
+        which skipped the backup before 0.15.1, so nothing covered the
+        backup-present case.
         """
         env = fi_env
         pre_hash = env.hash()
@@ -1809,7 +1809,8 @@ class TestAWriteThatFailsAfterItsBackupNamesIt:
         """The import body's ValueError arm (QA Q-2). The database layer
         turns a UNIQUE race on the source insert into a ValueError, and
         the arm names the backup that was taken before it; the older
-        test of this route passes `create_backup=False`."""
+        test of this route passed `create_backup=False`, which skipped the
+        backup before 0.15.1."""
         env = fi_env
         pre_hash = env.hash()
         before = env.backup_names()
@@ -1903,9 +1904,6 @@ class TestPerformWriteUnexpectedException:
         # Since v0.14 the tool guard answers an error of a kind it does
         # not name by its kind, rather than letting it reach the MCP
         # library with its message; the clean-up is what this pins.
-        # Called without create_backup, which no longer does anything
-        # (v0.15.1): a call that gives it is answered with a sentence
-        # saying so, refusals included.
         out = json.loads(server.set_memo("code", 1, "x"))
         assert out == {"error": server.UNEXPECTED_ERROR.format(
             kind="KeyError")}
@@ -1916,7 +1914,7 @@ class TestPerformWriteUnexpectedException:
         assert server.db.conn.in_transaction is False
         # server not bricked: a normal write works afterwards
         monkeypatch.undo()
-        out = json.loads(server.set_memo("code", 1, "after", create_backup=False))
+        out = json.loads(server.set_memo("code", 1, "after"))
         assert out.get("success") is True
 
 
@@ -1936,15 +1934,13 @@ class TestBespokeWriteToolsC1Cleanup:
 
     # (tool label, thunk(env) -> result str)  — each drives one failing write
     def _import(self, env):
-        return server.import_text_file("ghost.txt", "ghost body",
-                                       create_backup=False)
+        return server.import_text_file("ghost.txt", "ghost body")
 
     def _link(self, env):
-        return server.link_file_to_case(file_id=2, case_name="Case A",
-                                        create_backup=False)
+        return server.link_file_to_case(file_id=2, case_name="Case A")
 
     def _delete(self, env):
-        return server.delete_coding(1, create_backup=False)
+        return server.delete_coding(1)
 
     def _tools(self):
         return [("import_text_file", self._import),
@@ -1997,11 +1993,10 @@ class TestBespokeWriteToolsC1Cleanup:
         monkeypatch.setattr(server, "_recheck_lock_before_commit",
                             lambda f, h: (_ for _ in ()).throw(
                                 sqlite3.OperationalError("disk I/O error")))
-        server.import_text_file("ghost.txt", "ghost body", create_backup=False)
+        server.import_text_file("ghost.txt", "ghost body")
         monkeypatch.setattr(server, "_recheck_lock_before_commit", _ORIG_RECHECK)
 
-        out = json.loads(server.set_memo("code", 2, "legit memo",
-                                         create_backup=False))
+        out = json.loads(server.set_memo("code", 2, "legit memo"))
         assert out.get("success") is True
 
         con = sqlite3.connect(str(env.folder / "data.qda"))
@@ -2022,12 +2017,10 @@ class TestBespokeWriteToolsC1Cleanup:
         monkeypatch.setattr(server, "_recheck_lock_before_commit",
                             lambda f, h: (_ for _ in ()).throw(
                                 sqlite3.OperationalError("disk I/O error")))
-        server.link_file_to_case(file_id=2, case_name="Case A",
-                                 create_backup=False)
+        server.link_file_to_case(file_id=2, case_name="Case A")
         monkeypatch.setattr(server, "_recheck_lock_before_commit", _ORIG_RECHECK)
 
-        out = json.loads(server.set_memo("code", 2, "legit memo",
-                                         create_backup=False))
+        out = json.loads(server.set_memo("code", 2, "legit memo"))
         assert out.get("success") is True
 
         con = sqlite3.connect(str(env.folder / "data.qda"))
@@ -2045,11 +2038,10 @@ class TestBespokeWriteToolsC1Cleanup:
         monkeypatch.setattr(server, "_recheck_lock_before_commit",
                             lambda f, h: (_ for _ in ()).throw(
                                 sqlite3.OperationalError("disk I/O error")))
-        server.delete_coding(1, create_backup=False)
+        server.delete_coding(1)
         monkeypatch.setattr(server, "_recheck_lock_before_commit", _ORIG_RECHECK)
 
-        out = json.loads(server.set_memo("code", 2, "legit memo",
-                                         create_backup=False))
+        out = json.loads(server.set_memo("code", 2, "legit memo"))
         assert out.get("success") is True
 
         assert _count_codings(env) == 1, "failed delete's DELETE was co-committed"
@@ -2064,7 +2056,7 @@ class TestBespokeWriteToolsC1Cleanup:
             ExecFault("insert into source",
                       sqlite3.IntegrityError("NOT NULL constraint failed: source.owner")),
         ])
-        result = server.import_text_file("x.txt", "body", create_backup=False)
+        result = server.import_text_file("x.txt", "body")
         assert_structured_error(result, "Database error", "Failed to import text file")
         assert server.db.read_only is True
         assert server.db.conn.in_transaction is False

@@ -330,8 +330,7 @@ class TestACategoryCycle:
     def test_the_move_is_refused_and_nothing_changes(self, ladder):
         """Entry 7."""
         folder = ladder("v17", _with_child_category)
-        out = json.loads(server.move_category(1, "Category B",
-                                              create_backup=False))
+        out = json.loads(server.move_category(1, "Category B"))
         assert CYCLE in out["error"], out
         assert _rows(folder, "SELECT supercatid FROM code_cat WHERE "
                              "catid = 1") == [(None,)]
@@ -412,8 +411,7 @@ class TestASettingsFileFromANewerExegete:
         out = json.loads(server.set_project_ai_coder_name("After"))
         assert out["success"] is True, out
         _make_newer(folder)
-        said = json.loads(server.create_code("WhileNewer",
-                                             create_backup=False))["error"]
+        said = json.loads(server.create_code("WhileNewer"))["error"]
         assert said == (
             f"The AI coder name file for this project ({NEW} in the project "
             f"folder) {NEWER} both {NEW} and {OLD} aside: {OLD} beside it "

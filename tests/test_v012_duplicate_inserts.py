@@ -66,8 +66,7 @@ def _rows(project_path, sql, params=()):
 
 
 def _add(file_id, start, end, memo):
-    out = json.loads(server.add_annotation(file_id, start, end, memo,
-                                           create_backup=False))
+    out = json.loads(server.add_annotation(file_id, start, end, memo))
     assert out.get("success") is True, out
     return out["annotation"]["annotation_id"]
 
@@ -153,8 +152,7 @@ class TestAddAnnotationAgainstTheConstraint:
         """The control: the pre-check's text is distinguishable from the
         constraint's, so the test below can tell which guard spoke."""
         anid = _add(1, 0, 10, "first")
-        out = json.loads(server.add_annotation(1, 0, 10, "second",
-                                               create_backup=False))
+        out = json.loads(server.add_annotation(1, 0, 10, "second"))
         assert f"already exists on this exact span (anid={anid})" \
             in out["error"]
         assert "update_annotation" in out["error"]
@@ -165,8 +163,7 @@ class TestAddAnnotationAgainstTheConstraint:
         anid = _add(1, 0, 10, "first")
 
         blind(ANNOTATION_PRECHECK)
-        out = json.loads(server.add_annotation(1, 0, 10, "second",
-                                               create_backup=False))
+        out = json.loads(server.add_annotation(1, 0, 10, "second"))
         # The pre-check ran blind (both the exact-span read and the
         # overlap read carry the marker), so the INSERT was reached and
         # the constraint is what refused.
@@ -180,8 +177,7 @@ class TestAddAnnotationAgainstTheConstraint:
         # The failed INSERT was rolled back and the connection handed back
         # read-only in the usual way: the next write goes through.
         blind()
-        again = json.loads(server.add_annotation(1, 20, 30, "third",
-                                                 create_backup=False))
+        again = json.loads(server.add_annotation(1, 20, 30, "third"))
         assert again["success"] is True
         assert _rows(qualcoder_db_path,
                      "SELECT COUNT(*) FROM annotation") == [(2,)]
@@ -206,8 +202,7 @@ class TestSetAttributeAgainstTheConstraint:
         assert _rows(qualcoder_db_path, key) == [(1, "30")]
 
         blind(ATTRIBUTE_PRECHECK)
-        out = json.loads(server.set_attribute("case", 1, "Age", "31",
-                                              create_backup=False))
+        out = json.loads(server.set_attribute("case", 1, "Age", "31"))
         assert Blinded.hits >= 1
         assert out["error"] == ATTRIBUTE_CONSTRAINT_TEXT
         assert "success" not in out
@@ -220,8 +215,7 @@ class TestSetAttributeAgainstTheConstraint:
         # And the same call succeeds once the pre-check can see again:
         # the update branch, on the existing row.
         blind()
-        ok = json.loads(server.set_attribute("case", 1, "Age", "31",
-                                             create_backup=False))
+        ok = json.loads(server.set_attribute("case", 1, "Age", "31"))
         assert ok["success"] is True
         assert ok["attribute"]["row_created"] is False
         assert ok["attribute"]["previous_value"] == "30"
@@ -238,8 +232,7 @@ class TestUpdateAnnotationUnderTheConstraint:
             self, setup_server, qualcoder_db_path):
         first = _add(1, 0, 10, "first")
         second = _add(1, 20, 30, "second")
-        out = json.loads(server.update_annotation(first, "first, edited",
-                                                  create_backup=False))
+        out = json.loads(server.update_annotation(first, "first, edited"))
         assert out["success"] is True and out["updated"] is True
         rows = _rows(qualcoder_db_path,
                      "SELECT anid, fid, pos0, pos1, owner, memo "
@@ -263,8 +256,7 @@ class TestUpdateAnnotationUnderTheConstraint:
         """Under the constraint a row left behind by a clear would refuse
         the next annotation on that span; the delete has to be real."""
         first = _add(1, 0, 10, "first")
-        out = json.loads(server.update_annotation(first, "",
-                                                  create_backup=False))
+        out = json.loads(server.update_annotation(first, ""))
         assert out["success"] is True
         assert out["deleted_because_cleared"] is True
         assert _rows(qualcoder_db_path,

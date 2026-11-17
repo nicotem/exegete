@@ -327,25 +327,21 @@ def _category(project):
 # the words its answer opens with (the kind of error follows them).
 WRITE_TOOLS = {
     "create_code": ("INSERT", "code_name", "Failed to add code",
-                    lambda: server.create_code(name="Fresh",
-                                               create_backup=False)),
+                    lambda: server.create_code(name="Fresh")),
     "rename_code": ("UPDATE", "code_name", "Failed to rename code",
-                    lambda: server.rename_code(code_id=1, new_name="Strain",
-                                               create_backup=False)),
+                    lambda: server.rename_code(code_id=1, new_name="Strain")),
     "create_category": ("INSERT", "code_cat", "Failed to add category",
                         lambda: server.create_category(
-                            name="Fresh", create_backup=False)),
+                            name="Fresh")),
     "rename_category": ("UPDATE", "code_cat", "Failed to rename category",
                         lambda: server.rename_category(
-                            category_id=1, new_name="Moods",
-                            create_backup=False)),
+                            category_id=1, new_name="Moods")),
     "add_journal_entry": ("INSERT", "journal", "Failed to add journal entry",
                           lambda: server.add_journal_entry(
-                              name="j1", entry="x", create_backup=False)),
+                              name="j1", entry="x")),
     "import_text_file": ("INSERT", "source", "Failed to import text file",
                          lambda: server.import_text_file(
-                             filename="fresh.txt", content="Some words.",
-                             create_backup=False)),
+                             filename="fresh.txt", content="Some words.")),
 }
 
 
@@ -539,11 +535,9 @@ class TestTheQueryHelperAndTheRoutesWithNoTrigger:
         wrote carried the name. The kind only now."""
         _ddl(project, _not_utf8("source", "name", "id = 4"))
         caplog.set_level(logging.DEBUG)
-        call = (server.rename_file(file_id=1, new_name="renamed.txt",
-                                   create_backup=False)
+        call = (server.rename_file(file_id=1, new_name="renamed.txt")
                 if tool == "rename_file" else
-                server.rename_case(case_id=1, new_name="Participant Z",
-                                   create_backup=False))
+                server.rename_case(case_id=1, new_name="Participant Z"))
         answer = json.loads(call)
         _assert_no_leak(caplog, answer)
         assert "error" in answer
@@ -822,21 +816,17 @@ class TestNoNamesOrPathsInTheLog:
         assert json.loads(server.select_project(str(marked))).get(
             "success") is not False
         answers = [
-            server.create_code(name=f"{MARK} code", create_backup=False),
-            server.create_category(name=f"{MARK} category",
-                                   create_backup=False),
-            server.create_case(name=f"{MARK} case", create_backup=False),
-            server.add_journal_entry(name=f"{MARK} journal", entry="x",
-                                     create_backup=False),
+            server.create_code(name=f"{MARK} code"),
+            server.create_category(name=f"{MARK} category"),
+            server.create_case(name=f"{MARK} case"),
+            server.add_journal_entry(name=f"{MARK} journal", entry="x"),
             server.import_text_file(filename=f"{MARK}_interview.txt",
-                                    content="Some words.",
-                                    create_backup=False),
+                                    content="Some words."),
             server.create_attribute_type(name=f"{MARK} attribute",
-                                         applies_to="case",
-                                         create_backup=False),
+                                         applies_to="case"),
             server.set_attribute(target_type="case", target_id=1,
                                  attribute_name=f"{MARK} attribute",
-                                 value="yes", create_backup=False),
+                                 value="yes"),
         ]
         for answer in answers:
             assert "error" not in json.loads(answer), answer
@@ -896,7 +886,7 @@ class TestNoNamesOrPathsInTheLog:
         caplog.set_level(logging.DEBUG)
         for name in ("First", "Second"):
             assert "error" not in json.loads(server.create_code(
-                name=name, create_backup=True))
+                name=name))
         backups = self._backups(marked)
         assert len(backups) == 2
         # A restore: the swap keeps the lock file it holds (v0.15.1, the
@@ -943,8 +933,7 @@ class TestNoNamesOrPathsInTheLog:
             raise error
         monkeypatch.setattr(shutil, "copytree", fails)
         caplog.set_level(logging.DEBUG)
-        answer = json.loads(server.create_code(name="Third",
-                                               create_backup=True))
+        answer = json.loads(server.create_code(name="Third"))
         assert "error" in answer
         assert _log_names(caplog) == []
         label = dbmod.error_label(error)
@@ -1539,8 +1528,7 @@ class TestTheSchemaVersionInTheLog:
              "UPDATE project SET databaseversion = 'v14'",
              "CREATE TRIGGER copy AFTER UPDATE OF memo ON code_name BEGIN "
              "UPDATE project SET databaseversion = new.memo; END")
-        server.set_memo(target_type="code", target_id=1, memo=NOTE,
-                        create_backup=False)
+        server.set_memo(target_type="code", target_id=1, memo=NOTE)
         server.get_project_summary()
         assert SENTINEL not in caplog.text
         assert "Met Thomas" not in caplog.text
@@ -1588,7 +1576,7 @@ class TestPseudonymsJsonErrorsAreAnsweredByKind:
         raw = {
             "import_text_file": lambda: server.import_text_file(
                 filename="fresh.txt", content="Words.",
-                apply_project_pseudonyms=True, create_backup=False),
+                apply_project_pseudonyms=True),
             "pseudonymise_source": lambda: server.pseudonymise_source(
                 file_id=1, use_project_pseudonyms=True),
             "get_current_project": lambda: server.get_current_project(),

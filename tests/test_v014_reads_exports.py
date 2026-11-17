@@ -71,8 +71,7 @@ def _links(folder, fid):
 class TestCaseNameResolution:
 
     def test_the_exact_name_wins_over_a_letter_case_twin(self, twin_cases):
-        out = host("link_file_to_case", file_id=2, case_name="dana",
-                   create_backup=False)
+        out = host("link_file_to_case", file_id=2, case_name="dana")
         assert out["success"] is True, out
         assert out["link"]["case_id"] == 3
         assert out["case_match"] == "exact"
@@ -80,8 +79,7 @@ class TestCaseNameResolution:
 
     def test_a_name_matching_two_cases_by_letter_case_is_refused(
             self, twin_cases):
-        out = host("link_file_to_case", file_id=2, case_name="DANA",
-                   create_backup=False)
+        out = host("link_file_to_case", file_id=2, case_name="DANA")
         assert "success" not in out
         assert sorted(c["id"] for c in out["candidates"]) == [2, 3]
         assert "case_id" in out["hint"]
@@ -89,43 +87,39 @@ class TestCaseNameResolution:
         assert H.count_mcp_backups(twin_cases) == 0
 
     def test_spacing_is_normalised_as_create_case_does(self, twin_cases):
-        out = host("link_file_to_case", file_id=2, case_name="Ann  Lee",
-                   create_backup=False)
+        out = host("link_file_to_case", file_id=2, case_name="Ann  Lee")
         assert out["success"] is True, out
         assert out["link"]["case_id"] == 4
 
     def test_a_unique_letter_case_match_is_used_and_labelled(
             self, twin_cases):
-        out = host("link_file_to_case", file_id=2, case_name="ANN LEE",
-                   create_backup=False)
+        out = host("link_file_to_case", file_id=2, case_name="ANN LEE")
         assert out["link"]["case_id"] == 4
         assert out["case_match"] == "case_insensitive"
 
     def test_an_id_and_a_name_that_disagree_are_refused(self, twin_cases):
         out = host("link_file_to_case", file_id=2, case_id=1,
-                   case_name="dana", create_backup=False)
+                   case_name="dana")
         assert "success" not in out
         assert "case_id 1" in out["error"] and "'dana'" in out["error"]
         assert _links(twin_cases, 2) == []
 
     def test_an_id_and_a_name_that_agree_are_used(self, twin_cases):
         out = host("link_file_to_case", file_id=2, case_id=2,
-                   case_name="DANA", create_backup=False)
+                   case_name="DANA")
         assert out["success"] is True, out
         assert out["link"]["case_id"] == 2
 
     def test_import_links_to_the_case_named(self, twin_cases):
         out = host("import_text_file", filename="d.txt",
-                   content="Dana speaks.", case_name="dana",
-                   create_backup=False)
+                   content="Dana speaks.", case_name="dana")
         assert out["linked_to_case"]["case_id"] == 3, out
         assert out["case_match"] == "exact"
 
     def test_import_refuses_an_ambiguous_name_and_imports_nothing(
             self, twin_cases):
         out = host("import_text_file", filename="d.txt",
-                   content="Dana speaks.", case_name="DANA",
-                   create_backup=False)
+                   content="Dana speaks.", case_name="DANA")
         assert sorted(c["id"] for c in out["candidates"]) == [2, 3]
         assert sql(twin_cases,
                    "SELECT COUNT(*) FROM source WHERE name = 'd.txt'") == [(0,)]
@@ -345,7 +339,7 @@ class TestAttributeQueriesCompareNumbersOnly:
     def test_set_attribute_refuses_what_it_could_not_compare(
             self, setup_server, qualcoder_db_path, value):
         out = host("set_attribute", target_type="case", target_id=1,
-                   attribute_name="Age", value=value, create_backup=False)
+                   attribute_name="Age", value=value)
         assert "is not a number" in out["error"], out
         assert sql(qualcoder_db_path, "SELECT value FROM attribute WHERE "
                    "name = 'Age' AND id = 1") == [("30",)]
@@ -356,7 +350,7 @@ class TestAttributeQueriesCompareNumbersOnly:
     def test_set_attribute_still_takes_ordinary_numbers(
             self, setup_server, qualcoder_db_path, value, stored):
         out = host("set_attribute", target_type="case", target_id=1,
-                   attribute_name="Age", value=value, create_backup=False)
+                   attribute_name="Age", value=value)
         assert out["success"] is True, out
         assert sql(qualcoder_db_path, "SELECT value FROM attribute WHERE "
                    "name = 'Age' AND id = 1") == [(stored,)]
@@ -868,8 +862,7 @@ class TestAFileValueRecordsTheAICoder:
             "value, id, date, owner) VALUES ('Setting', ?, '', ?, "
             "'2020-01-01 00:00:00', 'Researcher')", (domain, target))
         out = host("set_attribute", target_type=domain, target_id=target,
-                   attribute_name="Setting", value="clinic",
-                   create_backup=False)
+                   attribute_name="Setting", value="clinic")
         assert out["success"] is True, out
         owner, date = sql(qualcoder_db_path, "SELECT owner, date FROM "
                           "attribute WHERE name = 'Setting'")[0]
@@ -892,8 +885,7 @@ class TestAFileValueRecordsTheAICoder:
             "value, id, date, owner) VALUES ('Setting', 'journal', '', 1, "
             "'2020-01-01 00:00:00', 'Researcher')")
         out = host("set_attribute", target_type="journal", target_id=1,
-                   attribute_name="Setting", value="clinic",
-                   create_backup=False)
+                   attribute_name="Setting", value="clinic")
         assert out["error"] == server.JOURNAL_ATTRIBUTES_REMOVED, out
         assert sql(qualcoder_db_path, "SELECT value, owner, date FROM "
                    "attribute WHERE name = 'Setting'") == [
@@ -908,7 +900,7 @@ class TestSubCodeMovesAndTheCascadeSayWhatHappens:
             add_subcode(folder, 10, "Kid", supercid=1)
         folder = ladder("v17", setup)
         out = host("move_code_to_category", code_id=10,
-                   category="Category A", create_backup=False)
+                   category="Category A")
         assert out["success"] is True, out
         assert (out["old_parent_code_id"], out["old_parent_code"]) == (
             1, "Stress")
@@ -919,13 +911,13 @@ class TestSubCodeMovesAndTheCascadeSayWhatHappens:
     def test_moving_a_sub_code_to_no_category_says_it_left_its_parent(
             self, ladder):
         ladder("v17", lambda f: add_subcode(f, 10, "Kid", supercid=1))
-        out = host("move_code_to_category", code_id=10, create_backup=False)
+        out = host("move_code_to_category", code_id=10)
         assert out["old_parent_code"] == "Stress"
         assert "top-level code" in out["message"]
 
     def test_a_top_level_move_names_no_parent(self, ladder):
         ladder("v17")
-        out = host("move_code_to_category", code_id=2, create_backup=False)
+        out = host("move_code_to_category", code_id=2)
         assert out["old_parent_code_id"] is None
         assert "parent" not in out["message"]
 
@@ -1120,8 +1112,7 @@ class TestOneNumericRule:
         """As QualCoder's own windows do (Python's strip), so the stored
         value is one SQLite reads as the number."""
         out = host("set_attribute", target_type="case", target_id=1,
-                   attribute_name="Age", value="\xa012",
-                   create_backup=False)
+                   attribute_name="Age", value="\xa012")
         assert out["success"] is True, out
         assert sql(qualcoder_db_path, "SELECT value, CAST(value AS REAL) "
                    "FROM attribute WHERE name = 'Age' AND id = 1"
@@ -1302,8 +1293,7 @@ class TestTwinCaseNamesRefusal:
         for caseid, name in ((2, composed), (3, decomposed)):
             sql(qualcoder_db_path, "INSERT INTO cases VALUES (?, ?, '', "
                 "'TestCoder', '2024-01-15')", (caseid, name))
-        out = host("link_file_to_case", file_id=2, case_name=composed,
-                   create_backup=False)
+        out = host("link_file_to_case", file_id=2, case_name=composed)
         assert sorted(c["id"] for c in out["candidates"]) == [2, 3]
         assert "no spelling of the name can single those out" in \
             out["error"]
@@ -1311,8 +1301,7 @@ class TestTwinCaseNamesRefusal:
                                "candidates.")
 
     def test_letter_case_twins_keep_the_spelling_advice(self, twin_cases):
-        out = host("link_file_to_case", file_id=2, case_name="DANA",
-                   create_backup=False)
+        out = host("link_file_to_case", file_id=2, case_name="DANA")
         assert "exact spelling" in out["hint"]
 
 
@@ -1549,10 +1538,8 @@ class TestNameMatchingIsLinear:
     @pytest.mark.parametrize("tool,args,expect", [
         ("search_coded_text", {"query": "I", "code_name": "stress"},
          "code_match"),
-        ("link_file_to_case", {"file_id": 2, "case_name": "nobody",
-                               "create_backup": False}, "error"),
-        ("link_file_to_case", {"file_id": 2, "case_name": "case a",
-                               "create_backup": False}, "success"),
+        ("link_file_to_case", {"file_id": 2, "case_name": "nobody"}, "error"),
+        ("link_file_to_case", {"file_id": 2, "case_name": "case a"}, "success"),
         ("search_coded_text", {"query": "I", "code_name": CRAFTED},
          "error"),
     ], ids=["code-name", "case-not-found", "case-found",
@@ -1638,7 +1625,7 @@ class TestARefusalNamesWhatTheToolTakes:
     def test_import_text_file_names_its_own_route(self, ambiguous_cases,
                                                    name):
         out = host("import_text_file", filename="n.txt", content="Hello.",
-                   case_name=name, create_backup=False)
+                   case_name=name)
         assert "candidates" in out, out
         assert "link_file_to_case" in out["hint"]
         assert _names_only_what_can_be_given("import_text_file", out) == []
@@ -1649,17 +1636,16 @@ class TestARefusalNamesWhatTheToolTakes:
                              ids=["letter-case", "unicode-form"])
     def test_link_file_to_case_names_its_own_argument(self, ambiguous_cases,
                                                       name):
-        out = host("link_file_to_case", file_id=2, case_name=name,
-                   create_backup=False)
+        out = host("link_file_to_case", file_id=2, case_name=name)
         assert out["hint"].startswith("Give case_id")
         assert _names_only_what_can_be_given("link_file_to_case", out) == []
 
     def test_the_spelling_clause_only_where_a_spelling_works(
             self, ambiguous_cases):
         letter = host("import_text_file", filename="n.txt", content="Hi.",
-                      case_name="DANA", create_backup=False)
+                      case_name="DANA")
         twins = host("import_text_file", filename="n.txt", content="Hi.",
-                     case_name="Jos\u00e9", create_backup=False)
+                     case_name="Jos\u00e9")
         assert "exact spelling" in letter["hint"]
         assert "exact spelling" not in twins["hint"]
 

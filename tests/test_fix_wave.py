@@ -113,8 +113,7 @@ class TestSecurityFixes:
                           f"'{secret}/proj_backup.qda'")
 
         monkeypatch.setattr(QualcoderDatabase, "backup_before_write", boom)
-        out = server.import_text_file("s2.txt", "content body",
-                                      create_backup=True)
+        out = server.import_text_file("s2.txt", "content body")
         assert secret not in out
         assert "realname" not in out
         data = json.loads(out)
@@ -330,7 +329,7 @@ class TestApplyCodingsSafety:
         session = self._approved_session(setup_server, qualcoder_db_path)
         json.loads(server.select_project(str(other)))
 
-        result = json.loads(server.apply_codings(session.session_id, create_backup=False))
+        result = json.loads(server.apply_codings(session.session_id))
         assert "different project" in result["error"]
         # nothing written into the other project
         con = sqlite3.connect(str(other / "data.qda"))
@@ -345,7 +344,7 @@ class TestApplyCodingsSafety:
         )
         parent = Path(qualcoder_db_path).parent
         before = len(list(parent.glob("*_backup_*")))
-        result = json.loads(server.apply_codings(session.session_id, create_backup=True))
+        result = json.loads(server.apply_codings(session.session_id))
         after = len(list(parent.glob("*_backup_*")))
         assert "failed validation" in result["error"]
         assert before == after  # no backup litter
@@ -365,21 +364,21 @@ class TestApplyCodingsSafety:
             file_id=7, file_name="pic.jpg", start_pos=0, end_pos=10,
             segment_text="junk here!",
         )
-        result = json.loads(server.apply_codings(session.session_id, create_backup=False))
+        result = json.loads(server.apply_codings(session.session_id))
         assert "not a text source" in json.dumps(result["failures"])
 
     def test_applied_status_prevents_double_apply(self, setup_server, qualcoder_db_path):
         session = self._approved_session(setup_server, qualcoder_db_path)
-        out = server.apply_codings(session.session_id, create_backup=False)
+        out = server.apply_codings(session.session_id)
         assert "Codings applied" in out
         # second run: clean explanation, not a unique-constraint blowup
-        result = json.loads(server.apply_codings(session.session_id, create_backup=False))
+        result = json.loads(server.apply_codings(session.session_id))
         assert "already applied" in result["error"]
         assert result["statistics"]["applied"] == 1
 
     def test_important_written_as_null(self, setup_server, qualcoder_db_path):
         session = self._approved_session(setup_server, qualcoder_db_path)
-        server.apply_codings(session.session_id, create_backup=False)
+        server.apply_codings(session.session_id)
         con = sqlite3.connect(str(Path(qualcoder_db_path) / "data.qda"))
         row = con.execute(
             "SELECT important FROM code_text ORDER BY ctid DESC LIMIT 1"
@@ -399,7 +398,7 @@ class TestQualcoderLockProtocol:
         lock.write_text(f"someone\n{time.time()}", encoding="utf-8")
         try:
             result = json.loads(server.import_text_file(
-                "new.txt", "some new content", create_backup=False))
+                "new.txt", "some new content"))
             assert "is in use by another program" in result["error"]
             assert "someone" in result["error"]
         finally:
@@ -410,7 +409,7 @@ class TestQualcoderLockProtocol:
         lock.write_text(f"someone\n{time.time() - 60}", encoding="utf-8")
         try:
             result = json.loads(server.import_text_file(
-                "stale_ok.txt", "content body", create_backup=False))
+                "stale_ok.txt", "content body"))
             assert result["success"] is True
             assert lock.exists()  # stale foreign lock untouched
             assert "someone" in lock.read_text(encoding="utf-8")
@@ -419,7 +418,7 @@ class TestQualcoderLockProtocol:
 
     def test_our_lock_removed_after_write(self, setup_server, qualcoder_db_path):
         result = json.loads(server.import_text_file(
-            "clean.txt", "content body", create_backup=False))
+            "clean.txt", "content body"))
         assert result["success"] is True
         assert not _lock_file(qualcoder_db_path).exists()
 
@@ -461,7 +460,7 @@ class TestQualcoderLockProtocol:
 class TestRecoveryTools:
 
     def test_delete_coding_roundtrip(self, setup_server, qualcoder_db_path):
-        result = json.loads(server.delete_coding(1, create_backup=False))
+        result = json.loads(server.delete_coding(1))
         assert result["success"] is True
         assert result["deleted_coding"]["code_name"] == "Stress"
         con = sqlite3.connect(str(Path(qualcoder_db_path) / "data.qda"))
@@ -471,7 +470,7 @@ class TestRecoveryTools:
         assert server.db.read_only is True
 
     def test_delete_coding_unknown_id(self, setup_server):
-        result = json.loads(server.delete_coding(9999, create_backup=False))
+        result = json.loads(server.delete_coding(9999))
         assert "does not exist" in result["error"]
 
     def test_list_backups_both_families(self, setup_server, qualcoder_db_path):
@@ -505,8 +504,7 @@ class TestRecoveryTools:
         backup = parent / f"{stem}_backup_20260101_000002.qda"
         shutil.copytree(qualcoder_db_path, backup)
         # mutate current state
-        json.loads(server.import_text_file("extra.txt", "extra content",
-                                           create_backup=False))
+        json.loads(server.import_text_file("extra.txt", "extra content"))
         result = json.loads(H.execute_destructive(server.restore_backup, str(backup)))
         assert result["success"] is True
         assert "_prerestore" in result["safety_backup"]
@@ -527,7 +525,7 @@ class TestCaseLinkage:
     def test_import_with_case_link(self, setup_server, qualcoder_db_path):
         result = json.loads(server.import_text_file(
             "dana.txt", "Dana talks at length here.",
-            case_name="case a", create_backup=False))
+            case_name="case a"))
         assert result["success"] is True
         link = result["linked_to_case"]
         assert link["case_name"] == "Case A"
@@ -537,7 +535,7 @@ class TestCaseLinkage:
 
     def test_import_unknown_case_no_write(self, setup_server, qualcoder_db_path):
         result = json.loads(server.import_text_file(
-            "x.txt", "body", case_name="Nobody", create_backup=False))
+            "x.txt", "body", case_name="Nobody"))
         assert "not found" in result["error"]
         con = sqlite3.connect(str(Path(qualcoder_db_path) / "data.qda"))
         count = con.execute(
@@ -546,11 +544,9 @@ class TestCaseLinkage:
         assert count == 0
 
     def test_link_tool_and_duplicate(self, setup_server, qualcoder_db_path):
-        result = json.loads(server.link_file_to_case(2, case_name="Case A",
-                                                     create_backup=False))
+        result = json.loads(server.link_file_to_case(2, case_name="Case A"))
         assert result["success"] is True
-        result = json.loads(server.link_file_to_case(2, case_name="Case A",
-                                                     create_backup=False))
+        result = json.loads(server.link_file_to_case(2, case_name="Case A"))
         assert "already linked" in result["error"]
 
 
@@ -648,7 +644,7 @@ class TestWriteVersionGate:
         con.close()
         json.loads(server.select_project(str(old)))
         result = json.loads(server.import_text_file(
-            "y.txt", "content", create_backup=False))
+            "y.txt", "content"))
         assert "pre-v14 schema" in result["error"]
         assert "QualCoder 3.8 or newer" in result["error"]
 
@@ -665,5 +661,5 @@ class TestWriteVersionGate:
         con.close()
         json.loads(server.select_project(str(old)))
         result = json.loads(server.import_text_file(
-            "y.txt", "content", create_backup=False))
+            "y.txt", "content"))
         assert result.get("success") is True

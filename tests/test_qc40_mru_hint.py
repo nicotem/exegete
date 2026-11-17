@@ -156,7 +156,7 @@ class TestSessionProjectCheckHint:
         monkeypatch.setattr(server, "current_project_path", None)
         monkeypatch.delenv("QUALCODER_PROJECT_PATH", raising=False)
         out = json.loads(server.apply_codings(
-            session_with_suggestions.session_id, create_backup=False))
+            session_with_suggestions.session_id))
         assert "No project selected" in out["error"]
         assert HINT_PHRASE in out["error"]
         assert str(Path(qualcoder_db_path).resolve()) in out["error"]

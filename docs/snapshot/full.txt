@@ -3228,8 +3228,6 @@ Safety guarantees:
 
 Args:
     coding_session_id: The session ID with approved suggestions
-    create_backup: No longer used: Exegete takes a backup before every
-                   change (accepted until the release on method)
 
 Returns:
     Detailed confirmation of what was written to the database
@@ -3247,18 +3245,6 @@ Example:
       "coding_session_id": {
         "title": "Coding Session Id",
         "type": "string"
-      },
-      "create_backup": {
-        "anyOf": [
-          {
-            "type": "boolean"
-          },
-          {
-            "type": "null"
-          }
-        ],
-        "default": null,
-        "title": "Create Backup"
       }
     },
     "required": [
@@ -3331,8 +3317,6 @@ Args:
               take for this text's stored copy
     content: The full text content of the file
     memo: Optional memo/description for the file
-    create_backup: No longer used: Exegete takes a backup before every
-                   change (accepted until the release on method)
     case_name: Optional existing case to link the new file to.
                The same name, once spaces and Unicode forms are
                evened out, is used first; otherwise one that differs
@@ -3374,18 +3358,6 @@ Returns:
         "default": "",
         "title": "Memo",
         "type": "string"
-      },
-      "create_backup": {
-        "anyOf": [
-          {
-            "type": "boolean"
-          },
-          {
-            "type": "null"
-          }
-        ],
-        "default": null,
-        "title": "Create Backup"
       },
       "case_name": {
         "anyOf": [
@@ -3587,8 +3559,6 @@ Args:
                same case, or nothing is linked. The answer's
                case_match says which rule matched ("id", "exact" or
                "case_insensitive")
-    create_backup: No longer used: Exegete takes a backup before every
-                   change (accepted until the release on method)
 
 Returns:
     JSON with the created link (case, file, covered span)
@@ -3629,18 +3599,6 @@ Example:
         ],
         "default": null,
         "title": "Case Name"
-      },
-      "create_backup": {
-        "anyOf": [
-          {
-            "type": "boolean"
-          },
-          {
-            "type": "null"
-          }
-        ],
-        "default": null,
-        "title": "Create Backup"
       }
     },
     "required": [
@@ -3712,8 +3670,6 @@ Args:
     coding_id: The ctid of the coding to delete. You can find ctids in
                the output of apply_codings, get_coded_segments, or
                read_file_with_codings (segment_id).
-    create_backup: No longer used: Exegete takes a backup before every
-                   change (accepted until the release on method)
     allow_hidden_coder: Override to delete a hidden coder's coding
     confirm_private_note_deletion: Override to delete a coding whose
                memo carries a private note
@@ -3736,18 +3692,6 @@ Example:
       "coding_id": {
         "title": "Coding Id",
         "type": "integer"
-      },
-      "create_backup": {
-        "anyOf": [
-          {
-            "type": "boolean"
-          },
-          {
-            "type": "null"
-          }
-        ],
-        "default": null,
-        "title": "Create Backup"
       },
       "allow_hidden_coder": {
         "default": false,
@@ -4919,8 +4863,6 @@ Text containing '#####', QualCoder's private-note marker, is refused before anyt
 
 Args:
     coding_session_id: The session with approved proposals
-    create_backup: No longer used: Exegete takes a backup before every
-                   change (accepted until the release on method)
 
 Returns:
     JSON with the created codes (proposal guid -> real code id, plus
@@ -4938,18 +4880,6 @@ Returns:
       "coding_session_id": {
         "title": "Coding Session Id",
         "type": "string"
-      },
-      "create_backup": {
-        "anyOf": [
-          {
-            "type": "boolean"
-          },
-          {
-            "type": "null"
-          }
-        ],
-        "default": null,
-        "title": "Create Backup"
       }
     },
     "required": [
@@ -5022,8 +4952,6 @@ Args:
                id / coding ctid / case caseid); null, or left out, for
                'project'
     memo: The memo text ('' clears it)
-    create_backup: No longer used: Exegete takes a backup before every
-                   change (accepted until the release on method)
     allow_hidden_coder: Override to write on a hidden coder's coding
                         (target_type 'coding' only)
 
@@ -5060,18 +4988,6 @@ Example:
       "memo": {
         "title": "Memo",
         "type": "string"
-      },
-      "create_backup": {
-        "anyOf": [
-          {
-            "type": "boolean"
-          },
-          {
-            "type": "null"
-          }
-        ],
-        "default": null,
-        "title": "Create Backup"
       },
       "allow_hidden_coder": {
         "default": false,
@@ -5125,8 +5041,6 @@ Text containing '#####', QualCoder's private-note marker, is refused before anyt
 Args:
     name: A short unique title for the entry
     entry: The journal text
-    create_backup: No longer used: Exegete takes a backup before every
-                   change (accepted until the release on method)
 
 Returns:
     JSON with the new entry's id, name and date
@@ -5148,18 +5062,6 @@ Example:
       "entry": {
         "title": "Entry",
         "type": "string"
-      },
-      "create_backup": {
-        "anyOf": [
-          {
-            "type": "boolean"
-          },
-          {
-            "type": "null"
-          }
-        ],
-        "default": null,
-        "title": "Create Backup"
       }
     },
     "required": [
@@ -5243,8 +5145,6 @@ Args:
     memo: Optional code definition/memo
     parent_code_id: Optional cid of an existing code to nest under
                     (v16+ sub-code; mutually exclusive with category)
-    create_backup: No longer used: Exegete takes a backup before every
-                   change (accepted until the release on method)
 
 Returns:
     JSON with the new code's id, name, category and color, or the
@@ -5310,18 +5210,6 @@ Example:
         ],
         "default": null,
         "title": "Parent Code Id"
-      },
-      "create_backup": {
-        "anyOf": [
-          {
-            "type": "boolean"
-          },
-          {
-            "type": "null"
-          }
-        ],
-        "default": null,
-        "title": "Create Backup"
       }
     },
     "required": [
@@ -5374,8 +5262,6 @@ Args:
               ignoring letter case, spacing and Unicode form; no
               invisible characters, nor a name that would newly match
               another's once invisible characters are left out)
-    create_backup: No longer used: Exegete takes a backup before every
-                   change (accepted until the release on method)
 
 
 ==== Tool rename_code: the rest of its entry ====
@@ -5390,18 +5276,6 @@ Args:
       "new_name": {
         "title": "New Name",
         "type": "string"
-      },
-      "create_backup": {
-        "anyOf": [
-          {
-            "type": "boolean"
-          },
-          {
-            "type": "null"
-          }
-        ],
-        "default": null,
-        "title": "Create Backup"
       }
     },
     "required": [
@@ -5456,8 +5330,6 @@ there are some, ask the researcher before writing.
 Args:
     code_id: The code's cid
     color: Hex colour in #RRGGBB format (snapped onto the palette)
-    create_backup: No longer used: Exegete takes a backup before every
-                   change (accepted until the release on method)
 
 
 ==== Tool recolor_code: the rest of its entry ====
@@ -5472,18 +5344,6 @@ Args:
       "color": {
         "title": "Color",
         "type": "string"
-      },
-      "create_backup": {
-        "anyOf": [
-          {
-            "type": "boolean"
-          },
-          {
-            "type": "null"
-          }
-        ],
-        "default": null,
-        "title": "Create Backup"
       }
     },
     "required": [
@@ -5546,8 +5406,6 @@ Args:
               Unicode form are ignored; the result gives the category
               it found), or null/omitted to make the code
               uncategorised
-    create_backup: No longer used: Exegete takes a backup before every
-                   change (accepted until the release on method)
 
 
 ==== Tool move_code_to_category: the rest of its entry ====
@@ -5570,18 +5428,6 @@ Args:
         ],
         "default": null,
         "title": "Category"
-      },
-      "create_backup": {
-        "anyOf": [
-          {
-            "type": "boolean"
-          },
-          {
-            "type": "null"
-          }
-        ],
-        "default": null,
-        "title": "Create Backup"
       }
     },
     "required": [
@@ -5650,8 +5496,6 @@ Args:
                      gives the category it found); omit for a
                      top-level category
     memo: Optional category memo
-    create_backup: No longer used: Exegete takes a backup before every
-                   change (accepted until the release on method)
 
 
 ==== Tool create_category: the rest of its entry ====
@@ -5686,18 +5530,6 @@ Args:
         ],
         "default": null,
         "title": "Memo"
-      },
-      "create_backup": {
-        "anyOf": [
-          {
-            "type": "boolean"
-          },
-          {
-            "type": "null"
-          }
-        ],
-        "default": null,
-        "title": "Create Backup"
       }
     },
     "required": [
@@ -5750,8 +5582,6 @@ Args:
               ignoring letter case, spacing and Unicode form; no
               invisible characters, nor a name that would newly match
               another's once invisible characters are left out)
-    create_backup: No longer used: Exegete takes a backup before every
-                   change (accepted until the release on method)
 
 
 ==== Tool rename_category: the rest of its entry ====
@@ -5766,18 +5596,6 @@ Args:
       "new_name": {
         "title": "New Name",
         "type": "string"
-      },
-      "create_backup": {
-        "anyOf": [
-          {
-            "type": "boolean"
-          },
-          {
-            "type": "null"
-          }
-        ],
-        "default": null,
-        "title": "Create Backup"
       }
     },
     "required": [
@@ -5834,8 +5652,6 @@ Args:
                      Unicode form are ignored; the result gives the
                      category it found), or null/omitted to move to
                      the top level
-    create_backup: No longer used: Exegete takes a backup before every
-                   change (accepted until the release on method)
 
 
 ==== Tool move_category: the rest of its entry ====
@@ -5858,18 +5674,6 @@ Args:
         ],
         "default": null,
         "title": "Parent Category"
-      },
-      "create_backup": {
-        "anyOf": [
-          {
-            "type": "boolean"
-          },
-          {
-            "type": "null"
-          }
-        ],
-        "default": null,
-        "title": "Create Backup"
       }
     },
     "required": [
@@ -6843,8 +6647,6 @@ Args:
     start_pos: 0-based character offset (inclusive)
     end_pos: End offset (exclusive, > start_pos)
     memo: The note text (must be non-empty)
-    create_backup: No longer used: Exegete takes a backup before every
-                   change (accepted until the release on method)
 
 Returns:
     JSON with the new annotation under annotation: its
@@ -6874,18 +6676,6 @@ Returns:
       "memo": {
         "title": "Memo",
         "type": "string"
-      },
-      "create_backup": {
-        "anyOf": [
-          {
-            "type": "boolean"
-          },
-          {
-            "type": "null"
-          }
-        ],
-        "default": null,
-        "title": "Create Backup"
       }
     },
     "required": [
@@ -6954,8 +6744,6 @@ Args:
     annotation_id: The annotation's anid (from read_file_with_codings
                    or search_memos)
     memo: The new note text ('' deletes the annotation)
-    create_backup: No longer used: Exegete takes a backup before every
-                   change (accepted until the release on method)
     allow_hidden_coder: Override to edit a hidden coder's annotation
 
 
@@ -6971,18 +6759,6 @@ Args:
       "memo": {
         "title": "Memo",
         "type": "string"
-      },
-      "create_backup": {
-        "anyOf": [
-          {
-            "type": "boolean"
-          },
-          {
-            "type": "null"
-          }
-        ],
-        "default": null,
-        "title": "Create Backup"
       },
       "allow_hidden_coder": {
         "default": false,
@@ -7049,8 +6825,6 @@ there are some, ask the researcher before writing.
 
 Args:
     annotation_id: The annotation's anid
-    create_backup: No longer used: Exegete takes a backup before every
-                   change (accepted until the release on method)
     allow_hidden_coder: Override to delete a hidden coder's annotation
     confirm_private_note_deletion: Override to delete an annotation
                    whose note carries a private section
@@ -7064,18 +6838,6 @@ Args:
       "annotation_id": {
         "title": "Annotation Id",
         "type": "integer"
-      },
-      "create_backup": {
-        "anyOf": [
-          {
-            "type": "boolean"
-          },
-          {
-            "type": "null"
-          }
-        ],
-        "default": null,
-        "title": "Create Backup"
       },
       "allow_hidden_coder": {
         "default": false,
@@ -7147,8 +6909,6 @@ Args:
           invisible characters, nor a name that matches another's
           only once invisible characters are left out)
     memo: Optional case memo
-    create_backup: No longer used: Exegete takes a backup before every
-                   change (accepted until the release on method)
 
 Example:
     "Create a case for participant Dana"
@@ -7174,18 +6934,6 @@ Example:
         ],
         "default": null,
         "title": "Memo"
-      },
-      "create_backup": {
-        "anyOf": [
-          {
-            "type": "boolean"
-          },
-          {
-            "type": "null"
-          }
-        ],
-        "default": null,
-        "title": "Create Backup"
       }
     },
     "required": [
@@ -7255,8 +7003,6 @@ Args:
               invisible characters, nor a name that would newly
               match another's once invisible characters are left
               out)
-    create_backup: No longer used: Exegete takes a backup before every
-                   change (accepted until the release on method)
 
 
 ==== Tool rename_case: the rest of its entry ====
@@ -7271,18 +7017,6 @@ Args:
       "new_name": {
         "title": "New Name",
         "type": "string"
-      },
-      "create_backup": {
-        "anyOf": [
-          {
-            "type": "boolean"
-          },
-          {
-            "type": "null"
-          }
-        ],
-        "default": null,
-        "title": "Create Backup"
       }
     },
     "required": [
@@ -7374,8 +7108,6 @@ Find a file id in exegete://files/list or search_files.
 Args:
     file_id: The file's id
     new_name: The new name
-    create_backup: No longer used: Exegete takes a backup before every
-                   change (accepted until the release on method)
 
 
 ==== Tool rename_file: the rest of its entry ====
@@ -7390,18 +7122,6 @@ Args:
       "new_name": {
         "title": "New Name",
         "type": "string"
-      },
-      "create_backup": {
-        "anyOf": [
-          {
-            "type": "boolean"
-          },
-          {
-            "type": "null"
-          }
-        ],
-        "default": null,
-        "title": "Create Backup"
       }
     },
     "required": [
@@ -7469,8 +7189,6 @@ Args:
                 query_by_attribute. There is no path back from numeric data to
                 character-only in Exegete, so choose carefully.
     memo: Optional description of what the attribute captures
-    create_backup: No longer used: Exegete takes a backup before every
-                   change (accepted until the release on method)
 
 Example:
     "Add a numeric Age attribute for cases"
@@ -7505,18 +7223,6 @@ Example:
         ],
         "default": null,
         "title": "Memo"
-      },
-      "create_backup": {
-        "anyOf": [
-          {
-            "type": "boolean"
-          },
-          {
-            "type": "null"
-          }
-        ],
-        "default": null,
-        "title": "Create Backup"
       }
     },
     "required": [
@@ -7577,8 +7283,6 @@ Args:
     attribute_name: The attribute to set (exact name; see
                     list_attribute_types)
     value: The value as a string ("" clears/unsets)
-    create_backup: No longer used: Exegete takes a backup before every
-                   change (accepted until the release on method)
 
 Example:
     "Set Age to 34 for case 2"
@@ -7604,18 +7308,6 @@ Example:
       "value": {
         "title": "Value",
         "type": "string"
-      },
-      "create_backup": {
-        "anyOf": [
-          {
-            "type": "boolean"
-          },
-          {
-            "type": "null"
-          }
-        ],
-        "default": null,
-        "title": "Create Backup"
       }
     },
     "required": [

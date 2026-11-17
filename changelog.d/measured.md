@@ -7,8 +7,8 @@ Python 3.13 with the libraries in `uv.lock`:
 
 | | 0.15.5, Python 3.13 | 0.15.4, Python 3.13 |
 |---|---|---|
-| `full` (78 tools) | 212,985 | 214,132 |
-| `core` (26 tools) | 76,977 | 78,208 |
+| `full` (78 tools) | 207,485 | 214,132 |
+| `core` (26 tools) | 75,977 | 78,208 |
 | The opening text | 2,047 | 2,047 |
 | The full brief | 14,630 | 14,630 |
 | The brief in `core` | 1,928 | 1,928 |
@@ -27,3 +27,7 @@ Python 3.13 with the libraries in `uv.lock`:
   and 3.12 keep it, with its indentation, the description is 19,889
   characters, 8 fewer than before. The sizes of `core`, which has no
   pseudonymisation tool, do not change.
+- `create_backup`, removed, takes 250 characters from the definition of
+  each of the 22 tools that took it, its two lines in the description
+  and its entry in the input schema: 5,500 from `full`, and 1,000 from
+  `core`, where four of them are.

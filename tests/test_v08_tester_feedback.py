@@ -144,7 +144,7 @@ class TestF1aEditCodeAndGates:
         out = json.loads(server.edit_suggestion(sid, guid, start_pos=24))
         assert "this one is approved" in out["error"]
         assert "Codings applied" in server.apply_codings(
-            sid, create_backup=False)
+            sid)
         out = json.loads(server.edit_suggestion(sid, guid, start_pos=24))
         assert "this one is applied" in out["error"]
         assert "delete_coding" in out["error"]
@@ -188,7 +188,7 @@ class TestF1aEditCodeAndGates:
         guid = _record_one(sid)
         server.edit_suggestion(sid, guid, start_pos=24, end_pos=55)
         server.update_suggestion_status(sid, approve=[guid])
-        out = server.apply_codings(sid, create_backup=False)
+        out = server.apply_codings(sid)
         assert "Successfully Applied: 1" in out
         conn = sqlite3.connect(str(Path(qualcoder_db_path) / "data.qda"))
         row = conn.execute(

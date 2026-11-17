@@ -170,7 +170,7 @@ class TestRenameCase:
 
     def test_the_log_carries_the_id_never_a_name(self, project, caplog):
         with caplog.at_level(logging.DEBUG):
-            _case(1, "Parity Person", create_backup=False)
+            _case(1, "Parity Person")
         text = "\n".join(r.getMessage() for r in caplog.records)
         assert "Renamed case 1" in text
         assert "Case A" not in text and "Parity Person" not in text
@@ -200,7 +200,7 @@ class TestRenameCase:
         assert _dump(project) == before and _backups(project) == []
 
     def test_a_respelling_of_its_own_name_proceeds(self, project):
-        out = _case(1, "CASE a", create_backup=False)
+        out = _case(1, "CASE a")
         assert out["changed"] is True and out["new_name"] == "CASE a"
 
     def test_a_pre_existing_twin_blocks_a_respelling(self, project):
@@ -216,10 +216,9 @@ class TestRenameCase:
         nfd = unicodedata.normalize("NFD", "Zoë")
         _add_case(project, nfd, 6)
         _reload()
-        out = _case(5, "Tom  P01", create_backup=False)
+        out = _case(5, "Tom  P01")
         assert out["changed"] is True and out["new_name"] == "Tom P01"
-        out = _case(6, unicodedata.normalize("NFC", "Zoë"),
-                    create_backup=False)
+        out = _case(6, unicodedata.normalize("NFC", "Zoë"))
         # normalize_name does not apply NFC: the NFC spelling is a change.
         assert out["changed"] is True
 
@@ -303,7 +302,7 @@ class TestRenameCaseReportsWhereTheOldNameStays:
         _add_file(project, 7, "Case A_interview.txt")
         _add_file(project, 8, "survey_case a")
         _reload()
-        out = _case(1, "P01", create_backup=False)
+        out = _case(1, "P01")
         assert out["old_name_left_in"] == {
             "saved_graph_labels": 2, "saved_table_displays": 1,
             "file_ids": [7, 8]}
@@ -316,13 +315,13 @@ class TestRenameCaseReportsWhereTheOldNameStays:
     def test_missing_tables_are_skipped_and_nothing_found_is_empty(
             self, project):
         # The conftest schema has none of the four saved-place tables.
-        out = _case(1, "P01", create_backup=False)
+        out = _case(1, "P01")
         assert out["old_name_left_in"] == {}
 
     def test_the_counts_carry_no_name(self, project):
         _add_file(project, 7, "Case A.txt")
         _reload()
-        out = _case(1, "P01", create_backup=False)
+        out = _case(1, "P01")
         assert "Case A" not in json.dumps(out["old_name_left_in"])
 
 
@@ -374,7 +373,7 @@ class TestRenameCaseRaces:
             return original_rows(self)
         monkeypatch.setattr(server.QualcoderDatabase, "begin_immediate", spy)
         monkeypatch.setattr(server.QualcoderDatabase, "case_name_rows", rows)
-        assert _case(1, "P01", create_backup=False)["changed"] is True
+        assert _case(1, "P01")["changed"] is True
         # The read-only pre-check, then the lock (taken before the
         # backup's database, v0.15.1), then the re-check under it; the
         # rename takes no lock of its own.
@@ -474,7 +473,7 @@ def test_rename_case_differs_from_manage_cases_only_as_listed(
     _reload()
     cases = _rows(project, "SELECT caseid, name FROM cases")
     up = upstream_manage_cases(typed, cases)
-    out = _case(target, typed, create_backup=False)
+    out = _case(target, typed)
     ours = out.get("new_name") if out.get("changed") else None
     if ours is None:
         assert "error" in out or out.get("reason") == "unchanged", out
@@ -546,7 +545,7 @@ def test_rename_file_differs_from_rename_entry_only_as_listed(
     _reload()
     sources = _rows(project, "SELECT name FROM source")
     up = upstream_rename_entry(typed, sources)
-    out = _file(1, typed, create_backup=False)
+    out = _file(1, typed)
     if refusal is not None:
         assert out["error"].startswith(refusal), out
         assert any(refusal.startswith(k) for k in FILE_DEPARTURES)
@@ -596,7 +595,7 @@ class TestRenameFile:
 
     def test_the_log_carries_the_id_never_a_name(self, project, caplog):
         with caplog.at_level(logging.DEBUG):
-            _file(1, "Parity_person.txt", create_backup=False)
+            _file(1, "Parity_person.txt")
         text = "\n".join(r.getMessage() for r in caplog.records)
         assert "Renamed file 1" in text
         assert "interview" not in text and "Parity_person" not in text
@@ -629,8 +628,6 @@ class TestRenameFile:
     ])
     def test_the_length_limits_at_and_over_each_boundary(
             self, project, typed, error):
-        # (v0.15.1: without create_backup, which every change ignores
-        # and whose answer would carry create_backup_ignored)
         out = _file(1, typed)
         if error is None:
             assert out["changed"] is True, out
@@ -656,10 +653,8 @@ class TestRenameFile:
         _reload()
         assert "File id 9 has an empty" in _file(1, "unnamed_file_9")["error"]
         # A valid file 10, and file 9 renaming itself, are both fine.
-        assert _file(1, "unnamed_file_10",
-                     create_backup=False)["changed"] is True
-        assert _file(9, "unnamed_file_9",
-                     create_backup=False)["changed"] is True
+        assert _file(1, "unnamed_file_10")["changed"] is True
+        assert _file(9, "unnamed_file_9")["changed"] is True
 
     def test_collisions_are_exact_after_nfc_on_both_sides(self, project):
         nfd = unicodedata.normalize("NFD", "café.txt")
@@ -670,9 +665,9 @@ class TestRenameFile:
                                f"'{nfd}' (id 5)."
         assert out["candidates"] == [{"id": 5, "name": nfd}]
         # A letter-case twin of ANOTHER file is QualCoder's own rule.
-        assert _file(1, "NOTES.txt", create_backup=False)["changed"] is True
+        assert _file(1, "NOTES.txt")["changed"] is True
         # A respelling of its own name.
-        assert _file(2, "Notes.TXT", create_backup=False)["changed"] is True
+        assert _file(2, "Notes.TXT")["changed"] is True
 
     def test_a_race_is_refused_with_no_backup(self, project, monkeypatch):
         original = server.QualcoderDatabase.begin_immediate
@@ -778,7 +773,7 @@ class TestTheEndingRule:
         (1, "interview.txt.txt"),
     ])
     def test_any_other_name_changes_freely(self, media, fid, typed):
-        out = _file(fid, typed, create_backup=False)
+        out = _file(fid, typed)
         assert out.get("changed") is True, out
 
     def test_the_rule_is_a_transcribed_copy_of_the_refi_type(self):
@@ -807,14 +802,14 @@ class TestTheDocumentsFolderRule:
         _add_file(project, 5, "P01.docx", mediapath="/docs/Thomas.docx")
         _documents_file(project, "Thomas.docx")
         _reload()
-        assert _file(5, "Thomas.docx", create_backup=False)["changed"]
+        assert _file(5, "Thomas.docx")["changed"]
 
     def test_media_is_not_checked(self, project):
         _add_file(project, 5, "a.png", mediapath="/images/a.png",
                   fulltext=None)
         _documents_file(project, "b.png")
         _reload()
-        assert _file(5, "b.png", create_backup=False)["changed"] is True
+        assert _file(5, "b.png")["changed"] is True
 
     def test_the_import_shares_the_rules(self, project):
         _documents_file(project, "orphan.txt")
@@ -843,7 +838,7 @@ class TestWhatKeepsTheOldName:
         ext = stored.rsplit(".", 1)[1]
         _add_file(project, 5, f"Thomas.{ext}", mediapath=mediapath)
         _reload()
-        out = _file(5, f"P01.{ext}", create_backup=False)
+        out = _file(5, f"P01.{ext}")
         assert out["stored_copy"]["kind"] == kind
         assert out["stored_copy"]["stored_name"] == stored
         if kind == "in_project_folder":
@@ -865,7 +860,7 @@ class TestWhatKeepsTheOldName:
                                         on_disk, kind, found):
         monkeypatch.setattr(server.QualcoderDatabase, "documents_listing",
                             lambda self: list(on_disk))
-        out = _file(1, "P01.txt", create_backup=False)
+        out = _file(1, "P01.txt")
         block = out["stored_copy"]
         assert block["kind"] == kind
         assert block.get("stored_name") == found
@@ -893,7 +888,7 @@ class TestWhatKeepsTheOldName:
         ext = mediapath.rsplit(".", 1)[1]
         _add_file(project, 5, f"Thomas.{ext}", mediapath=mediapath)
         _reload()
-        note = _file(5, f"P01.{ext}", create_backup=False)[
+        note = _file(5, f"P01.{ext}")[
             "stored_copy"]["note"]
         # v0.15.0, piece 12: "If a file called ... is later imported in
         # QualCoder, QualCoder overwrites this stored copy"
@@ -915,7 +910,7 @@ class TestWhatKeepsTheOldName:
         (project / "ai_data").mkdir()
         (project / "ai_data" / "search.sqlite").write_bytes(b"")
         _reload()
-        out = _file(1, "P01.txt", create_backup=False)
+        out = _file(1, "P01.txt")
         # A text with no stored file is looked for whole: '.txt' is part
         # of its name, so 'interview_p1.jpg' is not named after it.
         assert out["old_name_left_in"] == {
@@ -942,7 +937,7 @@ class TestTranscripts:
         return project
 
     def test_a_recording_reports_its_transcript(self, av):
-        out = _file(10, "P01.mp3", create_backup=False)
+        out = _file(10, "P01.mp3")
         block = out["linked_transcript"]
         assert (block["file_id"], block["name"]) == (11, "Thomas.mp3.txt")
         assert "A later QualCoder import of a recording called " \
@@ -950,18 +945,18 @@ class TestTranscripts:
         assert "transcript_pairing" not in out
 
     def test_a_transcribed_pairing_asks_for_the_matching_rename(self, av):
-        out = _file(12, "P02.mp4", create_backup=False)
+        out = _file(12, "P02.mp4")
         assert "rename the transcript 'P02.mp4.transcribed' to keep that " \
                "pairing" in out["linked_transcript"]["note"]
 
     def test_a_transcript_reports_its_recording(self, av):
-        out = _file(11, "P01.mp3.txt", create_backup=False)
+        out = _file(11, "P01.mp3.txt")
         assert out["transcript_of"]["file_id"] == 10
         assert out["transcript_of"]["name"] == "Thomas.mp3"
         assert "other_recording_ids" not in out["transcript_of"]
 
     def test_a_transcribed_entry_that_loses_its_pairing_says_so(self, av):
-        out = _file(13, "P02.mp4.transcribed", create_backup=False)
+        out = _file(13, "P02.mp4.transcribed")
         assert out["transcript_pairing"] == [
             "QualCoder's REFI-QDA export and file summary paired this entry "
             "with recording id 12 by name; they no longer do, and unless "
@@ -974,7 +969,7 @@ class TestTranscripts:
         _add_file(av, 21, "Gone.wav", mediapath="/audio/Gone.wav",
                   av_text_id=999, fulltext=None)         # link to nowhere
         _reload()
-        out = _file(2, "Lost.mp3.txt", create_backup=False)
+        out = _file(2, "Lost.mp3.txt")
         assert out["transcript_pairing"] == [
             "QualCoder may adopt file id 2 ('Lost.mp3.txt') as the "
             "transcript of recording id 20 ('Lost.mp3') the next time that "
@@ -983,7 +978,7 @@ class TestTranscripts:
             "'<recording>.transcribed'."]
         _add_file(av, 22, "Gone2.wav.txt")
         _reload()
-        out = _file(21, "Gone2.wav", create_backup=False)
+        out = _file(21, "Gone2.wav")
         assert out["transcript_pairing"] == [
             "QualCoder may adopt file id 22 ('Gone2.wav.txt') as the "
             "transcript of recording id 21 ('Gone2.wav') the next time that "
@@ -994,7 +989,7 @@ class TestTranscripts:
     def test_a_recording_renamed_onto_a_transcribed_entry(self, av):
         _add_file(av, 30, "P09.mp3.transcribed")
         _reload()
-        out = _file(10, "P09.mp3", create_backup=False)
+        out = _file(10, "P09.mp3")
         assert out["transcript_pairing"] == [
             "QualCoder's REFI-QDA export and file summary pair a recording "
             "with '<name>.transcribed' by name, so file id 30 will be "
@@ -1009,7 +1004,7 @@ class TestLimitsHoldElsewhere:
                                                             name):
         """The limits keep a cursor carrying the name under the cursor's
         1,024-character cap (rename dossier 3.3, item 4)."""
-        assert _file(1, name, create_backup=False)["changed"] is True
+        assert _file(1, name)["changed"] is True
         first = json.loads(server.search_coded_text("I", limit=1))
         cursor = first["page"]["next_cursor"]
         assert cursor and len(cursor) <= 1024
@@ -1023,7 +1018,7 @@ class TestLimitsHoldElsewhere:
                   av_text_id=21, fulltext=None)
         _add_file(project, 21, "R transcript")     # no longer '.txt'
         _reload()
-        out = _file(1, "R.mp3.txt", create_backup=False)
+        out = _file(1, "R.mp3.txt")
         assert "its transcript link is stale in QualCoder 4.0" in \
             out["transcript_pairing"][0]
 
@@ -1035,8 +1030,7 @@ class TestTheCodebookRenamesLogIdsToo:
 
     def test_rename_code(self, project, caplog):
         with caplog.at_level(logging.DEBUG):
-            out = json.loads(server.rename_code(1, "Parity Strain",
-                                                create_backup=False))
+            out = json.loads(server.rename_code(1, "Parity Strain"))
         assert out["changed"] is True
         text = "\n".join(r.getMessage() for r in caplog.records)
         assert "Renamed code 1" in text
@@ -1044,8 +1038,7 @@ class TestTheCodebookRenamesLogIdsToo:
 
     def test_rename_category(self, project, caplog):
         with caplog.at_level(logging.DEBUG):
-            out = json.loads(server.rename_category(1, "Parity Group",
-                                                    create_backup=False))
+            out = json.loads(server.rename_category(1, "Parity Group"))
         assert out["changed"] is True
         text = "\n".join(r.getMessage() for r in caplog.records)
         assert "Renamed category 1" in text
@@ -1131,8 +1124,8 @@ class TestNamesWindowsCannotStore:
         "CONSENT.txt", "console notes.txt", "COM10.txt", "LPT.txt",
         "my NUL.txt", "a.CON.txt", "P01 notes.txt"])
     def test_names_that_merely_resemble_them_pass(self, project, name):
-        assert _file(1, name, create_backup=False)["changed"] is True
-        assert _file(1, "interview.txt", create_backup=False)["changed"]
+        assert _file(1, name)["changed"] is True
+        assert _file(1, "interview.txt")["changed"]
 
     def test_the_refusal_names_every_kind_it_refuses(self, project):
         """R1-6: the superscript digits and the console names are named."""
@@ -1188,7 +1181,7 @@ class TestTheDocumentsRuleIsTheStrictestDisks:
                 "The project's documents folder already holds"), out
 
     def test_its_own_copy_in_another_letter_case_is_allowed(self, listing):
-        out = _file(20, "ALPHA_interview.docx", create_backup=False)
+        out = _file(20, "ALPHA_interview.docx")
         assert out["changed"] is True
 
     def test_its_own_copy_does_not_excuse_another_files_twin(self, listing):
@@ -1222,7 +1215,7 @@ class TestTheDocumentsRuleIsTheStrictestDisks:
         out = _file(22, "Legacy2.txt")
         assert out["error"].startswith(
             "The project's documents folder already holds 'legacy2.txt'")
-        assert _file(22, "P22.txt", create_backup=False)["changed"] is True
+        assert _file(22, "P22.txt")["changed"] is True
 
 
 class TestARenameBack:
@@ -1247,7 +1240,7 @@ class TestARenameBack:
         listing.append("legacy.txt")
         assert _file(5, "legacy2.txt")["changed"] is True   # with a backup
         before = _dump(project)
-        out = _file(5, "legacy.txt", create_backup=False)
+        out = _file(5, "legacy.txt")
         assert out["error"].startswith(
             "The project's documents folder already holds a file called "
             "'legacy.txt'."), out
@@ -1257,7 +1250,7 @@ class TestARenameBack:
         _add_file(project, 5, "legacy.txt")
         _reload()
         listing.append("legacy.txt")
-        assert _file(5, "legacy2.txt", create_backup=False)["changed"]
+        assert _file(5, "legacy2.txt")["changed"]
         out = _file(5, "legacy.txt")
         assert out["error"].startswith(
             "The project's documents folder already holds a file called "
@@ -1309,7 +1302,7 @@ class TestARenameBack:
             self, project, name, mediapath, restored):
         _add_file(project, 5, name, mediapath=mediapath)
         _reload()
-        assert _file(5, restored, create_backup=False)["changed"] is True
+        assert _file(5, restored)["changed"] is True
 
 
 class TestTheTranscriptRefusalByCase:
@@ -1365,7 +1358,7 @@ class TestTheTranscriptRefusalByCase:
                   "WHERE id = 11")
         _reload()
         before = _dump(av)
-        out = _file(11, "P01.mp3.txt", create_backup=False)
+        out = _file(11, "P01.mp3.txt")
         assert "swapping '.transcribed' for '.txt'" in out["error"], out
         assert _dump(av) == before
 
@@ -1397,7 +1390,7 @@ class TestWhereTheOldNameStaysByWholeWords:
         _add_file(project, 8, "AS_interview.txt")
         _add_file(project, 9, "Survey_as")
         _reload()
-        out = _case(5, "P05", create_backup=False)
+        out = _case(5, "P05")
         assert out["old_name_left_in"] == {
             "saved_table_displays": 1, "saved_filters": 1,
             "file_ids": [8, 9]}
@@ -1410,7 +1403,7 @@ class TestWhereTheOldNameStaysByWholeWords:
                           (10, "Thomas_P01.mp3.txt")):
             _add_file(project, fid, name)
         _reload()
-        out = _case(5, "P01", create_backup=False)
+        out = _case(5, "P01")
         assert out["old_name_left_in"] == {"file_ids": [7, 8, 10]}
 
     def test_a_dotted_name_is_not_cut_at_its_dot(self, project):
@@ -1418,7 +1411,7 @@ class TestWhereTheOldNameStaysByWholeWords:
         _add_file(project, 6, "Thomas_notes.txt")
         _add_file(project, 7, "Thomas.Jones.txt")
         _reload()
-        out = _file(5, "P05", create_backup=False)
+        out = _file(5, "P05")
         assert out["old_name_left_in"] == {"file_ids": [7]}
 
     def test_a_stored_file_is_looked_for_without_its_extension(self,
@@ -1427,7 +1420,7 @@ class TestWhereTheOldNameStaysByWholeWords:
         _add_file(project, 6, "Thomas_p1.jpg", mediapath="/images/t.jpg")
         _add_file(project, 7, "Thomasina.txt")
         _reload()
-        out = _file(5, "P05.pdf", create_backup=False)
+        out = _file(5, "P05.pdf")
         assert out["old_name_left_in"] == {"file_ids": [6]}
 
     def test_both_notes_call_it_a_heuristic(self):
@@ -1482,8 +1475,7 @@ class TestTheFiveBehavioursQAFoundUnpinned:
         _add_file(project, 5, "field notes.txt",
                   mediapath="/docs/field notes.txt")
         _reload()
-        assert _file(5, "field notes.docx",
-                     create_backup=False)["changed"] is True
+        assert _file(5, "field notes.docx")["changed"] is True
 
     def test_q5_a_legacy_text_keeps_its_own_found_copy(self, project,
                                                         monkeypatch):
@@ -1491,7 +1483,7 @@ class TestTheFiveBehavioursQAFoundUnpinned:
                             lambda self: ["legacy.txt"])
         _add_file(project, 5, "legacy.txt")
         _reload()
-        assert _file(5, "LEGACY.txt", create_backup=False)["changed"] is True
+        assert _file(5, "LEGACY.txt")["changed"] is True
 
     @pytest.mark.parametrize("stored, typed, written", [
         ("loose notes.txt ", "loose notes.txt ", "loose notes.txt"),
@@ -1503,7 +1495,7 @@ class TestTheFiveBehavioursQAFoundUnpinned:
             self, project, stored, typed, written):
         _add_file(project, 5, stored)
         _reload()
-        out = _file(5, typed, create_backup=False)
+        out = _file(5, typed)
         assert out["changed"] is True and out["new_name"] == written
         assert _rows(project, "SELECT name FROM source WHERE id = 5") == \
             [{"name": written}]
@@ -1527,7 +1519,7 @@ class TestSavedDisplaysAndFiltersByTheirValues:
         _save_filter(project, "all", "BOOLEAN_AND",
                      [("case name", "case", "character", "=", ["P02"])])
         _reload()
-        out = _case(5, "P05", create_backup=False)
+        out = _case(5, "P05")
         assert out["old_name_left_in"] == {}, out
 
     def test_the_values_are_still_read(self, project):
@@ -1539,7 +1531,7 @@ class TestSavedDisplaysAndFiltersByTheirValues:
                      [("case name", "case", "character", "like", ["P01"]),
                       ("case name", "case", "character", "=", ["OR"])])
         _reload()
-        out = _case(5, "P05", create_backup=False)
+        out = _case(5, "P05")
         assert out["old_name_left_in"] == {
             "saved_table_displays": 1, "saved_filters": 1}
 
@@ -1618,7 +1610,7 @@ class TestTheBehavioursR2FoundUnpinned:
         _add_file(project, 5, "Thomas notes")
         _add_file(project, 6, "Dr. Thomas notes")
         _reload()
-        out = _file(5, "Thomas notes v2", create_backup=False)
+        out = _file(5, "Thomas notes v2")
         assert out["old_name_left_in"] == {"file_ids": [6]}
 
     def test_d4_the_import_says_the_comparison_folds_letter_case(self):
@@ -1632,7 +1624,7 @@ class TestTheBehavioursR2FoundUnpinned:
         _add_file(project, 5, "Thomas.PDF", mediapath="/docs/Thomas.pdf")
         _add_file(project, 6, "Thomas_p1.jpg", mediapath="/images/t.jpg")
         _reload()
-        out = _file(5, "P05.PDF", create_backup=False)
+        out = _file(5, "P05.PDF")
         assert out["old_name_left_in"] == {"file_ids": [6]}
 
 
@@ -1697,7 +1689,7 @@ class TestSavedRowsQualCoderWrote:
     def test_counted_where_the_label_is(self, saved, label, expected):
         _add_case(saved, label, 5)
         _reload()
-        out = _case(5, "P05 new", create_backup=False)
+        out = _case(5, "P05 new")
         assert out["old_name_left_in"] == expected, out
 
     def test_a_cancelled_like_row_is_read_whole(self, project):
@@ -1709,7 +1701,7 @@ class TestSavedRowsQualCoderWrote:
                        "VALUES ('cancelled', 'Name\tlike\t\t\tName\tlike\t')")
         _add_case(project, "like", 5)
         _reload()
-        out = _case(5, "P05 new", create_backup=False)
+        out = _case(5, "P05 new")
         assert out["old_name_left_in"].get("saved_table_displays") == 1
 
     def test_a_saved_row_that_is_not_utf8_does_not_block_a_rename(
@@ -1723,7 +1715,7 @@ class TestSavedRowsQualCoderWrote:
                      "VALUES ('bad', CAST(X'436173650920093D09FF' AS TEXT))")
         _add_case(saved, "P03", 5)
         _reload()
-        out = _case(5, "P05 new", create_backup=False)
+        out = _case(5, "P05 new")
         assert out.get("changed") is True, out
 
 
@@ -1738,7 +1730,7 @@ class TestTheSavedPlacesOwnNames:
                      [("Age", "case", "numeric", ">", ["18"])])
         _add_case(project, "P03", 5)
         _reload()
-        out = _case(5, "P05 new", create_backup=False)
+        out = _case(5, "P05 new")
         assert out["old_name_left_in"] == {
             "saved_table_displays": 1, "saved_filters": 1}, out
 
@@ -1792,7 +1784,7 @@ class TestAUtf16Database:
         server.db.close()
         _to_utf16(project)
         _reload()
-        out = _case(5, "P05 new", create_backup=False)
+        out = _case(5, "P05 new")
         assert out["old_name_left_in"] == expected, out
 
     def test_the_fallback_decodes_with_the_databases_codec(self):
@@ -1820,7 +1812,7 @@ class TestAGraphLabelIsReadTolerantly:
                        "displaytext) VALUES (1, 5, CAST(? AS TEXT))",
               (b"Thomas_P01 \xff",))
         _reload()
-        out = _case(5, "P05 new", create_backup=False)
+        out = _case(5, "P05 new")
         assert out.get("changed") is True, out
         assert out["old_name_left_in"] == {"saved_graph_labels": 1}, out
 

@@ -6759,8 +6759,7 @@ class TestStaleSessions:
         assert execute_from(preview_of())["stale_sessions"] == \
             [session.session_id]
         before = query(project, "SELECT ctid FROM code_text")
-        out = json.loads(server.apply_codings(session.session_id,
-                                              create_backup=False))
+        out = json.loads(server.apply_codings(session.session_id))
         assert out["total_approved"] == 1
         assert len(out["failures"]) == 1
         assert "does not match the file text" in out["failures"][0]["reason"]
@@ -8013,7 +8012,7 @@ class TestImportRider:
             encoding="utf-8")
         out = json.loads(server.import_text_file(
             filename="new.txt", content="Thomas arrived. Thomas left.",
-            create_backup=False, apply_project_pseudonyms=True))
+            apply_project_pseudonyms=True))
         assert out["success"] is True
         assert query(project, "SELECT fulltext FROM source WHERE id=?",
                      (out["file_id"],))[0]["fulltext"] == \
@@ -8030,8 +8029,7 @@ class TestImportRider:
             json.dumps([{"original": "Thomas", "pseudonym": "Alex"}]),
             encoding="utf-8")
         out = json.loads(server.import_text_file(
-            filename="new.txt", content="Thomas arrived.",
-            create_backup=False))
+            filename="new.txt", content="Thomas arrived."))
         assert "project_pseudonyms" not in out
         assert query(project, "SELECT fulltext FROM source WHERE id=?",
                      (out["file_id"],))[0]["fulltext"] == "Thomas arrived."
@@ -8046,7 +8044,7 @@ class TestImportRider:
             encoding="utf-8")
         out = json.loads(server.import_text_file(
             filename="new.txt", content="Thomas and Alex.",
-            create_backup=False, apply_project_pseudonyms=True))
+            apply_project_pseudonyms=True))
         assert "chain" in out["error"]
         assert query(project, "SELECT id FROM source WHERE name='new.txt'") \
             == []
@@ -8068,7 +8066,7 @@ class TestImportRider:
             encoding="utf-8")
         out = json.loads(server.import_text_file(
             filename="new.txt", content="Zenobia and Quillon.",
-            create_backup=False, apply_project_pseudonyms=True))
+            apply_project_pseudonyms=True))
         assert "mapping entry 0: the pseudonym of entry 0 is also an " \
                "original or variant" in out["error"]
         for forbidden in ("Zenobia", "Quillon", "Rowan"):
@@ -8085,7 +8083,7 @@ class TestImportRider:
             encoding="utf-8")
         out = json.loads(server.import_text_file(
             filename="new.txt", content="﻿Thomas\r\nspoke\rThomas",
-            create_backup=False, apply_project_pseudonyms=True))
+            apply_project_pseudonyms=True))
         stored = query(project, "SELECT fulltext FROM source WHERE id=?",
                        (out["file_id"],))[0]["fulltext"]
         assert stored == "Alex\nspoke\nAlex"
@@ -8094,7 +8092,7 @@ class TestImportRider:
     def test_an_absent_sidecar_refuses_the_import(self, project):
         out = json.loads(server.import_text_file(
             filename="new.txt", content="Thomas arrived.",
-            create_backup=False, apply_project_pseudonyms=True))
+            apply_project_pseudonyms=True))
         assert "was not found" in out["error"]
 
 

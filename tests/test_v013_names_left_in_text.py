@@ -1195,7 +1195,7 @@ class TestAPseudonymCarryingANameIsWithheld:
                                                  encoding="utf-8")
         out = json.loads(server.import_text_file(
             filename="new.txt", content="Thomas Smith met Smith.",
-            create_backup=False, apply_project_pseudonyms=True))
+            apply_project_pseudonyms=True))
         report = out["project_pseudonyms"]
         assert report["per_pseudonym"] == [
             {"entry": 0, "pseudonym": "Jones", "count": 1},
@@ -2199,7 +2199,7 @@ class TestTheImportCountsTheAppliedWithheldOnly:
                                                  encoding="utf-8")
         out = json.loads(server.import_text_file(
             filename="alone.txt", content="Smith came alone.",
-            create_backup=False, apply_project_pseudonyms=True))
+            apply_project_pseudonyms=True))
         report = out["project_pseudonyms"]
         assert report["per_pseudonym"] == [
             {"entry": 0, "pseudonym": "Jones", "count": 1}]

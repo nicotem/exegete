@@ -68,20 +68,18 @@ def _sql(folder, sql, args=()):
 JOURNAL_CALLS = (
     ("create_attribute_type", {"name": "Mood", "applies_to": " Journal ",
                                "memo": "public ##### private"}),
-    ("create_attribute_type", {"name": "Mood", "applies_to": "journal",
-                               "create_backup": False}),
+    ("create_attribute_type", {"name": "Mood", "applies_to": "journal"}),
     ("set_attribute", {"target_type": "journal", "target_id": 1,
                        "attribute_name": "Mood", "value": "calm"}),
     ("set_attribute", {"target_type": "JOURNAL", "target_id": 1,
-                       "attribute_name": "Mood", "value": "calm",
-                       "create_backup": True}),
+                       "attribute_name": "Mood", "value": "calm"}),
 )
 
 
 def _refused_first(answer):
     assert isinstance(answer, dict), answer
     assert answer["error"] == SENTENCE, answer
-    assert set(answer) <= {"error", "create_backup_ignored"}, answer
+    assert set(answer) == {"error"}, answer
 
 
 def test_journal_attributes_are_refused_before_anything_else(tmp_path):

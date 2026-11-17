@@ -42,8 +42,7 @@ class TestS64NumericComparisonFix:
 
     @pytest.fixture
     def with_placeholder_case(self, setup_server, qualcoder_db_path):
-        out = json.loads(server.create_case("Unset participant",
-                                            create_backup=False))
+        out = json.loads(server.create_case("Unset participant"))
         assert out["success"] is True
         return qualcoder_db_path, out["case"]["id"]
 
@@ -84,10 +83,8 @@ class TestS64NumericComparisonFix:
 
     def test_character_equals_stays_string(self, setup_server,
                                            qualcoder_db_path):
-        json.loads(server.create_attribute_type("Region", "case",
-                                                create_backup=False))
-        json.loads(server.set_attribute("case", 1, "Region", "North",
-                                        create_backup=False))
+        json.loads(server.create_attribute_type("Region", "case"))
+        json.loads(server.set_attribute("case", 1, "Region", "North"))
         out = json.loads(server.query_by_attribute("Region", "North"))
         assert len(out["results"]) == 1
 
@@ -112,17 +109,15 @@ class TestS26CaseLinkDedupe:
             (len("Field notes from observation session.") - 1,))
         conn.commit()
         conn.close()
-        out = json.loads(server.link_file_to_case(2, case_id=1,
-                                                   create_backup=False))
+        out = json.loads(server.link_file_to_case(2, case_id=1))
         assert "already linked" in out["error"]
         assert "convention" in out["error"]
 
     def test_exact_convention_still_refused(self, setup_server,
                                             qualcoder_db_path):
         assert json.loads(server.link_file_to_case(
-            2, case_id=1, create_backup=False))["success"]
-        out = json.loads(server.link_file_to_case(2, case_id=1,
-                                                  create_backup=False))
+            2, case_id=1))["success"]
+        out = json.loads(server.link_file_to_case(2, case_id=1))
         assert "already linked" in out["error"]
 
     def test_partial_span_does_not_block(self, setup_server,
@@ -135,8 +130,7 @@ class TestS26CaseLinkDedupe:
             "date) VALUES (1, 2, 0, 10, '', 'TestCoder', '2024-01-15')")
         conn.commit()
         conn.close()
-        out = json.loads(server.link_file_to_case(2, case_id=1,
-                                                   create_backup=False))
+        out = json.loads(server.link_file_to_case(2, case_id=1))
         assert out.get("success") is True
 
 
@@ -148,8 +142,7 @@ class TestS31CreateAttributeType:
 
     def test_case_domain_backfill(self, setup_server, qualcoder_db_path):
         out = json.loads(server.create_attribute_type(
-            "Occupation", "case", memo="What they do",
-            create_backup=False))
+            "Occupation", "case", memo="What they do"))
         assert out["success"] is True
         at = _rows(qualcoder_db_path,
                    "SELECT * FROM attribute_type WHERE name='Occupation'")[0]
@@ -168,7 +161,7 @@ class TestS31CreateAttributeType:
 
     def test_file_domain_backfill(self, setup_server, qualcoder_db_path):
         out = json.loads(server.create_attribute_type(
-            "Language", "file", create_backup=False))
+            "Language", "file"))
         ph = _rows(qualcoder_db_path,
                    "SELECT id FROM attribute WHERE name='Language' "
                    "AND attr_type='file' ORDER BY id")
@@ -181,7 +174,7 @@ class TestS31CreateAttributeType:
         (tests/test_v0151_journal_and_rename_back.py), and the database
         method still takes it."""
         out = json.loads(server.create_attribute_type(
-            "Phase", "journal", create_backup=False))
+            "Phase", "journal"))
         assert out["error"] == server.JOURNAL_ATTRIBUTES_REMOVED
         assert not _rows(qualcoder_db_path,
                          "SELECT * FROM attribute WHERE name='Phase'")
@@ -194,20 +187,19 @@ class TestS31CreateAttributeType:
         assert (ph[0]["id"], ph[0]["attr_type"]) == (1, "journal")
 
     def test_both_is_not_a_domain(self, setup_server):
-        out = json.loads(server.create_attribute_type("X", "both",
-                                                      create_backup=False))
+        out = json.loads(server.create_attribute_type("X", "both"))
         assert "no 'both'" in out["error"]
 
     def test_numeric_valuetype(self, setup_server, qualcoder_db_path):
         json.loads(server.create_attribute_type(
-            "Height", "case", value_type="numeric", create_backup=False))
+            "Height", "case", value_type="numeric"))
         at = _rows(qualcoder_db_path,
                    "SELECT valuetype FROM attribute_type WHERE name='Height'")
         assert at[0]["valuetype"] == "numeric"
 
     def test_invalid_valuetype(self, setup_server):
         out = json.loads(server.create_attribute_type(
-            "X", "case", value_type="integer", create_backup=False))
+            "X", "case", value_type="integer"))
         assert "character" in out["error"]
 
 
@@ -220,8 +212,7 @@ class TestS33NameRules:
     def test_global_namespace_across_domains(self, setup_server):
         """'Age' exists as a CASE attribute — a FILE attribute of the
         same name must be refused (attribute_type.name is the PK)."""
-        out = json.loads(server.create_attribute_type("Age", "file",
-                                                      create_backup=False))
+        out = json.loads(server.create_attribute_type("Age", "file"))
         assert "global" in out["error"]
         assert "case attribute" in out["error"]
 
@@ -232,13 +223,11 @@ class TestS33NameRules:
     def test_reserved_names_both_spellings(self, setup_server, reserved):
         """Upstream reserves only the singular Ref_Author but its RIS
         importer creates Ref_Authors — we reserve BOTH."""
-        out = json.loads(server.create_attribute_type(reserved, "file",
-                                                      create_backup=False))
+        out = json.loads(server.create_attribute_type(reserved, "file"))
         assert "reserved" in out["error"]
 
     def test_empty_name_refused(self, setup_server):
-        out = json.loads(server.create_attribute_type("   ", "case",
-                                                      create_backup=False))
+        out = json.loads(server.create_attribute_type("   ", "case"))
         assert "error" in out
 
 
@@ -251,8 +240,7 @@ class TestS41SetAttribute:
     def test_case_update_refreshes_owner_and_date(self, setup_server,
                                                   qualcoder_db_path):
         """Case path: value + date + owner updated (cases.py:670-679)."""
-        out = json.loads(server.set_attribute("case", 1, "Age", "44",
-                                              create_backup=False))
+        out = json.loads(server.set_attribute("case", 1, "Age", "44"))
         assert out["success"] is True
         assert out["attribute"]["previous_value"] == "30"
         row = _rows(qualcoder_db_path,
@@ -268,15 +256,13 @@ class TestS41SetAttribute:
         claims audit item 18). A named departure: QualCoder's own file
         edit writes the value alone (manage_files.py:1259), which left
         a researcher's placeholder owning the AI's value."""
-        json.loads(server.create_attribute_type("Language", "file",
-                                                create_backup=False))
+        json.loads(server.create_attribute_type("Language", "file"))
         conn = _conn(qualcoder_db_path)
         conn.execute("UPDATE attribute SET owner = 'Researcher', "
                      "date = '2020-01-01' WHERE name='Language' AND id=1")
         conn.commit()
         conn.close()
-        json.loads(server.set_attribute("file", 1, "Language", "Italian",
-                                        create_backup=False))
+        json.loads(server.set_attribute("file", 1, "Language", "Italian"))
         after = _rows(qualcoder_db_path,
                       "SELECT value, owner, date FROM attribute "
                       "WHERE name='Language' AND id=1")[0]
@@ -292,7 +278,7 @@ class TestS41SetAttribute:
                                       read_only=False) as wdb:
             wdb.add_attribute_type("Phase", "TestCoder", "journal")
         out = json.loads(server.set_attribute("journal", 1, "Phase",
-                                              "pilot", create_backup=False))
+                                              "pilot"))
         assert out["error"] == server.JOURNAL_ATTRIBUTES_REMOVED
         assert _rows(qualcoder_db_path, "SELECT value FROM attribute "
                      "WHERE name='Phase'")[0]["value"] == ""
@@ -313,8 +299,7 @@ class TestS41SetAttribute:
         conn.execute("DELETE FROM attribute WHERE name='Age' AND id=1")
         conn.commit()
         conn.close()
-        out = json.loads(server.set_attribute("case", 1, "Age", "39",
-                                              create_backup=False))
+        out = json.loads(server.set_attribute("case", 1, "Age", "39"))
         assert out["attribute"]["row_created"] is True
         assert out["attribute"]["previous_value"] is None
         row = _rows(qualcoder_db_path,
@@ -325,8 +310,7 @@ class TestS41SetAttribute:
     def test_numeric_gate_rejects(self, setup_server, qualcoder_db_path):
         """Deviation from GUI (documented): refuse instead of silently
         blanking a non-castable numeric value."""
-        out = json.loads(server.set_attribute("case", 1, "Age", "thirty",
-                                              create_backup=False))
+        out = json.loads(server.set_attribute("case", 1, "Age", "thirty"))
         assert "not a number" in out["error"]
         row = _rows(qualcoder_db_path,
                     "SELECT value FROM attribute WHERE name='Age' AND id=1")
@@ -334,32 +318,27 @@ class TestS41SetAttribute:
 
     @pytest.mark.parametrize("ok", ["44", "4.5", "1e3", "-2"])
     def test_numeric_gate_accepts_floats(self, setup_server, ok):
-        out = json.loads(server.set_attribute("case", 1, "Age", ok,
-                                              create_backup=False))
+        out = json.loads(server.set_attribute("case", 1, "Age", ok))
         assert out["success"] is True, ok
 
     def test_empty_clears(self, setup_server, qualcoder_db_path):
         """'' is the canonical unset (§4.3) — always accepted, row kept."""
-        out = json.loads(server.set_attribute("case", 1, "Age", "",
-                                              create_backup=False))
+        out = json.loads(server.set_attribute("case", 1, "Age", ""))
         assert out["success"] is True
         row = _rows(qualcoder_db_path,
                     "SELECT value FROM attribute WHERE name='Age' AND id=1")
         assert row[0]["value"] == ""
 
     def test_wrong_domain_refused(self, setup_server):
-        out = json.loads(server.set_attribute("file", 1, "Age", "30",
-                                              create_backup=False))
+        out = json.loads(server.set_attribute("file", 1, "Age", "30"))
         assert "case attribute" in out["error"]
 
     def test_unknown_attribute(self, setup_server):
-        out = json.loads(server.set_attribute("case", 1, "Ghost", "x",
-                                              create_backup=False))
+        out = json.loads(server.set_attribute("case", 1, "Ghost", "x"))
         assert "create_attribute_type" in out["error"]
 
     def test_unknown_entity(self, setup_server):
-        out = json.loads(server.set_attribute("case", 99, "Age", "30",
-                                              create_backup=False))
+        out = json.loads(server.set_attribute("case", 99, "Age", "30"))
         assert "does not exist" in out["error"]
 
 
@@ -378,8 +357,7 @@ class TestS21CaseBackfillExact:
             "'', 'both', 'character')")
         conn.commit()
         conn.close()
-        out = json.loads(server.create_case("Fresh case",
-                                            create_backup=False))
+        out = json.loads(server.create_case("Fresh case"))
         # only the real case attribute (Age) is back-filled
         assert out["case"]["attributes_created"] == 1
 
@@ -394,10 +372,8 @@ class TestS7AnnotationAddenda:
         """§7.1: the GUI never creates a second annotation overlapping
         one by the same coder (it switches to editing). Refuse and point
         at the existing row."""
-        a1 = json.loads(server.add_annotation(1, 0, 10, "first note",
-                                              create_backup=False))
-        out = json.loads(server.add_annotation(1, 5, 15, "overlapping",
-                                               create_backup=False))
+        a1 = json.loads(server.add_annotation(1, 0, 10, "first note"))
+        out = json.loads(server.add_annotation(1, 5, 15, "overlapping"))
         assert "overlaps" in out["error"]
         assert str(a1["annotation"]["annotation_id"]) in out["error"]
         assert "update_annotation" in out["error"]
@@ -412,16 +388,13 @@ class TestS7AnnotationAddenda:
             "'2024-01-15 00:00:00')")
         conn.commit()
         conn.close()
-        out = json.loads(server.add_annotation(1, 5, 15, "my note",
-                                               create_backup=False))
+        out = json.loads(server.add_annotation(1, 5, 15, "my note"))
         assert out.get("success") is True
 
     def test_adjacent_spans_allowed(self, setup_server):
         """End-exclusive adjacency [0,10)+[10,20) is not an overlap."""
-        json.loads(server.add_annotation(1, 0, 10, "first",
-                                         create_backup=False))
-        out = json.loads(server.add_annotation(1, 10, 20, "second",
-                                               create_backup=False))
+        json.loads(server.add_annotation(1, 0, 10, "first"))
+        out = json.loads(server.add_annotation(1, 10, 20, "second"))
         assert out.get("success") is True
 
     def test_refi_born_empty_memo_tolerated_on_read(self, setup_server,
@@ -449,6 +422,5 @@ class TestS7AnnotationAddenda:
         anid = cur.lastrowid
         conn.commit()
         conn.close()
-        out = json.loads(server.delete_annotation(anid,
-                                                  create_backup=False))
+        out = json.loads(server.delete_annotation(anid))
         assert out["deleted"] is True

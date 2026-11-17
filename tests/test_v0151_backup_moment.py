@@ -302,23 +302,22 @@ def test_a_database_sqlite_cannot_copy_under_the_lock_is_not_copied_as_a_file(
 
 
 # ---------------------------------------------------------------------------
-# The ignored argument, in part one's words: the rename's note
+# The rename's note, in part one's words (v0.15.5: create_backup, which
+# a call could give here until then, is refused:
+# tests/test_v0155_retired_names.py)
 # ---------------------------------------------------------------------------
 
-@pytest.mark.parametrize("given", [{}, {"create_backup": False}],
-                         ids=["no-argument", "false"])
 def test_a_rename_names_the_backup_just_taken(setup_server,
-                                              qualcoder_db_path, given):
+                                              qualcoder_db_path):
     made = json.loads(server.create_case(name="Before"))
     case_id = made.get("case_id") or made["case"]["id"]
     before = own_backups(qualcoder_db_path)
     answer = json.loads(server.rename_case(case_id=case_id,
-                                           new_name="After", **given))
+                                           new_name="After"))
     assert answer.get("success"), answer
     assert "including the one just taken" in answer["note"]
     assert len(own_backups(qualcoder_db_path)) == len(before) + 1
-    answer = json.loads(server.rename_file(file_id=1, new_name="renamed.txt",
-                                           **given))
+    answer = json.loads(server.rename_file(file_id=1, new_name="renamed.txt"))
     assert answer.get("success"), answer
     assert "including the one just taken" in answer["note"]
 

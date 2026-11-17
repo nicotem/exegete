@@ -535,17 +535,14 @@ class TestWhatTheAssistantIsTold:
                                "the conversation. At most 1,000,000 "
                                "characters.")
 
-    def test_skipping_the_backup_on_import_is_ignored(self, project):
-        """Deprecated in 0.14.3; from v0.15.1 every tool that takes
-        create_backup ignores it and says so under a key of its own
-        (tests/test_v0151_ignored_argument.py)."""
-        answer = host("import_text_file", filename="x.txt",
-                      content="Some text.", create_backup=False)
-        assert answer["create_backup_ignored"] == \
-            server.IGNORED_CREATE_BACKUP
-        assert "deprecated" not in answer
+    def test_the_import_says_nothing_of_skipping_the_backup(self, project):
+        """Skipping the backup was deprecated in 0.14.3, ignored from
+        v0.15.1 and refused since v0.15.5, when create_backup was removed
+        (tests/test_v0155_retired_names.py): an import's answer carries
+        no word on it."""
         plain = host("import_text_file", filename="y.txt",
                      content="Some text.")
+        assert plain["success"] is True
         assert "create_backup_ignored" not in plain
         assert "deprecated" not in plain
 

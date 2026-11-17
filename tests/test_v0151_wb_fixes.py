@@ -9,8 +9,11 @@
    sub-codes" was refused before any backup, while delete_code refuses
    cascade whatever its value and deletes the whole branch on the
    preview's token alone. The removed arguments are read from Exegete's
-   own table of them (REMOVED_ARGUMENTS), and the refusal itself is
-   checked in test_v0151_removed_arguments.py, test 2.
+   own table of them (REMOVED_ARGUMENTS), its rows of 0.15.1 alone, and
+   the refusal itself is checked in test_v0151_removed_arguments.py,
+   test 2. (v0.15.5: create_backup's rows, removed then, are not read:
+   0.15.1's released entry records `create_backup=false` outside its
+   "Removed" parts, as it then was, accepted and ignored.)
 """
 
 import re
@@ -51,9 +54,10 @@ def _given_a_value(text, argument):
 
 
 def test_the_changelog_passes_no_removed_argument_outside_its_removal():
-    arguments = sorted({argument for _tool, argument
-                        in server.REMOVED_ARGUMENTS})
-    assert "cascade" in arguments
+    arguments = sorted({argument for (_tool, argument), sentence
+                        in server.REMOVED_ARGUMENTS.items()
+                        if "removed in 0.15.1" in sentence})
+    assert arguments == ["cascade", "owner", "search_memo"]
     problems = []
     for heading, body in _parts_outside_removed(_entry_for_0151()):
         for argument in arguments:

@@ -193,13 +193,12 @@ class TestT1ProbeGateMatrix:
     @pytest.mark.parametrize("version", ["v14", "v15", "v16", "v17"])
     def test_writes_proceed_v14_through_v17(self, v17_env, version):
         v17_env(version)
-        out = json.loads(server.set_memo("code", 1, f"memo on {version}",
-                                         create_backup=False))
+        out = json.loads(server.set_memo("code", 1, f"memo on {version}"))
         assert out.get("success") is True, (version, out)
 
     def test_v13_refused_with_corrected_message(self, v17_env):
         v17_env("v13")
-        out = json.loads(server.set_memo("code", 1, "x", create_backup=False))
+        out = json.loads(server.set_memo("code", 1, "x"))
         assert "pre-v14 schema" in out["error"]
         assert "QualCoder 3.8 or newer" in out["error"]
         # the old backwards advice must be gone: a v16+ user must never be
@@ -208,7 +207,7 @@ class TestT1ProbeGateMatrix:
 
     def test_v18_refused_without_override(self, v17_env):
         v17_env("v18")
-        out = json.loads(server.set_memo("code", 1, "x", create_backup=False))
+        out = json.loads(server.set_memo("code", 1, "x"))
         assert "v18" in out["error"]
         # The owner's ruling of 6 October 2026: a researcher is told the
         # release Exegete is verified against, not a development commit
@@ -223,8 +222,7 @@ class TestT1ProbeGateMatrix:
                                                   monkeypatch):
         v17_env("v18")
         monkeypatch.setenv("QUALCODER_MCP_ALLOW_UNKNOWN_SCHEMA", "1")
-        out = json.loads(server.set_memo("code", 1, "override write",
-                                         create_backup=False))
+        out = json.loads(server.set_memo("code", 1, "override write"))
         assert out.get("success") is True
         assert "Warning:" in out["schema_warning"]
         assert "v18" in out["schema_warning"]
@@ -268,8 +266,7 @@ class TestT2MoveSubcode:
         folder = v17_env("v16")
         add_subcode(folder, 10, "Sub stress", supercid=1)
         server.switch_project(str(folder))
-        out = json.loads(server.move_code_to_category(10, category="Category A",
-                                                      create_backup=False))
+        out = json.loads(server.move_code_to_category(10, category="Category A"))
         assert out.get("success") is True, out
         row = _rows(folder, "SELECT catid, supercid FROM code_name WHERE cid=10")[0]
         assert row["catid"] == 1
@@ -282,16 +279,14 @@ class TestT2MoveSubcode:
         folder = v17_env("v16")
         add_subcode(folder, 10, "Sub stress", supercid=1)
         server.switch_project(str(folder))
-        out = json.loads(server.move_code_to_category(10, category=None,
-                                                      create_backup=False))
+        out = json.loads(server.move_code_to_category(10, category=None))
         assert out.get("success") is True, out
         row = _rows(folder, "SELECT catid, supercid FROM code_name WHERE cid=10")[0]
         assert row["catid"] is None and row["supercid"] is None
 
     def test_v14_move_unchanged(self, v17_env):
         folder = v17_env("v14")
-        out = json.loads(server.move_code_to_category(2, category=None,
-                                                      create_backup=False))
+        out = json.loads(server.move_code_to_category(2, category=None))
         assert out.get("success") is True
         row = _rows(folder, "SELECT catid FROM code_name WHERE cid=2")[0]
         assert row["catid"] is None
@@ -433,8 +428,7 @@ class TestT6CreateSubcode:
 
     def test_create_subcode_on_v16(self, v17_env):
         folder = v17_env("v16")
-        out = json.loads(server.create_code("Sub stress", parent_code_id=1,
-                                            create_backup=False))
+        out = json.loads(server.create_code("Sub stress", parent_code_id=1))
         assert out.get("success") is True, out
         cid = out["code"]["id"]
         row = _rows(folder, "SELECT catid, supercid FROM code_name WHERE cid=?",
@@ -445,18 +439,15 @@ class TestT6CreateSubcode:
     def test_both_parents_refused(self, v17_env):
         v17_env("v16")
         out = json.loads(server.create_code("X", category="Category A",
-                                            parent_code_id=1,
-                                            create_backup=False))
+                                            parent_code_id=1))
         assert "not both" in out["error"]
 
     def test_unknown_parent_refused(self, v17_env):
         v17_env("v16")
-        out = json.loads(server.create_code("X", parent_code_id=999,
-                                            create_backup=False))
+        out = json.loads(server.create_code("X", parent_code_id=999))
         assert "does not exist" in out["error"]
 
     def test_refused_on_v14(self, v17_env):
         v17_env("v14")
-        out = json.loads(server.create_code("X", parent_code_id=1,
-                                            create_backup=False))
+        out = json.loads(server.create_code("X", parent_code_id=1))
         assert "v16 or newer" in out["error"]

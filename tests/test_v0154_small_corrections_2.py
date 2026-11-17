@@ -106,7 +106,7 @@ def _guid(sid, text, code="Stress", **extra):
 def _one_of_each(sid, qualcoder_db_path):
     """One suggestion of each status on file 1, and an applied one on
     file 2 under a code no other suggestion names: by GUID."""
-    jcall("create_code", name="Observed", create_backup=False)
+    jcall("create_code", name="Observed")
     guids = {
         "applied": _guid(sid, STRESSED),
         "removed": _guid(sid, COPE, code="Coping"),
@@ -116,8 +116,7 @@ def _one_of_each(sid, qualcoder_db_path):
     approve_and_apply(sid, list(guids.values()))
     ctid = server.session_manager.load_session(sid).get_suggestion_by_guid(
         guids["removed"]).applied_ctid
-    assert jcall("delete_coding", coding_id=ctid,
-                 create_backup=False)["success"] is True
+    assert jcall("delete_coding", coding_id=ctid)["success"] is True
     guids["pending"] = _guid(sid, "interview text.")
     guids["approved"] = _guid(sid, "I feel stressed", code="Coping")
     guids["rejected"] = _guid(sid, "deadlines")

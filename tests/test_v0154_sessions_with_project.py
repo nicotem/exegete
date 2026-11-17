@@ -928,12 +928,11 @@ class TestEverySessionKeptInTheProject:
         guid = record(sid)["recorded"][0]["guid"]
         call("update_suggestion_status", coding_session_id=sid,
              approve=[guid])
-        server.apply_codings(coding_session_id=sid, create_backup=False)
+        server.apply_codings(coding_session_id=sid)
         ctid = server.session_manager.load_session(sid) \
             .get_suggestion_by_guid(guid).applied_ctid
         everyone = {sid, *_copies(project, sid, 200)}
-        out = json.loads(server.delete_coding(coding_id=ctid,
-                                              create_backup=False))
+        out = json.loads(server.delete_coding(coding_id=ctid))
         updated = out["sessions_updated"]
         assert {u["coding_session_id"] for u in updated} == everyone
         assert {u["status"] for u in updated} == {"removed"}

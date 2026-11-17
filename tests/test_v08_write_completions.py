@@ -44,8 +44,7 @@ def _exec(project_path, sql, args=()):
 class TestAddAnnotation:
 
     def test_creates_with_owner_and_date(self, setup_server, qualcoder_db_path):
-        out = json.loads(server.add_annotation(1, 0, 10, "check this opener",
-                                               create_backup=False))
+        out = json.loads(server.add_annotation(1, 0, 10, "check this opener"))
         assert out["success"] is True
         ann = out["annotation"]
         r = _row(qualcoder_db_path,
@@ -60,35 +59,30 @@ class TestAddAnnotation:
         """§4.1: an annotation never exists with memo='' — the memo IS the
         annotation."""
         for empty in ("", "   "):
-            out = json.loads(server.add_annotation(1, 0, 10, empty,
-                                                   create_backup=False))
+            out = json.loads(server.add_annotation(1, 0, 10, empty))
             assert "error" in out and "non-empty" in out["error"]
         assert _row(qualcoder_db_path,
                     "SELECT COUNT(*) FROM annotation")[0] == 0
 
     def test_unique_span_per_owner_precheck(self, setup_server,
                                             qualcoder_db_path):
-        json.loads(server.add_annotation(1, 0, 10, "first",
-                                         create_backup=False))
-        out = json.loads(server.add_annotation(1, 0, 10, "second",
-                                               create_backup=False))
+        json.loads(server.add_annotation(1, 0, 10, "first"))
+        out = json.loads(server.add_annotation(1, 0, 10, "second"))
         assert "already exists" in out["error"]
         assert "update_annotation" in out["error"]  # points to the edit path
 
     def test_position_validation(self, setup_server, qualcoder_db_path):
         assert "0 <= start_pos < end_pos" in json.loads(
-            server.add_annotation(1, 10, 5, "x", create_backup=False))["error"]
+            server.add_annotation(1, 10, 5, "x"))["error"]
         assert "exceeds file length" in json.loads(
-            server.add_annotation(1, 0, 10_000, "x",
-                                  create_backup=False))["error"]
+            server.add_annotation(1, 0, 10_000, "x"))["error"]
 
     def test_media_source_refused(self, setup_server, qualcoder_db_path):
         _exec(qualcoder_db_path,
               "INSERT INTO source (id, name, fulltext, mediapath) "
               "VALUES (30, 'pic.jpg', NULL, '/images/pic.jpg')")
         server.switch_project(qualcoder_db_path)
-        out = json.loads(server.add_annotation(30, 0, 5, "note",
-                                               create_backup=False))
+        out = json.loads(server.add_annotation(30, 0, 5, "note"))
         assert "not a text source" in out["error"]
 
     def test_position_safety_relay_on_unsafe_file(self, setup_server,
@@ -97,8 +91,7 @@ class TestAddAnnotation:
               "INSERT INTO source (id, name, fulltext) "
               "VALUES (31, 'emoji.txt', ?)", ("😀 grinning here today",))
         server.switch_project(qualcoder_db_path)
-        out = json.loads(server.add_annotation(31, 2, 10, "note on unsafe",
-                                               create_backup=False))
+        out = json.loads(server.add_annotation(31, 2, 10, "note on unsafe"))
         assert out["success"] is True
         assert "position_safety_warning" in out
 
@@ -120,8 +113,7 @@ class TestAddAnnotation:
 class TestUpdateAnnotation:
 
     def _make(self, qualcoder_db_path) -> int:
-        out = json.loads(server.add_annotation(1, 0, 10, "original note",
-                                               create_backup=False))
+        out = json.loads(server.add_annotation(1, 0, 10, "original note"))
         return out["annotation"]["annotation_id"]
 
     def test_updates_memo_and_date_not_owner_or_span(self, setup_server,
@@ -132,8 +124,7 @@ class TestUpdateAnnotation:
         before = _row(qualcoder_db_path,
                       "SELECT owner, pos0, pos1 FROM annotation WHERE anid=?",
                       (anid,))
-        out = json.loads(server.update_annotation(anid, "revised note",
-                                                  create_backup=False))
+        out = json.loads(server.update_annotation(anid, "revised note"))
         assert out["updated"] is True
         after = _row(qualcoder_db_path,
                      "SELECT memo, owner, pos0, pos1, date FROM annotation "
@@ -147,8 +138,7 @@ class TestUpdateAnnotation:
     def test_clearing_deletes_the_row(self, setup_server, qualcoder_db_path):
         """§4.3: clear = delete; QualCoder never keeps an empty annotation."""
         anid = self._make(qualcoder_db_path)
-        out = json.loads(server.update_annotation(anid, "",
-                                                  create_backup=False))
+        out = json.loads(server.update_annotation(anid, ""))
         assert out["deleted"] is True
         assert out["deleted_because_cleared"] is True
         assert _row(qualcoder_db_path,
@@ -156,8 +146,7 @@ class TestUpdateAnnotation:
                     (anid,))[0] == 0
 
     def test_unknown_anid(self, setup_server, qualcoder_db_path):
-        out = json.loads(server.update_annotation(999, "x",
-                                                  create_backup=False))
+        out = json.loads(server.update_annotation(999, "x"))
         assert "does not exist" in out["error"]
 
 
@@ -177,7 +166,7 @@ class TestDeleteAnnotation:
         GUI), so the colliding row is seeded directly — exactly how such
         rows arise in real projects (REFI import, GUI convention mixes)."""
         a1 = json.loads(server.add_annotation(
-            1, 0, 10, "note one", create_backup=False))["annotation"]
+            1, 0, 10, "note one"))["annotation"]
         conn = sqlite3.connect(str(Path(qualcoder_db_path) / "data.qda"))
         cur = conn.execute(
             "INSERT INTO annotation (fid, pos0, pos1, memo, owner, date) "
@@ -186,8 +175,7 @@ class TestDeleteAnnotation:
         a2_anid = cur.lastrowid
         conn.commit()
         conn.close()
-        out = json.loads(server.delete_annotation(a1["annotation_id"],
-                                                  create_backup=False))
+        out = json.loads(server.delete_annotation(a1["annotation_id"]))
         assert out["deleted"] is True
         remaining = _row(qualcoder_db_path,
                          "SELECT anid, memo FROM annotation")
@@ -195,7 +183,7 @@ class TestDeleteAnnotation:
         assert remaining["memo"] == "note two — same pos0"
 
     def test_unknown_anid(self, setup_server, qualcoder_db_path):
-        out = json.loads(server.delete_annotation(999, create_backup=False))
+        out = json.loads(server.delete_annotation(999))
         assert "does not exist" in out["error"]
 
 
@@ -209,12 +197,11 @@ class TestMergeCategory:
     def tree(self, setup_server, qualcoder_db_path):
         """Category A(1, fixture) > B > C; code 1 in A, code 2 in B."""
         b = json.loads(server.create_category(
-            "B", parent_category="Category A",
-            create_backup=False))["category"]["id"]
+            "B", parent_category="Category A"))["category"]["id"]
         c = json.loads(server.create_category(
-            "C", parent_category="B", create_backup=False))["category"]["id"]
-        server.move_code_to_category(1, "Category A", create_backup=False)
-        server.move_code_to_category(2, "B", create_backup=False)
+            "C", parent_category="B"))["category"]["id"]
+        server.move_code_to_category(1, "Category A")
+        server.move_code_to_category(2, "B")
         return qualcoder_db_path, {"A": 1, "B": b, "C": c}
 
     def test_preview_counts_without_writing(self, tree):
@@ -286,7 +273,7 @@ class TestCreateCase:
     def test_creates_with_placeholders(self, setup_server, qualcoder_db_path):
         """§5.1: memo='' default, owner=codername, one empty attribute row
         per case attribute type (the fixture defines 'Age')."""
-        out = json.loads(server.create_case("Dana", create_backup=False))
+        out = json.loads(server.create_case("Dana"))
         assert out["success"] is True
         case = out["case"]
         assert case["attributes_created"] == 1  # fixture has case attr 'Age'
@@ -303,23 +290,21 @@ class TestCreateCase:
 
     def test_duplicate_name_is_idempotent(self, setup_server, qualcoder_db_path):
         """v0.12 (D5): a duplicate create answers with the existing row."""
-        out = json.loads(server.create_case("Case A", create_backup=False))
+        out = json.loads(server.create_case("Case A"))
         assert "error" not in out
         assert out["created"] is False and out["reason"] == "already_exists"
         assert out["match"] == "exact" and out["case"]["id"] == 1
         assert _row(qualcoder_db_path, "SELECT COUNT(*) AS n FROM cases")["n"] == 1
 
     def test_whitespace_name_refused(self, setup_server, qualcoder_db_path):
-        out = json.loads(server.create_case("   ", create_backup=False))
+        out = json.loads(server.create_case("   "))
         assert "non-empty" in out["error"]
 
     def test_links_compose_with_case_tools(self, setup_server,
                                            qualcoder_db_path):
         """create_case -> link_file_to_case -> case analysis end to end."""
-        case = json.loads(server.create_case("Dana",
-                                             create_backup=False))["case"]
-        out = json.loads(server.link_file_to_case(1, case_name="Dana",
-                                                  create_backup=False))
+        case = json.loads(server.create_case("Dana"))["case"]
+        out = json.loads(server.link_file_to_case(1, case_name="Dana"))
         assert out["success"] is True
         codes = json.loads(server.get_codes_by_case(case["id"]))
         assert isinstance(codes, list) and len(codes) >= 1

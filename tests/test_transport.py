@@ -565,7 +565,7 @@ def test_write_path_approval_flow(write_project):
             }))
 
             applied = text_of(await s.call_tool("apply_codings", {
-                "coding_session_id": sid, "create_backup": True,
+                "coding_session_id": sid,
             }))
 
             # Independent verification: read Coping segments back over the wire.

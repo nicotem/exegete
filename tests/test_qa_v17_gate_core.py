@@ -225,8 +225,7 @@ class TestProbeGate:
         _attach(p, tmp_path)
         for out in (server.set_memo("code", 1, "clean"),
                     server.create_code("Clean probe"),
-                    server.import_text_file("clean.txt", "content",
-                                            create_backup=False)):
+                    server.import_text_file("clean.txt", "content")):
             assert "schema_warning" not in json.loads(out)
 
     def test_probe_cached_per_connection_refreshed_on_reconnect(self, tmp_path):

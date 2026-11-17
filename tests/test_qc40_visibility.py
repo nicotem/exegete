@@ -549,29 +549,27 @@ class TestWriteEchoesRedactHiddenTargets:
 
     def test_delete_coding_hidden_target_refused_without_override(
             self, visibility_db):
-        self._assert_refused(server.delete_coding(3, create_backup=False))
+        self._assert_refused(server.delete_coding(3))
         assert _row(visibility_db,
                     "SELECT COUNT(*) FROM code_text WHERE ctid = 3")[0] == 1
         assert _backups(visibility_db) == []
 
     def test_update_annotation_hidden_target_refused_without_override(
             self, visibility_db):
-        self._assert_refused(server.update_annotation(1, "probe",
-                                                      create_backup=False))
+        self._assert_refused(server.update_annotation(1, "probe"))
         assert _row(visibility_db,
                     "SELECT memo FROM annotation WHERE anid = 1")[0] == \
             "hidden annotation"
 
     def test_delete_annotation_hidden_target_refused_without_override(
             self, visibility_db):
-        self._assert_refused(server.delete_annotation(1, create_backup=False))
+        self._assert_refused(server.delete_annotation(1))
         assert _row(visibility_db,
                     "SELECT COUNT(*) FROM annotation WHERE anid = 1")[0] == 1
 
     def test_set_memo_on_hidden_coding_refused_without_override(
             self, visibility_db):
-        self._assert_refused(server.set_memo("coding", 3, "probe",
-                                             create_backup=False))
+        self._assert_refused(server.set_memo("coding", 3, "probe"))
         assert _row(visibility_db,
                     "SELECT memo FROM code_text WHERE ctid = 3")[0] == \
             "hidden memo"
@@ -596,7 +594,7 @@ class TestWriteEchoesRedactHiddenTargets:
     # -- overrides: ids-only echo (Tier 1) ------------------------------
 
     def test_delete_coding_with_override_echoes_ids_only(self, visibility_db):
-        raw = server.delete_coding(3, create_backup=False,
+        raw = server.delete_coding(3,
                                    allow_hidden_coder=True)
         out = self._assert_redacted_success(raw)
         assert out["message"] == "Deleted coding 3"
@@ -608,7 +606,7 @@ class TestWriteEchoesRedactHiddenTargets:
 
     def test_update_annotation_with_override_echoes_ids_only(
             self, visibility_db):
-        raw = server.update_annotation(1, "probe", create_backup=False,
+        raw = server.update_annotation(1, "probe",
                                        allow_hidden_coder=True)
         out = self._assert_redacted_success(raw)
         assert out["annotation_id"] == 1
@@ -625,7 +623,7 @@ class TestWriteEchoesRedactHiddenTargets:
 
     def test_delete_annotation_with_override_echoes_ids_only(
             self, visibility_db):
-        raw = server.delete_annotation(1, create_backup=False,
+        raw = server.delete_annotation(1,
                                        allow_hidden_coder=True)
         out = self._assert_redacted_success(raw)
         assert out["annotation_id"] == 1
@@ -641,7 +639,7 @@ class TestWriteEchoesRedactHiddenTargets:
             self, visibility_db):
         # update_annotation("") deletes the row; the redaction must hold
         # on that path too
-        raw = server.update_annotation(1, "", create_backup=False,
+        raw = server.update_annotation(1, "",
                                        allow_hidden_coder=True)
         out = self._assert_redacted_success(raw)
         assert out["deleted"] is True
@@ -649,7 +647,7 @@ class TestWriteEchoesRedactHiddenTargets:
         assert "owner" not in out and "memo" not in out
 
     def test_set_memo_on_hidden_coding_with_override(self, visibility_db):
-        raw = server.set_memo("coding", 3, "probe", create_backup=False,
+        raw = server.set_memo("coding", 3, "probe",
                               allow_hidden_coder=True)
         self._assert_no_leak(raw)
         out = json.loads(raw)
@@ -675,7 +673,7 @@ class TestWriteEchoesRedactHiddenTargets:
         con.close()
         _reopen(visibility_db)
 
-        raw = server.delete_coding(3, create_backup=False)
+        raw = server.delete_coding(3)
         self._assert_no_leak(raw)
         out = json.loads(raw)
         assert "error" in out
@@ -686,17 +684,17 @@ class TestWriteEchoesRedactHiddenTargets:
         assert "confirm_private_note_deletion" in out["error"]
 
         # One override alone is not enough, either way round
-        one = json.loads(server.delete_coding(3, create_backup=False,
+        one = json.loads(server.delete_coding(3,
                                               allow_hidden_coder=True))
         assert one["refused"] == ["private_note"]
         other = json.loads(server.delete_coding(
-            3, create_backup=False, confirm_private_note_deletion=True))
+            3, confirm_private_note_deletion=True))
         assert other["refused"] == ["hidden_coder"]
         assert _row(visibility_db,
                     "SELECT COUNT(*) FROM code_text WHERE ctid = 3")[0] == 1
         assert _backups(visibility_db) == []
 
-        raw = server.delete_coding(3, create_backup=False,
+        raw = server.delete_coding(3,
                                    allow_hidden_coder=True,
                                    confirm_private_note_deletion=True)
         assert secret not in raw
@@ -704,8 +702,8 @@ class TestWriteEchoesRedactHiddenTargets:
         assert out["deleted_coding"]["hidden_coder_row"] is True
         assert out["deleted_coding"]["private_note_removed"] is True
         assert "memo" not in out["deleted_coding"]
-        # S-P2 (a): a backup exists even though create_backup=False, as
-        # before every change since v0.15.1, so no note says so
+        # S-P2 (a): a backup exists, as before every change since
+        # v0.15.1, so no note says so
         assert "backup_path" in out
         assert "backup_note" not in out
         assert len(_backups(visibility_db)) == 1
@@ -718,7 +716,7 @@ class TestWriteEchoesRedactHiddenTargets:
             self, visibility_db):
         # The guards are per row: the visible coding on the very same 4.0
         # project needs no override, keeps the full echo, carries no note
-        out = json.loads(server.delete_coding(1, create_backup=False))
+        out = json.loads(server.delete_coding(1))
         assert out["deleted_coding"]["code_name"] == "Stress"
         assert out["deleted_coding"]["owner"] == "TestCoder"
         assert out["deleted_coding"]["text"] == "I feel stressed about deadlines"
@@ -727,22 +725,20 @@ class TestWriteEchoesRedactHiddenTargets:
         assert out["message"].startswith("Deleted coding 1 ('Stress' on")
 
     def test_visible_annotation_keeps_full_echo(self, visibility_db):
-        out = json.loads(server.add_annotation(1, 5, 9, "mine",
-                                               create_backup=False))
+        out = json.loads(server.add_annotation(1, 5, 9, "mine"))
         anid = out["annotation"]["annotation_id"]
-        upd = json.loads(server.update_annotation(anid, "edited",
-                                                  create_backup=False))
+        upd = json.loads(server.update_annotation(anid, "edited"))
         assert upd["owner"] == server._default_owner()
         assert upd["file_name"] == "interview.txt"
         assert "coder_visibility" not in upd
-        dele = json.loads(server.delete_annotation(anid, create_backup=False))
+        dele = json.loads(server.delete_annotation(anid))
         assert dele["memo"] == "edited"
         assert "coder_visibility" not in dele
 
     def test_pre40_project_never_redacts_or_refuses(self, setup_server):
         # No visibility capability: every row is visible, full echo, no
         # note, no override needed
-        out = json.loads(server.delete_coding(1, create_backup=False))
+        out = json.loads(server.delete_coding(1))
         assert out["deleted_coding"]["owner"] == "TestCoder"
         assert "coder_visibility" not in out
         assert server.db.coding_is_visible(2) is True
@@ -882,9 +878,9 @@ class TestVisibilityGuardFailsClosed:
         with pytest.raises(RuntimeError):
             server.db.existing_row_status("annotation", 1)
 
-    # The by-id calls below use the DEFAULT create_backup: the guard must
-    # refuse before the backup a default call would take, so
-    # _rows_intact's "no backup" assertion is meaningful (fix round 4)
+    # The by-id calls below would each take a backup: the guard must
+    # refuse before it, so _rows_intact's "no backup" assertion is
+    # meaningful (fix round 4)
 
     @pytest.mark.parametrize("variant", sorted(_BROKEN_VIEWS))
     def test_by_id_writes_error_out_without_override(self, visibility_db,
@@ -919,9 +915,9 @@ class TestVisibilityGuardFailsClosed:
     @pytest.mark.parametrize("variant", sorted(_BROKEN_VIEWS))
     def test_guard_runs_before_any_backup(self, visibility_db, variant,
                                           monkeypatch):
-        # Timestamp-independent form of the no-backup assertion: with the
-        # default create_backup, without and with the override, the
-        # pre-check refuses before backup_before_write is ever reached
+        # Timestamp-independent form of the no-backup assertion: without
+        # and with the override, the pre-check refuses before
+        # backup_before_write is ever reached
         _break_views(visibility_db, variant)
         _reopen(visibility_db)
         reached = []
@@ -950,8 +946,7 @@ class TestVisibilityGuardFailsClosed:
         # hidden one, so it refuses both: ctid 1 is TestCoder's own coding
         _break_views(visibility_db, "no_id_column")
         _reopen(visibility_db)
-        self._assert_failed_closed(server.delete_coding(1,
-                                                        create_backup=False))
+        self._assert_failed_closed(server.delete_coding(1))
         assert _row(visibility_db,
                     "SELECT COUNT(*) FROM code_text WHERE ctid = 1")[0] == 1
 
@@ -992,7 +987,7 @@ class TestVisibilityGuardFailsClosed:
             return real_perform_write(op, **kwargs)
 
         monkeypatch.setattr(server, "_perform_write", break_then_write)
-        raw = server.set_memo("coding", 3, "probe", create_backup=False,
+        raw = server.set_memo("coding", 3, "probe",
                               allow_hidden_coder=True)
         assert broken, "the view never broke; the test proves nothing"
         out = self._assert_failed_closed(raw)
@@ -1034,8 +1029,7 @@ class TestVisibilityGuardFailsClosed:
         _break_views(visibility_db, "missing_table")
         _reopen(visibility_db)
         assert "error" in json.loads(server.get_coded_segments(1))
-        self._assert_failed_closed(server.delete_coding(3,
-                                                        create_backup=False))
+        self._assert_failed_closed(server.delete_coding(3))
 
 
 class TestTheCapabilityIsNotAVersion:

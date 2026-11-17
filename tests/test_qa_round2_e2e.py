@@ -388,7 +388,7 @@ class TestUnhappyPaths:
         content = "".join(f"Paragraph {i:03d} about workload and recovery. "
                           for i in range(400))
         imp = json.loads(server.import_text_file(
-            "big_interview.txt", content, create_backup=False))
+            "big_interview.txt", content))
         fid = imp["file_id"]
 
         sid = _session_id(server.start_coding_session([fid], instruction="test"))
@@ -410,7 +410,7 @@ class TestUnhappyPaths:
         guids = [r["guid"] for r in rec["recorded"]]
         server.update_suggestion_status(sid, approve=guids)
         t0 = time.perf_counter()
-        result = server.apply_codings(sid, create_backup=False)
+        result = server.apply_codings(sid)
         apply_ms = (time.perf_counter() - t0) * 1000
         assert "Codings applied" in result
 

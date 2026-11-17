@@ -417,7 +417,7 @@ class TestTheImportsAndGetCurrentProject:
         _list(named, BROKEN)
         raw = _once(server.import_text_file(
             filename="fresh.txt", content="Words.",
-            apply_project_pseudonyms=True, create_backup=False))
+            apply_project_pseudonyms=True))
         assert json.loads(raw)["error"].endswith(server.EDITOR_AI_WARNING)
 
     @pytest.mark.parametrize("kind", ["cannot_read", "cannot_use"])

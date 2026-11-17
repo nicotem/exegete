@@ -274,8 +274,7 @@ class TestCreateCaseAndBackfill:
         _exec(qualcoder_db_path,
               "INSERT INTO attribute_type VALUES ('BothAttr','2024','T','','both','character')")
         _reload()
-        out = json.loads(server.import_text_file("bf.txt", "content",
-                                                 create_backup=False))
+        out = json.loads(server.import_text_file("bf.txt", "content"))
         fid = out["file_id"]
         atts = {r["name"] for r in _rows(
             qualcoder_db_path,

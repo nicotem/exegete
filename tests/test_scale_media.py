@@ -287,7 +287,7 @@ class TestWriteLoop:
         guids = [r["guid"] for r in rec["recorded"]]
 
         server.update_suggestion_status(sid, approve=guids)
-        applied = server.apply_codings(sid, create_backup=True)
+        applied = server.apply_codings(sid)
         assert "Codings applied" in applied, applied
 
         after_apply = db_counts(proj)
@@ -672,7 +672,7 @@ def _bench_write_loop(scratch):
     rec = json.loads(server.record_suggestions(sid, suggs, replace=True))
     guids = [r["guid"] for r in rec["recorded"]]
     _, out["update_suggestion_status(20)"], _ = time_call(lambda: server.update_suggestion_status(sid, approve=guids))
-    _, out["apply_codings(20+backup)"], peak = time_call(lambda: server.apply_codings(sid, create_backup=True))
+    _, out["apply_codings(20+backup)"], peak = time_call(lambda: server.apply_codings(sid))
     out["_apply_peak_kib"] = peak
     conn = sqlite3.connect(str(proj / "data.qda"))
     ctid = conn.execute("SELECT ctid FROM code_text WHERE owner='AI Coding Assistant' LIMIT 1").fetchone()[0]

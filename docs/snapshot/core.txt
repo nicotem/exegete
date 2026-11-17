@@ -2126,8 +2126,6 @@ Safety guarantees:
 
 Args:
     coding_session_id: The session ID with approved suggestions
-    create_backup: No longer used: Exegete takes a backup before every
-                   change (accepted until the release on method)
 
 Returns:
     Detailed confirmation of what was written to the database
@@ -2145,18 +2143,6 @@ Example:
       "coding_session_id": {
         "title": "Coding Session Id",
         "type": "string"
-      },
-      "create_backup": {
-        "anyOf": [
-          {
-            "type": "boolean"
-          },
-          {
-            "type": "null"
-          }
-        ],
-        "default": null,
-        "title": "Create Backup"
       }
     },
     "required": [
@@ -2228,8 +2214,6 @@ Args:
     coding_id: The ctid of the coding to delete. You can find ctids in
                the output of apply_codings, get_coded_segments, or
                read_file_with_codings (segment_id).
-    create_backup: No longer used: Exegete takes a backup before every
-                   change (accepted until the release on method)
     allow_hidden_coder: Override to delete a hidden coder's coding
     confirm_private_note_deletion: Override to delete a coding whose
                memo carries a private note
@@ -2252,18 +2236,6 @@ Example:
       "coding_id": {
         "title": "Coding Id",
         "type": "integer"
-      },
-      "create_backup": {
-        "anyOf": [
-          {
-            "type": "boolean"
-          },
-          {
-            "type": "null"
-          }
-        ],
-        "default": null,
-        "title": "Create Backup"
       },
       "allow_hidden_coder": {
         "default": false,
@@ -2640,8 +2612,6 @@ Args:
                id / coding ctid / case caseid); null, or left out, for
                'project'
     memo: The memo text ('' clears it)
-    create_backup: No longer used: Exegete takes a backup before every
-                   change (accepted until the release on method)
     allow_hidden_coder: Override to write on a hidden coder's coding
                         (target_type 'coding' only)
 
@@ -2678,18 +2648,6 @@ Example:
       "memo": {
         "title": "Memo",
         "type": "string"
-      },
-      "create_backup": {
-        "anyOf": [
-          {
-            "type": "boolean"
-          },
-          {
-            "type": "null"
-          }
-        ],
-        "default": null,
-        "title": "Create Backup"
       },
       "allow_hidden_coder": {
         "default": false,
@@ -2778,8 +2736,6 @@ Args:
     memo: Optional code definition/memo
     parent_code_id: Optional cid of an existing code to nest under
                     (v16+ sub-code; mutually exclusive with category)
-    create_backup: No longer used: Exegete takes a backup before every
-                   change (accepted until the release on method)
 
 Returns:
     JSON with the new code's id, name, category and color, or the
@@ -2845,18 +2801,6 @@ Example:
         ],
         "default": null,
         "title": "Parent Code Id"
-      },
-      "create_backup": {
-        "anyOf": [
-          {
-            "type": "boolean"
-          },
-          {
-            "type": "null"
-          }
-        ],
-        "default": null,
-        "title": "Create Backup"
       }
     },
     "required": [

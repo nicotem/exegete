@@ -99,8 +99,7 @@ class TestRecordingUnderBothRules:
         _call_text("update_suggestion_status",
                    {"coding_session_id": sid, "approve": [guid]})
         text = text_of(host_session(lambda c: c.call_tool(
-            "apply_codings", {"coding_session_id": sid,
-                              "create_backup": False})))
+            "apply_codings", {"coding_session_id": sid})))
         assert "Codings applied" in text
         assert _memos(qualcoder_db_path) == [
             "Reading: explicit (the passage states what the code names)"]
@@ -185,12 +184,10 @@ class TestSessionFilesBothWays:
                     )["recorded"][0]["guid"]
             await call("update_suggestion_status", {
                 "coding_session_id": undone, "approve": [guid]})
-            await call("apply_codings", {"coding_session_id": undone,
-                                         "create_backup": False})
+            await call("apply_codings", {"coding_session_id": undone})
             ctid = server.session_manager.load_session(undone) \
                 .get_suggestion_by_guid(guid).applied_ctid
-            deleted = await call("delete_coding", {"coding_id": ctid,
-                                                   "create_backup": False})
+            deleted = await call("delete_coding", {"coding_id": ctid})
             merged = (await call("start_coding_session",
                                  {"instruction": "test", "file_ids": [1]}))["coding_session_id"]
             proposed = await call("propose_codes", {
@@ -256,8 +253,7 @@ class TestTheExportsAndTheMemoInWords:
             "recorded"][0]["guid"]
         _call_text("update_suggestion_status",
                    {"coding_session_id": sid, "approve": [guid]})
-        _call_text("apply_codings", {"coding_session_id": sid,
-                                     "create_backup": False})
+        _call_text("apply_codings", {"coding_session_id": sid})
         memo = _memos(qualcoder_db_path)[0]
         assert memo == ("Reading: interpretive (the code rests on what the passage "
                         "implies rather than on what it says)\n\nread in")
@@ -317,13 +313,11 @@ class TestDeleteUnderTheOtherSpelling:
             await call("update_suggestion_status",
                        {"coding_session_id": sid, "approve": [guid]})
             await call("select_project", {"project_path": spelt(applied_as)})
-            applied = await call("apply_codings", {"coding_session_id": sid,
-                                                   "create_backup": False})
+            applied = await call("apply_codings", {"coding_session_id": sid})
             ctid = server.session_manager.load_session(sid) \
                 .get_suggestion_by_guid(guid).applied_ctid
             await call("select_project", {"project_path": spelt(deleted_as)})
-            deleted = await call("delete_coding", {"coding_id": ctid,
-                                                   "create_backup": False})
+            deleted = await call("delete_coding", {"coding_id": ctid})
             return sid, guid, applied, deleted
 
         sid, guid, applied, deleted = host_session(drive)
@@ -378,8 +372,7 @@ class TestDeleteUnderTheOtherSpelling:
         guid = _record(sid, _item())["recorded"][0]["guid"]
         _call_text("update_suggestion_status",
                    {"coding_session_id": sid, "approve": [guid]})
-        _call_text("apply_codings", {"coding_session_id": sid,
-                                     "create_backup": False})
+        _call_text("apply_codings", {"coding_session_id": sid})
         ctid = server.session_manager.load_session(sid) \
             .get_suggestion_by_guid(guid).applied_ctid
         twin = tmp_path / "twin.qda"
@@ -397,8 +390,7 @@ class TestDeleteUnderTheOtherSpelling:
 
         monkeypatch.setattr(SessionManager, "same_project",
                             staticmethod(same))
-        out = host_json("delete_coding", {"coding_id": ctid,
-                                          "create_backup": False})
+        out = host_json("delete_coding", {"coding_id": ctid})
         marked = {u["coding_session_id"] for u in out["sessions_updated"]}
         assert marked == {sid, other.session_id}
         assert any(first.startswith(str(twin.resolve()))

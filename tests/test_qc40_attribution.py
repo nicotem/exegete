@@ -140,7 +140,7 @@ class TestAiCoderNameConfig:
         would refuse to store anyway.
         """
         monkeypatch.setenv(AI_CODER_NAME_ENV, "bad\nname")
-        out = json.loads(server.create_code("Declared", create_backup=False))
+        out = json.loads(server.create_code("Declared"))
         assert out.get("success") is True, out
         assert _row(qualcoder_db_path,
                     "SELECT owner FROM code_name WHERE name='Declared'"
@@ -159,11 +159,11 @@ class TestDefaultAttribution:
     def test_create_code_category_case_journal_annotation(
             self, setup_server, qualcoder_db_path, monkeypatch):
         monkeypatch.delenv(AI_CODER_NAME_ENV, raising=False)
-        server.create_code("OwnCode", create_backup=False)
-        server.create_category("OwnCat", create_backup=False)
-        server.create_case("OwnCase", create_backup=False)
-        server.add_journal_entry("OwnJournal", "text", create_backup=False)
-        server.add_annotation(1, 0, 4, "note", create_backup=False)
+        server.create_code("OwnCode")
+        server.create_category("OwnCat")
+        server.create_case("OwnCase")
+        server.add_journal_entry("OwnJournal", "text")
+        server.add_annotation(1, 0, 4, "note")
 
         checks = [
             ("SELECT owner FROM code_name WHERE name='OwnCode'",),
@@ -180,13 +180,13 @@ class TestDefaultAttribution:
                                             qualcoder_db_path, monkeypatch):
         monkeypatch.delenv(AI_CODER_NAME_ENV, raising=False)
         out = json.loads(server.import_text_file(
-            "own_import.txt", "Some text.", create_backup=False))
+            "own_import.txt", "Some text."))
         assert out["success"] is True
         assert out["owner"] == DEFAULT_AI_CODER_NAME
         fid = out["file_id"]
-        server.link_file_to_case(fid, case_id=1, create_backup=False)
-        server.create_attribute_type("OwnAttr", "case", create_backup=False)
-        server.set_attribute("case", 1, "OwnAttr", "yes", create_backup=False)
+        server.link_file_to_case(fid, case_id=1)
+        server.create_attribute_type("OwnAttr", "case")
+        server.set_attribute("case", 1, "OwnAttr", "yes")
 
         assert _row(qualcoder_db_path,
                     "SELECT owner FROM source WHERE id=?",
@@ -209,7 +209,7 @@ class TestDefaultAttribution:
         server.update_suggestion_status(
             session.session_id,
             approve=[session.suggestions[0].guid])
-        out = server.apply_codings(session.session_id, create_backup=False)
+        out = server.apply_codings(session.session_id)
         assert "Codings applied" in out
         row = _row(qualcoder_db_path,
                    "SELECT owner FROM code_text WHERE pos0=0 AND pos1=10")
@@ -227,7 +227,7 @@ class TestConfiguredAttribution:
         """Rule c2: a declaration that differs from the project's name is
         a question for the user, never a silent re-attribution."""
         monkeypatch.setenv(AI_CODER_NAME_ENV, "AI Agent")
-        out = json.loads(server.create_code("AgentCode", create_backup=False))
+        out = json.loads(server.create_code("AgentCode"))
         assert out["host_declared_ai_coder_name"] == "AI Agent"
         assert out["ai_coder_name"] == DEFAULT_AI_CODER_NAME
         assert out["quick_picks"] == ["AI Agent", DEFAULT_AI_CODER_NAME]
@@ -239,8 +239,8 @@ class TestConfiguredAttribution:
         # answer decides the attribution.
         out = json.loads(server.set_project_ai_coder_name("AI Agent"))
         assert out["success"] is True
-        server.create_code("AgentCode", create_backup=False)
-        server.add_journal_entry("AgentJournal", "text", create_backup=False)
+        server.create_code("AgentCode")
+        server.add_journal_entry("AgentJournal", "text")
         assert _row(qualcoder_db_path,
                     "SELECT owner FROM code_name WHERE name='AgentCode'"
                     )["owner"] == "AI Agent"
@@ -259,7 +259,7 @@ class TestConfiguredAttribution:
         assert out["ai_coder_name"]["host_declaration"] == "AI Agent"
         assert "Unchanged; the choice was recorded again (acknowledging " \
             "the AI coder name in Exegete's settings)." in out["warnings"]
-        out = json.loads(server.create_code("KeptCode", create_backup=False))
+        out = json.loads(server.create_code("KeptCode"))
         assert out.get("success") is True, out
         assert _row(qualcoder_db_path,
                     "SELECT owner FROM code_name WHERE name='KeptCode'"
@@ -291,7 +291,7 @@ class TestConfiguredAttribution:
         assert len(reloaded.filter_by_status("approved")) == 1
 
         # Retrying without the argument writes under the project's name.
-        out = server.apply_codings(session.session_id, create_backup=False)
+        out = server.apply_codings(session.session_id)
         assert "Codings applied" in out
         assert _row(qualcoder_db_path,
                     "SELECT owner FROM code_text WHERE pos0=0 AND pos1=10"

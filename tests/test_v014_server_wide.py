@@ -336,8 +336,7 @@ class TestUnknownArgumentsRefused:
             "create_case", {"name": "Dana", "bogus_arg": 1}))
         body = json.loads(text_of(result))
         assert body["unknown_arguments"] == ["bogus_arg"]
-        assert "Its arguments are: name, memo, create_backup." in \
-            body["error"]
+        assert "Its arguments are: name, memo." in body["error"]
         with closing(sqlite3.connect(db)) as conn, conn:
             assert conn.execute(count).fetchone()[0] == 0
 
@@ -456,14 +455,15 @@ NOT_TOOLS = {
     "set_at": "a key of the AI coder name's record",
     "update_check": "the check for new versions' state file, "
                     "update_check.json, and the extension's setting",
-    "create_backup_ignored": "the key of an answer to a call that gave "
-                             "create_backup, which Exegete ignores",
     "search_memo": "search_files' argument removed in 0.15.1, which the "
                    "refusal of a call passing it names (REMOVED_ARGUMENTS)",
     "analyze_for_coding": "a help topic removed in 0.15.1, whose answer "
                           "gives it back as the topic asked for "
                           "(REMOVED_HELP_TOPICS), and the earlier name of "
                           "start_coding_session, removed in 0.15.5",
+    "create_backup": "the argument of 22 tools removed in 0.15.5, which "
+                     "the refusal of a call passing it names "
+                     "(REMOVED_ARGUMENTS)",
     "undo_receipt": "the key of a change's answer, and a line of "
                     "apply_codings' answer, that names the change's record "
                     "(v0.15.2)",

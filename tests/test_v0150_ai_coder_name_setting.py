@@ -189,7 +189,7 @@ class TestTheWords:
     def test_the_ask_names_the_setting(self, setup_server_unset,
                                        monkeypatch):
         monkeypatch.setenv(AI, SETTING)
-        out = json.loads(server.create_code("Asked", create_backup=False))
+        out = json.loads(server.create_code("Asked"))
         assert out["error"] == ASK_WITH_SETTING
         assert out["quick_picks"][0] == SETTING
         assert out["action_required"] == "set_project_ai_coder_name"
@@ -202,7 +202,7 @@ class TestTheWords:
         monkeypatch.delenv(AI, raising=False)
         server.set_project_ai_coder_name("Model A")
         monkeypatch.setenv(AI, "Model B")
-        out = json.loads(server.create_code("Blocked", create_backup=False))
+        out = json.loads(server.create_code("Blocked"))
         assert out["error"] == _mismatch("Model B", "Model A", place)
         # its fields keep their names
         assert out["ai_coder_name"] == "Model A"
@@ -212,7 +212,7 @@ class TestTheWords:
         # "keep": the project keeps its name, and is not asked again
         kept = json.loads(server.set_project_ai_coder_name("Model A"))
         assert kept["ai_coder_name"]["name"] == "Model A"
-        out = json.loads(server.create_code("Kept", create_backup=False))
+        out = json.loads(server.create_code("Kept"))
         assert out.get("success") is True, out
         assert _owner_of_code(qualcoder_db_path, "Kept") == "Model A"
         assert read_sidecar(Path(qualcoder_db_path)).name == "Model A"
@@ -303,13 +303,12 @@ class TestAtCreation:
         monkeypatch.setenv(AI, SETTING)
         folder = Path(_create("First", tmp_path)["project_path"])
         if tool == "create_code":
-            out = json.loads(server.create_code("Theme",
-                                                create_backup=False))
+            out = json.loads(server.create_code("Theme"))
             assert out.get("success") is True, out
             assert _owner_of_code(folder, "Theme") == SETTING
         else:
             out = json.loads(server.import_text_file(
-                "notes.txt", "Some words.", create_backup=False))
+                "notes.txt", "Some words."))
             assert out.get("success") is True, out
             conn = sqlite3.connect(str(folder / "data.qda"))
             try:
@@ -328,7 +327,7 @@ class TestAtCreation:
         monkeypatch.setenv(AI, SETTING)
         folder = Path(_create("Later", tmp_path)["project_path"])
         monkeypatch.setenv(AI, "Model B")
-        out = json.loads(server.create_code("Held", create_backup=False))
+        out = json.loads(server.create_code("Held"))
         assert out["error"] == _mismatch("Model B", SETTING, place)
         assert read_sidecar(folder).name == SETTING
 
@@ -377,7 +376,7 @@ class TestAtCreation:
         assert answer["next_steps"][0] == ASK_STEP
         assert (Path(answer["project_path"]) / "data.qda").is_file()
         # and the first change asks, with the setting offered first
-        out = json.loads(server.create_code("Asked", create_backup=False))
+        out = json.loads(server.create_code("Asked"))
         assert out["error"] == ASK_WITH_SETTING
 
     def test_a_marker_that_cannot_be_written_is_tried_again(
@@ -404,7 +403,7 @@ class TestAtCreation:
         assert _ai_warnings(answer) == []
         assert (folder / SIDECAR_NAME).is_file()
         assert not (folder / OLD_SIDECAR_NAME).exists()
-        out = json.loads(server.create_code("Retried", create_backup=False))
+        out = json.loads(server.create_code("Retried"))
         assert out.get("success") is True, out
         assert (folder / OLD_SIDECAR_NAME).is_file()
         assert calls == [OLD_SIDECAR_NAME, OLD_SIDECAR_NAME]
@@ -442,7 +441,7 @@ class TestWithoutTheSetting:
         assert _ai_warnings(answer) == []
         assert sorted(p.name for p in folder.iterdir()) == [
             "ai_data", "audio", "data.qda", "documents", "images", "video"]
-        out = json.loads(server.create_code("Asked", create_backup=False))
+        out = json.loads(server.create_code("Asked"))
         assert out["action_required"] == "set_project_ai_coder_name"
         assert "(the AI coder name in Exegete's settings)" not in out["error"]
 
@@ -451,7 +450,7 @@ class TestWithoutTheSetting:
         """Guard: a project Exegete did not create, with no AI coder
         name, is asked as before; nothing is stored by the setting."""
         monkeypatch.setenv(AI, SETTING)
-        out = json.loads(server.create_code("Asked", create_backup=False))
+        out = json.loads(server.create_code("Asked"))
         assert out["error"] == ASK_WITH_SETTING
         assert not (Path(qualcoder_db_path) / SIDECAR_NAME).exists()
 
@@ -484,7 +483,7 @@ class TestARefusedSettingIsNotOffered:
         monkeypatch.setenv(AI, refused)
         if refused == "Ann Lee":
             monkeypatch.setenv(CODER, "Ann Lee")
-        out = json.loads(server.create_code("Asked", create_backup=False))
+        out = json.loads(server.create_code("Asked"))
         assert out["error"] == ASK_WITHOUT_SETTING
         # v0.15.0, piece 12: "AI Agent" only on its sign
         assert out["quick_picks"] == [server.DEFAULT_AI_CODER_NAME]
@@ -513,7 +512,7 @@ class TestARefusedSettingIsNotOffered:
         monkeypatch.setenv(AI, refused)
         if refused == "Ann Lee":
             monkeypatch.setenv(CODER, "Ann Lee")
-        out = json.loads(server.create_code("Asked", create_backup=False))
+        out = json.loads(server.create_code("Asked"))
         assert out["error"] == ASK_WITHOUT_SETTING
         assert out["existing_ai_coder_names_in_project"] == []
         # v0.15.0, piece 12: "AI Agent" only on its sign
@@ -525,7 +524,7 @@ class TestARefusedSettingIsNotOffered:
         monkeypatch.setenv(AI, reserved)
         answer = _create("Reserved", tmp_path)
         assert answer["ai_coder_name"] is None
-        out = json.loads(server.create_code("Asked", create_backup=False))
+        out = json.loads(server.create_code("Asked"))
         assert out["error"] == ASK_WITHOUT_SETTING
         assert reserved not in out["quick_picks"]
 
@@ -535,7 +534,7 @@ class TestARefusedSettingIsNotOffered:
         only when the two are the same name."""
         monkeypatch.setenv(CODER, "Ann Lee")
         monkeypatch.setenv(AI, SETTING)
-        out = json.loads(server.create_code("Asked", create_backup=False))
+        out = json.loads(server.create_code("Asked"))
         assert out["error"] == ASK_WITH_SETTING
         assert out["quick_picks"][0] == SETTING
 
@@ -572,7 +571,7 @@ class TestTheSpellingInUse:
         _route(monkeypatch, "terminal")
         server.set_project_ai_coder_name("Model A")
         monkeypatch.setenv(AI_OLD, "Model B")
-        out = json.loads(server.create_code("Blocked", create_backup=False))
+        out = json.loads(server.create_code("Blocked"))
         assert out["error"] == _mismatch("Model B", "Model A", TERMINAL_OLD)
 
     def test_the_warning_for_a_reserved_name(self, tmp_path, monkeypatch):

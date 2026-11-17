@@ -744,6 +744,9 @@ RETIRED: Dict[str, Tuple[str, str]] = {
     # tests/test_v0155_retired_names.py)
     "analyze_for_coding": ("tool", "0.15.5"),
     "analyze_file_with_coding": ("tool", "0.15.5"),
+    # the argument of 22 tools, ignored from 0.15.1 (ruling 85, item 6;
+    # tests/test_v0155_retired_names.py)
+    "create_backup": ("argument", "0.15.5"),
 }
 
 # A library's release (v0.15.2): a name, then the release; read when
@@ -3803,34 +3806,30 @@ def _code_text_line(module: str, words: str) -> int:
 
 
 def test_the_code_texts_are_read():
-    """The create_backup note, the help topic on the old name, the update
-    note for the old name and the log lines on the earlier spellings are
-    places of the fact; the earlier names' row moved names the note, and
-    so does create_backup's moved alone, which the note names in a
-    sentence of its own; the rename's rows moved name the other three."""
+    """The refusal of create_backup, the help topic on the old name, the
+    update note for the old name and the log lines on the earlier
+    spellings are places of the fact; create_backup's row moved alone
+    names the refusal, which gives the release that removed it (v0.15.5:
+    the refusal's sentence in place of the note that said it was
+    ignored); the rename's rows moved name the other three."""
     real, documents, before = _on_the_branch()
-    note = (SERVER_SOURCE, _code_text_line(
-        SERVER_SOURCE, "until the release on method removes it"))
+    removed = (SERVER_SOURCE, _code_text_line(
+        SERVER_SOURCE, "create_backup was removed in 0.15.5"))
     topic = (SERVER_SOURCE, _code_text_line(SERVER_SOURCE,
                                             "still work until v1.0"))
     update = ("src/exegete/updates.py", _code_text_line(
         "src/exegete/updates.py", "comes with Exegete 1.0"))
     spelling = ("src/exegete/env_settings.py", _code_text_line(
         "src/exegete/env_settings.py", "the earlier spelling of"))
-    for module, line in (note, topic, update, spelling):
+    for module, line in (removed, topic, update, spelling):
         found = _code_place(before.places, module, line)
         assert found and not any(place.wrong for place in found), (
             module, line)
-    names_row = "the two tools' earlier names"
-    release, words = real.planned[names_row]
-    moved = _releases_places(replace(real, planned=dict(
-        real.planned, **{names_row: (_one_on(release), words)})), documents)
-    assert any(place.wrong for place in _code_place(moved, *note))
     release, words = real.planned["create_backup"]
     moved = _releases_places(replace(real, planned=dict(
         real.planned, create_backup=(_one_on(release), words))), documents)
-    assert [place.stated for place in _code_place(moved, *note)
-            if place.wrong] == ["create_backup"]
+    assert {place.stated for place in _code_place(moved, *removed)
+            if place.wrong} == {"removed in 0.15.5", "create_backup"}
     renamed = {name for name, (_, _, _, rulings) in _plan(
         REPO).PLANNED.items() if "41" in rulings.split(", ")}
     moved = _releases_places(replace(real, planned={

@@ -80,7 +80,7 @@ class TestT18ApplyCodingsPrecondition:
 
         monkeypatch.setattr(QualcoderDatabase, "start_backup_before_write",
                             racing_start)
-        result = server.apply_codings(sid, create_backup=False)
+        result = server.apply_codings(sid)
         data = json.loads(result) if result.strip().startswith("{") else None
         blob = result.lower()
         assert "changed while this write" in blob
@@ -103,7 +103,7 @@ class TestT18ApplyCodingsPrecondition:
         }]))
         server.update_suggestion_status(
             sid, approve=[out["recorded"][0]["guid"]])
-        result = server.apply_codings(sid, create_backup=False)
+        result = server.apply_codings(sid)
         assert "Codings applied" in result
 
 
@@ -125,8 +125,7 @@ class TestT18AnnotationPrecondition:
             return fc
 
         monkeypatch.setattr(QualcoderDatabase, "get_file_content", stale_get)
-        out = json.loads(server.add_annotation(1, 0, 10, "note",
-                                               create_backup=False))
+        out = json.loads(server.add_annotation(1, 0, 10, "note"))
         assert "changed while this write" in out["error"]
         assert _counts(qualcoder_db_path)["annotation"] == before["annotation"]
         assert server.db.read_only is True
@@ -134,8 +133,7 @@ class TestT18AnnotationPrecondition:
 
     def test_normal_annotation_unaffected(self, setup_server,
                                           qualcoder_db_path):
-        out = json.loads(server.add_annotation(1, 0, 10, "note",
-                                               create_backup=False))
+        out = json.loads(server.add_annotation(1, 0, 10, "note"))
         assert out.get("success") is True
 
 
@@ -171,7 +169,7 @@ class TestT18CreateProposedCodesPrecondition:
         monkeypatch.setattr(QualcoderDatabase, "start_backup_before_write",
                             racing_start)
         out = json.loads(server.create_proposed_codes(
-            sid, create_backup=False))
+            sid))
         assert out.get("success") is True, out
         after = _counts(qualcoder_db_path)
         assert after["code_text"] == before["code_text"]  # no coding

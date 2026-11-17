@@ -138,7 +138,7 @@ def item(text=STRESSED, code="Stress", reading="explicit", **extra):
 
 def approve_and_apply(sid, guids):
     call("update_suggestion_status", coding_session_id=sid, approve=guids)
-    return call("apply_codings", coding_session_id=sid, create_backup=False)
+    return call("apply_codings", coding_session_id=sid)
 
 
 # A session file's timestamps run to the microsecond, and this one holds
@@ -294,8 +294,7 @@ class TestSessionsFromEarlierReleases:
         if clock is not None:
             fix_the_clock(monkeypatch, clock)
         sid, path = self._old_session(qualcoder_db_path)
-        out = call("apply_codings", coding_session_id=sid,
-                   create_backup=False)
+        out = call("apply_codings", coding_session_id=sid)
         assert "Codings applied" in out, out
         memo = rows(qualcoder_db_path, "SELECT memo FROM code_text WHERE "
                     "owner = 'AI Coding Assistant'")[0]["memo"]
@@ -437,8 +436,7 @@ class TestTheSessionScopeLimitsWhatIsRecorded:
                      proposals=[{"name": "Exercise", "memo": "d"}])
         call("update_proposal_status", coding_session_id=sid,
              approve=[prop["recorded"][0]["guid"]])
-        created = jcall("create_proposed_codes", coding_session_id=sid,
-                        create_backup=False)
+        created = jcall("create_proposed_codes", coding_session_id=sid)
         assert created.get("success"), created
         rec = record(sid, item(text=COPE, code="Exercise"))
         assert rec["recorded_count"] == 1, rec
@@ -573,7 +571,7 @@ class TestDeleteCodingIsTheLoopsUndo:
     def test_the_session_is_told_and_named(self, setup_server):
         sid = new_session()
         guid, ctid = self._applied(sid)
-        out = jcall("delete_coding", coding_id=ctid, create_backup=False)
+        out = jcall("delete_coding", coding_id=ctid)
         assert out["success"] is True
         assert out["sessions_updated"] == [{
             "coding_session_id": sid, "suggestion_guids": [guid],
@@ -585,7 +583,7 @@ class TestDeleteCodingIsTheLoopsUndo:
     def test_the_same_passage_can_be_recorded_again(self, setup_server):
         sid = new_session()
         _, ctid = self._applied(sid)
-        call("delete_coding", coding_id=ctid, create_backup=False)
+        call("delete_coding", coding_id=ctid)
         rec = record(sid, item())
         assert rec["recorded_count"] == 1 and rec["skipped_duplicates"] == 0
 
@@ -593,7 +591,7 @@ class TestDeleteCodingIsTheLoopsUndo:
             self, setup_server, qualcoder_db_path):
         sid = new_session()
         guid, ctid = self._applied(sid)
-        call("delete_coding", coding_id=ctid, create_backup=False)
+        call("delete_coding", coding_id=ctid)
         out = approve_and_apply(sid, [guid])
         assert "Successfully Applied: 1 codings" in out, out
         assert len(rows(qualcoder_db_path, "SELECT ctid FROM code_text "
@@ -611,7 +609,7 @@ class TestDeleteCodingIsTheLoopsUndo:
             code_name="Stress", start_pos=24, end_pos=55,
             segment_text=FULLTEXT[24:55], status="applied"))
         server.session_manager.save_session(session)
-        out = jcall("delete_coding", coding_id=1, create_backup=False)
+        out = jcall("delete_coding", coding_id=1)
         assert out["success"] is True
         assert "sessions_updated" not in out
         assert server.session_manager.load_session(session.session_id) \
@@ -625,7 +623,7 @@ class TestDeleteCodingIsTheLoopsUndo:
         data = json.loads(path.read_text())
         data["suggestions"][0].pop("applied_ctid")      # as before v0.14
         path.write_text(json.dumps(data))
-        out = jcall("delete_coding", coding_id=ctid, create_backup=False)
+        out = jcall("delete_coding", coding_id=ctid)
         assert out["sessions_updated"][0]["suggestion_guids"] == [guid]
 
     def test_deleting_a_persons_coding_of_the_same_span_leaves_it(
@@ -636,7 +634,7 @@ class TestDeleteCodingIsTheLoopsUndo:
         sid = new_session()
         guid = record(sid, item(text=FULLTEXT[24:55]))["recorded"][0]["guid"]
         approve_and_apply(sid, [guid])
-        out = jcall("delete_coding", coding_id=1, create_backup=False)
+        out = jcall("delete_coding", coding_id=1)
         assert out["success"] is True and "sessions_updated" not in out
         assert server.session_manager.load_session(sid) \
             .get_suggestion_by_guid(guid).status == "applied"
@@ -654,7 +652,7 @@ class TestDeleteCodingIsTheLoopsUndo:
         server.session_manager.save_session(other)
         sid = new_session()
         _, ctid = self._applied(sid)
-        out = jcall("delete_coding", coding_id=ctid, create_backup=False)
+        out = jcall("delete_coding", coding_id=ctid)
         assert [u["coding_session_id"] for u in out["sessions_updated"]] \
             == [sid]
         assert server.session_manager.load_session(other.session_id) \
@@ -843,8 +841,7 @@ class TestAProposalsApprovalBindsIt:
                     proposal_guid=g, name="Loneliness", memo="changed")
         assert out["status"] == "pending"
         assert "approval withdrawn" in out["approval_withdrawn"]
-        created = jcall("create_proposed_codes", coding_session_id=sid,
-                        create_backup=False)
+        created = jcall("create_proposed_codes", coding_session_id=sid)
         assert "No approved proposals" in created["error"]
         assert not rows(qualcoder_db_path, "SELECT cid FROM code_name "
                         "WHERE name = 'Loneliness'")
@@ -873,8 +870,7 @@ class TestAProposalsApprovalBindsIt:
         assert self._status(sid, source) == "merged"
         assert "final" in jcall("update_proposal", coding_session_id=sid,
                                 proposal_guid=source, memo="x")["error"]
-        created = jcall("create_proposed_codes", coding_session_id=sid,
-                        create_backup=False)
+        created = jcall("create_proposed_codes", coding_session_id=sid)
         assert [c["name"] for c in created["created_codes"]] == ["Isolation"]
         assert not rows(qualcoder_db_path, "SELECT cid FROM code_name "
                         "WHERE name = 'Mentoring'")
@@ -1009,8 +1005,7 @@ class TestOnlyApprovedItemsAreWritten:
         call("update_suggestion_status", coding_session_id=sid,
              approve=[yes], reject=[no])
         assert "Codings applied" in call("apply_codings",
-                                         coding_session_id=sid,
-                                         create_backup=False)
+                                         coding_session_id=sid)
         written = rows(qualcoder_db_path, "SELECT seltext FROM code_text "
                        "WHERE owner = 'AI Coding Assistant'")
         assert written == [{"seltext": STRESSED}]
@@ -1026,8 +1021,7 @@ class TestOnlyApprovedItemsAreWritten:
         yes, no, _ = [r["guid"] for r in out["recorded"]]
         call("update_proposal_status", coding_session_id=sid,
              approve=[yes], reject=[no])
-        created = jcall("create_proposed_codes", coding_session_id=sid,
-                        create_backup=False)
+        created = jcall("create_proposed_codes", coding_session_id=sid)
         assert created.get("success"), created
         names = {r["name"] for r in rows(qualcoder_db_path,
                                          "SELECT name FROM code_name")}
@@ -1073,7 +1067,7 @@ class TestFixRoundAReusedCodingId:
                       "owner, date, memo) VALUES (1, 1, ?, 24, 56, "
                       "'TestCoder', '2026-09-27 10:00:00', '')", (STRESSED,))
         assert new_id == ctid
-        out = jcall("delete_coding", coding_id=ctid, create_backup=False)
+        out = jcall("delete_coding", coding_id=ctid)
         assert out["success"] is True
         assert out["deleted_coding"]["owner"] == "TestCoder"
         assert "sessions_updated" not in out
@@ -1256,7 +1250,7 @@ class TestFixRoundTwoHostsOnOneProject:
             return original(self, *args, **kwargs)
 
         monkeypatch.setattr(AICodingSession, "mark_removed", interleaved)
-        out = jcall("delete_coding", coding_id=ctid, create_backup=False)
+        out = jcall("delete_coding", coding_id=ctid)
         assert out["sessions_updated"][0]["status"] == "removed"
         final = server.session_manager.load_session(sid)
         assert final.get_suggestion_by_guid(x).status == "pending"
@@ -1370,7 +1364,7 @@ class TestFixRoundPromisesNowPinned:
         approve_and_apply(sid, [first])
         ctid = server.session_manager.load_session(sid) \
             .get_suggestion_by_guid(first).applied_ctid
-        call("delete_coding", coding_id=ctid, create_backup=False)
+        call("delete_coding", coding_id=ctid)
         second = record(sid, item(text="I feel stressed"))["recorded"][0]
         out = jcall("edit_suggestion", coding_session_id=sid,
                     suggestion_guid=second["guid"], segment_text=STRESSED)
@@ -1705,7 +1699,7 @@ class TestFixRound2CodesOnly:
         sid = new_session()
         self._approved(sid, [{"file_id": 1, "segment_text": STRESSED}])
         out = jcall("create_proposed_codes", coding_session_id=sid,
-                    apply_coded_segments=True, create_backup=False)
+                    apply_coded_segments=True)
         assert "no argument 'apply_coded_segments'" in out["error"]
         assert not rows(qualcoder_db_path, "SELECT cid FROM code_name "
                         "WHERE name = 'Isolation'")
@@ -1720,8 +1714,7 @@ class TestFixRound2CodesOnly:
                              {"file_id": second["id"],
                               "segment_text": words}])
         before = rows(qualcoder_db_path, "SELECT * FROM code_text")
-        out = jcall("create_proposed_codes", coding_session_id=sid,
-                    create_backup=False)
+        out = jcall("create_proposed_codes", coding_session_id=sid)
         assert out["success"] is True
         assert "no passage is coded yet" in out["message"]
         assert rows(qualcoder_db_path, "SELECT * FROM code_text") == before
@@ -2264,7 +2257,7 @@ class TestFixRound2TheMinors:
             raise OSError("disk full")
         monkeypatch.setattr(server.session_manager,
                             "save_session_if_unchanged", fail)
-        out = jcall("delete_coding", coding_id=ctid, create_backup=False)
+        out = jcall("delete_coding", coding_id=ctid)
         assert out["sessions_updated"][0]["status"].startswith("not saved")
         assert "approve it again to re-apply it" not in out["sessions_note"]
         assert "record the passage again" in out["sessions_note"]
@@ -2304,7 +2297,7 @@ class TestFixRound2TheMinors:
         assert "Every write operation creates a timestamped backup" \
             not in flat_guide
         # v0.15.1: Exegete takes a backup before every change, and no
-        # text offers to skip one (tests/test_v0151_ignored_argument.py)
+        # text offers to skip one (tests/test_v0151_one_backup.py)
         assert "create_backup=false" not in flat_guide
         readme = (root / "TOOLS.md").read_text(encoding="utf-8")
         line = next(l for l in readme.splitlines()

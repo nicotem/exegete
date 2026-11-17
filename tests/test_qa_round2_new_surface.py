@@ -365,8 +365,7 @@ class TestRestoreBackupGates:
     def test_confirmed_restore_roundtrip(self, setup_server, qualcoder_db_path):
         backup = self._make_backup(qualcoder_db_path)
         # damage the project after the backup
-        json.loads(server.import_text_file("post_backup.txt", "to be rolled back",
-                                           create_backup=False))
+        json.loads(server.import_text_file("post_backup.txt", "to be rolled back"))
         # plant a stray lock file inside the backup (old-format backups had them)
         (backup / QUALCODER_LOCK_FILENAME).write_text("ghost\n1.0", encoding="utf-8")
 

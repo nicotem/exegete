@@ -615,11 +615,10 @@ def test_the_path_of_a_coding():
     # each step a behaviour of the server
     status = inspect.signature(server.update_suggestion_status).parameters
     assert {"approve", "reject", "reopen"} <= set(status)
-    # v0.15.1: a backup before every change, whatever create_backup says;
-    # the argument is accepted and ignored, its default null
-    # (tests/test_v0151_ignored_argument.py)
+    # v0.15.1: a backup before every change; v0.15.5: no argument to skip
+    # it, create_backup removed (tests/test_v0155_retired_names.py)
     apply = inspect.signature(server.apply_codings)
-    assert apply.parameters["create_backup"].default is None
+    assert "create_backup" not in apply.parameters
     doc = " ".join(server.apply_codings.__doc__.split())
     assert "checked again before the backup" in doc
     assert "single all-or-nothing transaction" in doc

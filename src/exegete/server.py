@@ -22,7 +22,6 @@ import hashlib
 import hmac
 import difflib
 import functools
-import inspect
 import unicodedata
 from pathlib import Path
 from datetime import datetime, timezone
@@ -436,7 +435,9 @@ REFI_EXPORT_READ_ONLY_REFUSAL = (
 # longer reads them), and pseudonymise_source's overlap policy
 # qualcoder_edit_parity (EDIT_PARITY_REMOVED, below).
 
-# The arguments removed in 0.15.1, as announced in 0.14: a call that
+# The arguments removed in 0.15.1, as announced in 0.14, and
+# create_backup, removed in 0.15.5 (owner ruling 85, item 6: it went with
+# the tools' earlier names, in the release on method): a call that
 # passes one is refused like any argument its tool does not declare
 # (unknown_arguments_refusal), nothing done, with this sentence naming
 # what replaces it in place of a "Did you mean" line, and under
@@ -447,6 +448,21 @@ _OWNER_REMOVED = (
     "owner was removed in 0.15.1: every row Exegete writes is stored under "
     "the project's AI coder name, which set_project_ai_coder_name "
     "changes; call {tool} without it.")
+# The 22 tools that took create_backup until 0.15.5. From 0.15.1 they
+# accepted it and ignored it, since Exegete takes a backup before every
+# change to the database whatever it said.
+_TOOLS_THAT_TOOK_CREATE_BACKUP = (
+    "add_annotation", "add_journal_entry", "apply_codings",
+    "create_attribute_type", "create_case", "create_category",
+    "create_code", "create_proposed_codes", "delete_annotation",
+    "delete_coding", "import_text_file", "link_file_to_case",
+    "move_category", "move_code_to_category", "recolor_code",
+    "rename_case", "rename_category", "rename_code", "rename_file",
+    "set_attribute", "set_memo", "update_annotation")
+_CREATE_BACKUP_REMOVED = (
+    "create_backup was removed in 0.15.5: Exegete takes a backup of the "
+    "project before every change to its database, so call {tool} without "
+    "it.")
 REMOVED_ARGUMENTS: Dict[Tuple[str, str], str] = {
     ("delete_code", "cascade"): (
         "cascade was removed in 0.15.1: the preview's token approves the "
@@ -458,6 +474,8 @@ REMOVED_ARGUMENTS: Dict[Tuple[str, str], str] = {
     ("search_files", "search_memo"): (
         "search_memo was removed in 0.15.1: search_memos searches file "
         "memos and every other kind of note."),
+    **{(tool, "create_backup"): _CREATE_BACKUP_REMOVED.format(tool=tool)
+       for tool in _TOOLS_THAT_TOOK_CREATE_BACKUP},
 }
 
 # Attributes on journal entries, removed in 0.15.1, as announced in 0.14:
@@ -494,18 +512,6 @@ HELP_TOPIC_REMOVED = (
     "own descriptions: each tool's description documents its arguments, "
     "refusals and overrides, and start_coding_session's says what to ask "
     "the researcher before a coding session.")
-
-# create_backup, accepted and ignored (v0.15.1; owner ruling 85, item 6:
-# it goes with the tools' earlier names in the release on method).
-# Exegete takes one backup before every change, so the argument decides
-# nothing; a call that gives it, whatever its value, is answered with
-# this sentence under a key of its own, create_backup_ignored, never in
-# place of a "deprecated" one. The owner's words of 20 October 2026.
-IGNORED_CREATE_BACKUP = (
-    "create_backup no longer does anything: Exegete takes one backup "
-    "before every change, whatever it says. It is still accepted, so that "
-    "saved instructions keep working, until the release on method removes "
-    "it with the tools' earlier names.")
 
 # start_coding_session without the researcher's answers (owner ruling 25,
 # question 5, with the Saldaña reading's item 17)
@@ -1002,79 +1008,6 @@ def _with_paragraphs(*blocks: str, before: str, gap: str = "\n\n"):
     return deco
 
 
-def _with_deprecation(answer: Any, sentence: str,
-                      key: str = "deprecated") -> Any:
-    """The answer with the deprecation sentence: the `key` of a JSON
-    object ("deprecated" unless another is given), else a last paragraph
-    of a text answer."""
-    if not isinstance(answer, str):
-        return answer
-    try:
-        payload = json.loads(answer)
-    except ValueError:
-        return f"{answer}\n\n{sentence}"
-    if isinstance(payload, dict):
-        payload[key] = sentence
-        return json.dumps(payload, indent=2)
-    return answer
-
-
-def _deprecated(sentence: Any, before: Optional[str],
-                when: Optional[Callable[[Dict[str, Any]], bool]] = None,
-                key: str = "deprecated", in_description: bool = True):
-    """What goes in v0.15.1 (owner ruling 25, questions 3, 7 and 8; ruling
-    70): the
-    sentence in the tool's description (before the line holding
-    `before`), and in every answer the tool gives, or, for an option,
-    only when `when(arguments)` holds. Sits inside _tool_guard, but for
-    `_ignores_create_backup`, which sits above it.
-
-    The answer carries it under `key`, "deprecated" unless another is
-    given: create_backup's sentence has a key of its own,
-    create_backup_ignored, so it never takes the place of a "deprecated"
-    one (v0.15.1). With `in_description` false the description is left
-    as it is, for a sentence its Args line already gives.
-
-    A sentence that names a tool the core set lacks, on a core tool, is
-    given as a function returning it marked (`_mark_unregistered`), and
-    is written into the docstring by hand: marking it when the tool is
-    defined would mark tools not yet registered."""
-    def deco(fn):
-        if isinstance(sentence, str) and in_description:
-            fn = _with_guidance(sentence, before=before)(fn)
-        signature = inspect.signature(fn)
-
-        @functools.wraps(fn)
-        def wrapper(*args, **kwargs):
-            answer = fn(*args, **kwargs)
-            if when is not None:
-                try:
-                    bound = signature.bind(*args, **kwargs)
-                    bound.apply_defaults()
-                    if not when(bound.arguments):
-                        return answer
-                except TypeError:
-                    return answer
-            return _with_deprecation(
-                answer, sentence if isinstance(sentence, str) else sentence(),
-                key)
-        return wrapper
-    return deco
-
-
-# The 22 tools that take create_backup: a call that gives it, whatever its
-# value, is answered with IGNORED_CREATE_BACKUP under create_backup_ignored,
-# every refusal included; a call without it carries nothing. Each tool's
-# Args line says so, in place of its description. It sits above
-# _tool_guard (fix round 1), so the refusals the guard makes of an error
-# raised inside the tool (a validator's, a busy database, no project
-# selected, an unexpected error) carry it too; the wrapper itself raises
-# nothing (_with_deprecation and the binding catch their own errors).
-_ignores_create_backup = _deprecated(
-    IGNORED_CREATE_BACKUP, before=None, key="create_backup_ignored",
-    in_description=False, when=lambda a: a.get("create_backup") is not None)
-
-
 def _is(value: Any, word: str) -> bool:
     """An argument naming `word`, as the tools read it (spaces and letter
     case aside)."""
@@ -1191,9 +1124,10 @@ def unknown_arguments_refusal(tool_name: str, schema: Dict[str, Any],
     audit, item 5). The declared arguments are the tool's input schema,
     the list the host itself was given.
 
-    An argument removed in 0.15.1 (REMOVED_ARGUMENTS) is refused the same
-    way, whatever its value, with its sentence, marked for the tool set
-    in use, in place of a "Did you mean" line, and under "removed".
+    An argument removed in 0.15.1 or 0.15.5 (REMOVED_ARGUMENTS) is
+    refused the same way, whatever its value, with its sentence, marked
+    for the tool set in use, in place of a "Did you mean" line, and under
+    "removed".
     """
     if not isinstance(arguments, dict) or not arguments:
         return None
@@ -12728,12 +12662,10 @@ APPLIED_SESSION_NOT_SAVED = (
 
 
 @mcp.tool(annotations=TOOL_ADDS)
-@_ignores_create_backup
 @_tool_guard
 @_with_guidance(MARKER_REFUSED_DESCRIPTION, before="Safety guarantees:")
 def apply_codings(
-    coding_session_id: str,
-    create_backup: Optional[bool] = None
+    coding_session_id: str
 ) -> str:
     """Apply approved coding suggestions to the project database.
 
@@ -12769,8 +12701,6 @@ def apply_codings(
 
     Args:
         coding_session_id: The session ID with approved suggestions
-        create_backup: No longer used: Exegete takes a backup before every
-                       change (accepted until the release on method)
 
     Returns:
         Detailed confirmation of what was written to the database
@@ -13128,7 +13058,6 @@ def apply_codings(
 
 
 @mcp.tool(annotations=TOOL_ADDS)
-@_ignores_create_backup
 @_tool_guard
 @_with_guidance(MARKER_REFUSED_DESCRIPTION, before="Args:")
 @_with_paragraphs(LOCK_REFUSED_PARAGRAPH,
@@ -13137,7 +13066,6 @@ def import_text_file(
     filename: str,
     content: str,
     memo: str = "",
-    create_backup: Optional[bool] = None,
     case_name: Optional[str] = None,
     apply_project_pseudonyms: bool = False
 ) -> str:
@@ -13174,8 +13102,6 @@ def import_text_file(
                   take for this text's stored copy
         content: The full text content of the file
         memo: Optional memo/description for the file
-        create_backup: No longer used: Exegete takes a backup before every
-                       change (accepted until the release on method)
         case_name: Optional existing case to link the new file to.
                    The same name, once spaces and Unicode forms are
                    evened out, is used first; otherwise one that differs
@@ -14230,14 +14156,12 @@ def _import_done_answer(result, taken, ctx, owner, backup_path,
 
 
 @mcp.tool(annotations=TOOL_ADDS)
-@_ignores_create_backup
 @_tool_guard
 @_with_paragraphs(LOCK_REFUSED_PARAGRAPH, before="Args:")
 def link_file_to_case(
     file_id: int,
     case_id: Optional[int] = None,
-    case_name: Optional[str] = None,
-    create_backup: Optional[bool] = None
+    case_name: Optional[str] = None
 ) -> str:
     """Link a source file to a case so it appears in case-based analyses.
 
@@ -14261,8 +14185,6 @@ def link_file_to_case(
                    same case, or nothing is linked. The answer's
                    case_match says which rule matched ("id", "exact" or
                    "case_insensitive")
-        create_backup: No longer used: Exegete takes a backup before every
-                       change (accepted until the release on method)
 
     Returns:
         JSON with the created link (case, file, covered span)
@@ -14328,12 +14250,10 @@ def link_file_to_case(
 # ============================================================================
 
 @mcp.tool(annotations=TOOL_CHANGES)
-@_ignores_create_backup
 @_tool_guard
 @_with_paragraphs(LOCK_REFUSED_PARAGRAPH,
                   before="Exegete takes a backup first", gap="\n")
-def delete_coding(coding_id: int, create_backup: Optional[bool] = None,
-                  allow_hidden_coder: bool = False,
+def delete_coding(coding_id: int, allow_hidden_coder: bool = False,
                   confirm_private_note_deletion: bool = False) -> str:
     """Delete a single coded segment from the project database.
 
@@ -14370,8 +14290,6 @@ def delete_coding(coding_id: int, create_backup: Optional[bool] = None,
         coding_id: The ctid of the coding to delete. You can find ctids in
                    the output of apply_codings, get_coded_segments, or
                    read_file_with_codings (segment_id).
-        create_backup: No longer used: Exegete takes a backup before every
-                       change (accepted until the release on method)
         allow_hidden_coder: Override to delete a hidden coder's coding
         confirm_private_note_deletion: Override to delete a coding whose
                    memo carries a private note
@@ -19114,12 +19032,10 @@ CREATED_OUTSIDE_SCOPE = (
 
 
 @mcp.tool(annotations=TOOL_ADDS)
-@_ignores_create_backup
 @_tool_guard
 @_with_guidance(MARKER_REFUSED_DESCRIPTION, before="Args:")
 @_with_paragraphs(LOCK_REFUSED_PARAGRAPH, before="Args:")
-def create_proposed_codes(coding_session_id: str,
-                          create_backup: Optional[bool] = None) -> str:
+def create_proposed_codes(coding_session_id: str) -> str:
     """Create the approved code proposals in the project codebook.
 
     It writes to the database: each approved proposal becomes a code
@@ -19139,8 +19055,6 @@ def create_proposed_codes(coding_session_id: str,
 
     Args:
         coding_session_id: The session with approved proposals
-        create_backup: No longer used: Exegete takes a backup before every
-                       change (accepted until the release on method)
 
     Returns:
         JSON with the created codes (proposal guid -> real code id, plus
@@ -19350,13 +19264,11 @@ NOT_CREATED_NOT_APPROVED_HERE = (
 # ============================================================================
 
 @mcp.tool(annotations=TOOL_CHANGES)
-@_ignores_create_backup
 @_tool_guard
 @_with_guidance(MARKER_REFUSED_DESCRIPTION, before="Args:")
 @_with_paragraphs(LOCK_REFUSED_PARAGRAPH, before="Coder visibility (in a project")
 def set_memo(target_type: str, target_id: Optional[int] = None,
              memo: str = Field(...),
-             create_backup: Optional[bool] = None,
              allow_hidden_coder: bool = False) -> str:
     """Write (or clear) the memo on a code, category, file, coding, or
     case, or the project memo.
@@ -19391,8 +19303,6 @@ def set_memo(target_type: str, target_id: Optional[int] = None,
                    id / coding ctid / case caseid); null, or left out, for
                    'project'
         memo: The memo text ('' clears it)
-        create_backup: No longer used: Exegete takes a backup before every
-                       change (accepted until the release on method)
         allow_hidden_coder: Override to write on a hidden coder's coding
                             (target_type 'coding' only)
 
@@ -19453,12 +19363,10 @@ def set_memo(target_type: str, target_id: Optional[int] = None,
 
 
 @mcp.tool(annotations=TOOL_ADDS)
-@_ignores_create_backup
 @_tool_guard
 @_with_guidance(MARKER_REFUSED_DESCRIPTION, before="Args:")
 @_with_paragraphs(LOCK_REFUSED_PARAGRAPH, before="Args:")
-def add_journal_entry(name: str, entry: str,
-                      create_backup: Optional[bool] = None) -> str:
+def add_journal_entry(name: str, entry: str) -> str:
     """Add a research journal entry to the project.
 
     It writes to the database. Journals are free-form research notes
@@ -19467,8 +19375,6 @@ def add_journal_entry(name: str, entry: str,
     Args:
         name: A short unique title for the entry
         entry: The journal text
-        create_backup: No longer used: Exegete takes a backup before every
-                       change (accepted until the release on method)
 
     Returns:
         JSON with the new entry's id, name and date
@@ -19502,14 +19408,12 @@ def add_journal_entry(name: str, entry: str,
 # ============================================================================
 
 @mcp.tool(annotations=TOOL_ADDS_ONCE)
-@_ignores_create_backup
 @_tool_guard
 @_with_guidance(MARKER_REFUSED_DESCRIPTION, before="Colours are stored")
 @_with_paragraphs(LOCK_REFUSED_PARAGRAPH, before="Colours are stored")
 def create_code(name: str, category: Optional[str] = None,
                 color: Optional[str] = None, memo: Optional[str] = None,
-                parent_code_id: Optional[int] = None,
-                create_backup: Optional[bool] = None) -> str:
+                parent_code_id: Optional[int] = None) -> str:
     """Create a new code in the codebook.
 
     It writes to the database. Adds a code that can then be applied to
@@ -19553,8 +19457,6 @@ def create_code(name: str, category: Optional[str] = None,
         memo: Optional code definition/memo
         parent_code_id: Optional cid of an existing code to nest under
                         (v16+ sub-code; mutually exclusive with category)
-        create_backup: No longer used: Exegete takes a backup before every
-                       change (accepted until the release on method)
 
     Returns:
         JSON with the new code's id, name, category and color, or the
@@ -19659,11 +19561,9 @@ def create_code(name: str, category: Optional[str] = None,
 
 
 @mcp.tool(annotations=TOOL_CHANGES_ONCE)
-@_ignores_create_backup
 @_tool_guard
 @_with_paragraphs(LOCK_REFUSED_PARAGRAPH, before="Args:")
-def rename_code(code_id: int, new_name: str,
-                create_backup: Optional[bool] = None) -> str:
+def rename_code(code_id: int, new_name: str) -> str:
     """Rename a code. It writes to the database. Names are unique.
 
     A new name that matches another code, ignoring letter case, spacing
@@ -19679,8 +19579,6 @@ def rename_code(code_id: int, new_name: str,
                   ignoring letter case, spacing and Unicode form; no
                   invisible characters, nor a name that would newly match
                   another's once invisible characters are left out)
-        create_backup: No longer used: Exegete takes a backup before every
-                       change (accepted until the release on method)
     """
     new_name = normalize_name(new_name)
     if not new_name:
@@ -19726,11 +19624,9 @@ def rename_code(code_id: int, new_name: str,
 
 
 @mcp.tool(annotations=TOOL_CHANGES_ONCE)
-@_ignores_create_backup
 @_tool_guard
 @_with_paragraphs(LOCK_REFUSED_PARAGRAPH, before="Args:")
-def recolor_code(code_id: int, color: str,
-                 create_backup: Optional[bool] = None) -> str:
+def recolor_code(code_id: int, color: str) -> str:
     """Set a code's colour (#RRGGBB). It writes to the database.
 
     Colours are stored as the nearest QualCoder palette colour (120 fixed
@@ -19747,8 +19643,6 @@ def recolor_code(code_id: int, color: str,
     Args:
         code_id: The code's cid
         color: Hex colour in #RRGGBB format (snapped onto the palette)
-        create_backup: No longer used: Exegete takes a backup before every
-                       change (accepted until the release on method)
     """
     target = snap_to_palette(validate_color(color))
     code_id = validate_id(code_id, "code_id")
@@ -19793,12 +19687,10 @@ def recolor_code(code_id: int, color: str,
 
 
 @mcp.tool(annotations=TOOL_CHANGES_ONCE)
-@_ignores_create_backup
 @_tool_guard
 @_with_paragraphs(LOCK_REFUSED_PARAGRAPH, before="Args:")
 def move_code_to_category(code_id: int,
-                          category: Optional[str] = None,
-                          create_backup: Optional[bool] = None) -> str:
+                          category: Optional[str] = None) -> str:
     """Move a code into a category (or out of any category).
 
     It writes to the database. The result gives the category the code was
@@ -19823,8 +19715,6 @@ def move_code_to_category(code_id: int,
                   Unicode form are ignored; the result gives the category
                   it found), or null/omitted to make the code
                   uncategorised
-        create_backup: No longer used: Exegete takes a backup before every
-                       change (accepted until the release on method)
     """
     category_id = None
     if category is not None:
@@ -19906,13 +19796,11 @@ def move_code_to_category(code_id: int,
 
 
 @mcp.tool(annotations=TOOL_ADDS_ONCE)
-@_ignores_create_backup
 @_tool_guard
 @_with_guidance(MARKER_REFUSED_DESCRIPTION, before="Args:")
 @_with_paragraphs(LOCK_REFUSED_PARAGRAPH, before="Args:")
 def create_category(name: str, parent_category: Optional[str] = None,
-                    memo: Optional[str] = None,
-                    create_backup: Optional[bool] = None) -> str:
+                    memo: Optional[str] = None) -> str:
     """Create a code category. It writes to the database.
 
     Categories group codes (and can nest under a parent category). Names
@@ -19942,8 +19830,6 @@ def create_category(name: str, parent_category: Optional[str] = None,
                          gives the category it found); omit for a
                          top-level category
         memo: Optional category memo
-        create_backup: No longer used: Exegete takes a backup before every
-                       change (accepted until the release on method)
     """
     marker = private_marker_refusal(memo, "memo")
     if marker is not None:
@@ -20016,11 +19902,9 @@ def create_category(name: str, parent_category: Optional[str] = None,
 
 
 @mcp.tool(annotations=TOOL_CHANGES_ONCE)
-@_ignores_create_backup
 @_tool_guard
 @_with_paragraphs(LOCK_REFUSED_PARAGRAPH, before="Args:")
-def rename_category(category_id: int, new_name: str,
-                    create_backup: Optional[bool] = None) -> str:
+def rename_category(category_id: int, new_name: str) -> str:
     """Rename a category. It writes to the database. Names are unique.
 
     A new name that matches another category, ignoring letter case,
@@ -20036,8 +19920,6 @@ def rename_category(category_id: int, new_name: str,
                   ignoring letter case, spacing and Unicode form; no
                   invisible characters, nor a name that would newly match
                   another's once invisible characters are left out)
-        create_backup: No longer used: Exegete takes a backup before every
-                       change (accepted until the release on method)
     """
     new_name = normalize_name(new_name)
     if not new_name:
@@ -20080,11 +19962,10 @@ def rename_category(category_id: int, new_name: str,
 
 
 @mcp.tool(annotations=TOOL_CHANGES_ONCE)
-@_ignores_create_backup
 @_tool_guard
 @_with_paragraphs(LOCK_REFUSED_PARAGRAPH, before="Args:")
-def move_category(category_id: int, parent_category: Optional[str] = None,
-                  create_backup: Optional[bool] = None) -> str:
+def move_category(category_id: int,
+                  parent_category: Optional[str] = None) -> str:
     """Move a category under another category (or to the top level).
 
     It writes to the database. The result gives the parent the category was
@@ -20103,8 +19984,6 @@ def move_category(category_id: int, parent_category: Optional[str] = None,
                          Unicode form are ignored; the result gives the
                          category it found), or null/omitted to move to
                          the top level
-        create_backup: No longer used: Exegete takes a backup before every
-                       change (accepted until the release on method)
     """
     new_supercatid = None
     if parent_category is not None:
@@ -25154,12 +25033,11 @@ def _pseudonymise_journal_attempt(wdb, plan: Dict[str, Any],
 # ============================================================================
 
 @mcp.tool(annotations=TOOL_ADDS)
-@_ignores_create_backup
 @_tool_guard
 @_with_guidance(MARKER_REFUSED_DESCRIPTION, before="Args:")
 @_with_paragraphs(LOCK_REFUSED_PARAGRAPH, before="Args:")
-def add_annotation(file_id: int, start_pos: int, end_pos: int, memo: str,
-                   create_backup: Optional[bool] = None) -> str:
+def add_annotation(file_id: int, start_pos: int, end_pos: int,
+                   memo: str) -> str:
     """Attach a note (annotation) to a text span of a file.
 
     It writes to the database. An annotation is a researcher note
@@ -25177,8 +25055,6 @@ def add_annotation(file_id: int, start_pos: int, end_pos: int, memo: str,
         start_pos: 0-based character offset (inclusive)
         end_pos: End offset (exclusive, > start_pos)
         memo: The note text (must be non-empty)
-        create_backup: No longer used: Exegete takes a backup before every
-                       change (accepted until the release on method)
 
     Returns:
         JSON with the new annotation under annotation: its
@@ -25226,12 +25102,10 @@ def add_annotation(file_id: int, start_pos: int, end_pos: int, memo: str,
 
 
 @mcp.tool(annotations=TOOL_CHANGES)
-@_ignores_create_backup
 @_tool_guard
 @_with_guidance(MARKER_REFUSED_DESCRIPTION, before="Args:")
 @_with_paragraphs(LOCK_REFUSED_PARAGRAPH, before="Args:")
 def update_annotation(annotation_id: int, memo: str,
-                      create_backup: Optional[bool] = None,
                       allow_hidden_coder: bool = False) -> str:
     """Edit an annotation's note. An empty note deletes the annotation.
 
@@ -25259,8 +25133,6 @@ def update_annotation(annotation_id: int, memo: str,
         annotation_id: The annotation's anid (from read_file_with_codings
                        or search_memos)
         memo: The new note text ('' deletes the annotation)
-        create_backup: No longer used: Exegete takes a backup before every
-                       change (accepted until the release on method)
         allow_hidden_coder: Override to edit a hidden coder's annotation
     """
     marker = private_marker_refusal(memo, "memo")
@@ -25285,11 +25157,9 @@ def update_annotation(annotation_id: int, memo: str,
 
 
 @mcp.tool(annotations=TOOL_CHANGES)
-@_ignores_create_backup
 @_tool_guard
 @_with_paragraphs(LOCK_REFUSED_PARAGRAPH, before="Args:")
 def delete_annotation(annotation_id: int,
-                      create_backup: Optional[bool] = None,
                       allow_hidden_coder: bool = False,
                       confirm_private_note_deletion: bool = False) -> str:
     """Delete an annotation by its anid.
@@ -25315,8 +25185,6 @@ def delete_annotation(annotation_id: int,
 
     Args:
         annotation_id: The annotation's anid
-        create_backup: No longer used: Exegete takes a backup before every
-                       change (accepted until the release on method)
         allow_hidden_coder: Override to delete a hidden coder's annotation
         confirm_private_note_deletion: Override to delete an annotation
                        whose note carries a private section
@@ -25349,12 +25217,10 @@ def delete_annotation(annotation_id: int,
 # ============================================================================
 
 @mcp.tool(annotations=TOOL_ADDS_ONCE)
-@_ignores_create_backup
 @_tool_guard
 @_with_guidance(MARKER_REFUSED_DESCRIPTION, before="Args:")
 @_with_paragraphs(LOCK_REFUSED_PARAGRAPH, before="Args:")
-def create_case(name: str, memo: Optional[str] = None,
-                create_backup: Optional[bool] = None) -> str:
+def create_case(name: str, memo: Optional[str] = None) -> str:
     """Create a new case (a participant, for example) in the project.
 
     It writes to the database. Cases group data by person, site or
@@ -25377,8 +25243,6 @@ def create_case(name: str, memo: Optional[str] = None,
               invisible characters, nor a name that matches another's
               only once invisible characters are left out)
         memo: Optional case memo
-        create_backup: No longer used: Exegete takes a backup before every
-                       change (accepted until the release on method)
 
     Example:
         "Create a case for participant Dana"
@@ -25554,11 +25418,9 @@ _RENAME_QC40_PARAGRAPH = (
 
 
 @mcp.tool(annotations=TOOL_CHANGES_ONCE)
-@_ignores_create_backup
 @_tool_guard
 @_with_paragraphs(LOCK_REFUSED_PARAGRAPH, before="Args:")
-def rename_case(case_id: int, new_name: str,
-                create_backup: Optional[bool] = None) -> str:
+def rename_case(case_id: int, new_name: str) -> str:
     """Rename a case. It writes to the database.
 
     Only the case's name is written: its date, owner, notes, file links,
@@ -25591,8 +25453,6 @@ def rename_case(case_id: int, new_name: str,
                   invisible characters, nor a name that would newly
                   match another's once invisible characters are left
                   out)
-        create_backup: No longer used: Exegete takes a backup before every
-                       change (accepted until the release on method)
     """
     new_name = normalize_name(new_name)
     if not new_name:
@@ -25972,12 +25832,10 @@ def _file_rename_precheck(db, file_id: int, candidate: str):
 
 
 @mcp.tool(annotations=TOOL_CHANGES_ONCE)
-@_ignores_create_backup
 @_tool_guard
 @_with_paragraphs(LOCK_REFUSED_PARAGRAPH,
                   before="Refused, each with its reason:")
-def rename_file(file_id: int, new_name: str,
-                create_backup: Optional[bool] = None) -> str:
+def rename_file(file_id: int, new_name: str) -> str:
     """Rename a file's entry. It writes to the database.
 
     Only the name the project gives the file is written, as with "Rename
@@ -26031,8 +25889,6 @@ def rename_file(file_id: int, new_name: str,
     Args:
         file_id: The file's id
         new_name: The new name
-        create_backup: No longer used: Exegete takes a backup before every
-                       change (accepted until the release on method)
     """
     file_id = validate_id(file_id, "file_id")
     if not isinstance(new_name, str):
@@ -26085,14 +25941,12 @@ def rename_file(file_id: int, new_name: str,
 
 
 @mcp.tool(annotations=TOOL_ADDS)
-@_ignores_create_backup
 @_tool_guard
 @_with_guidance(MARKER_REFUSED_DESCRIPTION, before="Args:")
 @_with_paragraphs(LOCK_REFUSED_PARAGRAPH, before="Args:")
 def create_attribute_type(name: str, applies_to: str,
                           value_type: str = "character",
-                          memo: Optional[str] = None,
-                          create_backup: Optional[bool] = None) -> str:
+                          memo: Optional[str] = None) -> str:
     """Define a new attribute for cases or files.
 
     It writes to the database. An attribute is a variable, of character
@@ -26120,8 +25974,6 @@ def create_attribute_type(name: str, applies_to: str,
                     query_by_attribute. There is no path back from numeric data to
                     character-only in Exegete, so choose carefully.
         memo: Optional description of what the attribute captures
-        create_backup: No longer used: Exegete takes a backup before every
-                       change (accepted until the release on method)
 
     Example:
         "Add a numeric Age attribute for cases"
@@ -26169,11 +26021,10 @@ def create_attribute_type(name: str, applies_to: str,
 
 
 @mcp.tool(annotations=TOOL_CHANGES)
-@_ignores_create_backup
 @_tool_guard
 @_with_paragraphs(LOCK_REFUSED_PARAGRAPH, before="Args:")
 def set_attribute(target_type: str, target_id: int, attribute_name: str,
-                  value: str, create_backup: Optional[bool] = None) -> str:
+                  value: str) -> str:
     """Set (or clear) an attribute value on a case or a file.
 
     It writes to the database. The attribute must already exist (see
@@ -26196,8 +26047,6 @@ def set_attribute(target_type: str, target_id: int, attribute_name: str,
         attribute_name: The attribute to set (exact name; see
                         list_attribute_types)
         value: The value as a string ("" clears/unsets)
-        create_backup: No longer used: Exegete takes a backup before every
-                       change (accepted until the release on method)
 
     Example:
         "Set Age to 34 for case 2"

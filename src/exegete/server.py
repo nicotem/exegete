@@ -21457,15 +21457,24 @@ _NOT_SAVED_NO_RUN = (
     "QualCoder can also enter the mapping in its Pseudonyms dialog, under "
     "Manage Files.)")
 # Choosing occurrences to leave, and leaving them, refused with a note
-# rewrite (v0.15.3): one text for the preview's choice and the run's list
+# rewrite (v0.15.3): one text for the preview's choice and the run's list.
+# Whatever memo_scope says (v0.15.5): this file's notes about the person
+# whose occurrences are left would take the pseudonym too
 _OCCURRENCES_WITH_NOTE_REWRITE = (
     "Exegete cannot leave some occurrences of a name as they are while "
     "rewrite_memos is on. A note rewrite replaces the name in the public "
-    "part of every note and journal entry across the project, including "
-    "those about the person whose occurrences are left. To choose "
-    "occurrences, preview again with rewrite_memos off and change by hand "
-    "the notes that name either person. To rewrite the notes, call again "
-    "without choosing occurrences.")
+    "part of every note it reaches, including those about the person whose "
+    "occurrences are left. To choose occurrences, preview again with "
+    "rewrite_memos off and change by hand the notes that name either "
+    "person. To rewrite the notes, call again without choosing "
+    "occurrences.")
+# memo_scope "file" without the note rewrite it limits (v0.15.5), refused
+# before any read: no note would change, and the call asked for some
+_MEMO_SCOPE_WITHOUT_NOTE_REWRITE = (
+    "memo_scope \"file\" keeps the note rewrite to this file's notes, and "
+    "rewrite_memos is off, so no note would change. To rewrite this file's "
+    "notes, call again with rewrite_memos on; to leave every note as it is, "
+    "call again without memo_scope.")
 # The words around each occurrence, refused while occurrences are chosen
 # or left (v0.15.3, ruling 106: the conversation carries ids and counts),
 # on both mapping paths. include_context is not bound, so an execute
@@ -21565,6 +21574,23 @@ _NO_NAME_HERE_NOTES_WERE_KEPT = (
     "None of the names in this mapping occurs in this file, and every one "
     "in a note or journal entry lies inside a phrase to keep, so nothing "
     "was rewritten and no backup was taken.")
+# The same two, and the two where no name occurs at all, with memo_scope
+# "file" (v0.15.5): its plan reads this file's notes alone, so they speak
+# of its notes, never of every note
+_NO_NAME_HERE_FILE_NOTES_KEPT = (
+    "None of the names in this mapping occurs in this file, and every one "
+    "in its notes lies inside a phrase to keep, so an execute would "
+    "rewrite nothing.")
+_NO_NAME_HERE_FILE_NOTES_WERE_KEPT = (
+    "None of the names in this mapping occurs in this file, and every one "
+    "in its notes lies inside a phrase to keep, so nothing was rewritten "
+    "and no backup was taken.")
+_NO_NAME_IN_FILE_OR_ITS_NOTES = (
+    "None of the names in this mapping occurs in this file or in its "
+    "notes, so an execute would rewrite nothing.")
+_NO_NAME_WAS_IN_FILE_OR_ITS_NOTES = (
+    "None of the names in this mapping occurs in this file or in its "
+    "notes, so nothing was rewritten and no backup was taken.")
 # The occurrences a list leaves, in the preview's warnings (v0.15.3): real
 # names, said on every path, the file counted or not. Where every
 # occurrence is left, the sentence above has said that it is by choice
@@ -21724,13 +21750,18 @@ def _nothing_was_rewritten(preview: Dict[str, Any], rewrite_memos: bool,
     kept inside a phrase (v0.15.4), never that no name occurs in any
     note; else no name in the file, nor, with rewrite_memos, in any note
     or journal entry. `not_saved` where a save was asked for on the
-    typed path (the lead's third ruling for Brief 2): no run, no save."""
+    typed path (the lead's third ruling for Brief 2): no run, no save.
+    With memo_scope "file" (v0.15.5) the notes said are this file's."""
     if _left_by_choice(preview):
         return _EVERY_OCCURRENCE_WAS_LEFT + (
             " The mapping was not saved, because no run happened."
             if not_saved else "")
+    file_notes = _file_notes_only(preview)
     if _kept_in_notes(preview):
-        said = _NO_NAME_HERE_NOTES_WERE_KEPT
+        said = (_NO_NAME_HERE_FILE_NOTES_WERE_KEPT if file_notes
+                else _NO_NAME_HERE_NOTES_WERE_KEPT)
+    elif rewrite_memos and file_notes:
+        said = _NO_NAME_WAS_IN_FILE_OR_ITS_NOTES
     elif rewrite_memos:
         said = ("None of the names in this mapping occurs in this file or "
                 "in any note or journal entry, so nothing was rewritten and "
@@ -22683,6 +22714,8 @@ def _pseudonymise_file_text_warning(file_text: Dict[str, Any],
 # Its three instructions are the paragraph's own words, pinned by
 # tests/test_v0142_shared_name_in_notes.py; "(a yes or no is enough)" keeps
 # a real name out of the answer when the mapping is the project's own list.
+# Since v0.15.5 its advice names memo_scope "file" for two people each in
+# a file of their own, and keeps the notes off for two in one file.
 _SHARED_NAME_IN_NOTES_WARNING = (
     "Warning: with rewrite_memos on, this run rewrites these names in notes "
     "and journal entries across the whole project, not only in those "
@@ -22690,12 +22723,53 @@ _SHARED_NAME_IN_NOTES_WARNING = (
     "project shares a name in this mapping, the notes about them are "
     "rewritten too, with this mapping's pseudonym, and no order of runs "
     "avoids this. Ask the researcher whether anyone does (a yes or no is "
-    "enough) before executing. If so, preview again with rewrite_memos "
-    "off, keep rewrite_memos off on every run of a shared name and change "
-    "the notes that name either person by hand; give the second person a "
-    "typed mapping with save_mapping_to_project off and "
-    "researcher_keeps_mapping on (pseudonyms.json holds one pseudonym per "
-    "name).")
+    "enough) before executing. If so, preview again: where each person has "
+    "a file of their own, with memo_scope \"file\", which keeps the rewrite "
+    "to this file's notes; where both are in one file, with rewrite_memos "
+    "off, then keep rewrite_memos off on every run of a shared name and "
+    "change the notes that name either person by hand. Either way, give "
+    "the second person a typed mapping with save_mapping_to_project off "
+    "and researcher_keeps_mapping on (pseudonyms.json holds one pseudonym "
+    "per name).")
+# Its place with memo_scope "file" (v0.15.5): which notes this run
+# rewrites, and the same question about anyone named in them, a yes or no
+# being enough
+_SHARED_NAME_IN_FILE_NOTES_WARNING = (
+    "Warning: with memo_scope \"file\", this run rewrites these names in "
+    "this file's notes alone (see memo_rewrites): those of its codings, "
+    "annotations and case links, its own note, and those of its "
+    "recording's segments that its codings are linked to. If someone else "
+    "named in those notes shares a name in this mapping, those mentions "
+    "are rewritten too, with this mapping's pseudonym. Ask the "
+    "researcher whether anyone does (a yes or no is enough) before "
+    "executing. If so, preview again with rewrite_memos off, keep "
+    "rewrite_memos off on every run of a shared name and change the notes "
+    "that name either person by hand.")
+# The notes a run limited to one file leaves that its rule still matches
+# (v0.15.5), from the residue's whole_word_after_rewrite: their number,
+# what the count takes in, and the two ways to change them, the second
+# only where no one else named shares a name
+_NOTES_LEFT_AFTER_RUN = (
+    "Warning: after this run, {count} note(s) or journal entr(ies) would "
+    "still match its whole-word rule outside every phrase to keep "
+    "(residue.memos, whole_word_after_rewrite).")
+_NOTES_LEFT_NO_RUN = (
+    "Warning: {count} note(s) or journal entr(ies) match the rewrite's "
+    "whole-word rule outside every phrase to keep, and an execute would "
+    "leave them as they are (residue.memos, whole_word_after_rewrite).")
+_NOTES_LEFT_HOLD = (
+    " That count takes in the notes memo_scope \"file\" leaves as they "
+    "are: other files' notes, those of PDFs, recordings and images "
+    "included; the notes of cases, codes, categories, attribute types and "
+    "the project; journal entries; and any of this file's notes left for a "
+    "marker. Change them by hand, or by a run across the whole project "
+    "when no one else named in those notes shares a name in this mapping.")
+
+
+def _file_notes_only(preview: Dict[str, Any]) -> bool:
+    """Whether a preview's note rewrite is limited to its file's notes
+    (memo_scope "file", v0.15.5), as its memo_rewrites block says."""
+    return (preview.get("memo_rewrites") or {}).get("memo_scope") == "file"
 
 
 def _pseudonymise_warnings(preview: Dict[str, Any],
@@ -22714,6 +22788,8 @@ def _pseudonymise_warnings(preview: Dict[str, Any],
     # Present exactly when the run was asked to rewrite notes (v0.13,
     # Brief 2): every note warning below reads its counts from here.
     memo_block = preview.get("memo_rewrites")
+    # And whether that rewrite is limited to this file's notes (v0.15.5)
+    file_notes = _file_notes_only(preview)
 
     other = sum(entry["codings"] for item in preview.get("files", [])
                 for entry in item["codings"].get("by_owner", []))
@@ -22824,10 +22900,12 @@ def _pseudonymise_warnings(preview: Dict[str, Any],
         if memo_block is None:
             rewritten = "this tool does not rewrite any of them"
         elif run:
+            # Only this file's notes with memo_scope "file" (v0.15.5)
+            among = "this file's notes" if file_notes else "the notes"
             rewritten = (
-                "this run rewrites only the notes among them, and only "
-                "where the whole-word rule matches (see memo_rewrites); "
-                "labels and attribute values are never rewritten")
+                f"this run rewrites only {among} among them, and only "
+                f"where the whole-word rule matches (see memo_rewrites); "
+                f"labels and attribute values are never rewritten")
         else:
             rewritten = ("an execute would rewrite none of them (see "
                          "memo_rewrites)")
@@ -22843,6 +22921,15 @@ def _pseudonymise_warnings(preview: Dict[str, Any],
             f"case, so it over-reports rather than under-reports; a "
             f"look-alike letter from another script is not caught. See "
             f"residue, and tell the researcher which fields to check.")
+    # The notes a run limited to this file's notes leaves (v0.15.5) that
+    # its rule still matches, outside every phrase to keep, as the residue
+    # counts them: said with what the count takes in, and the ways on
+    notes_left = sum(count.get("whole_word_after_rewrite", 0)
+                     for count in residue.get("memos", {}).values())
+    if file_notes and notes_left:
+        warnings.append(
+            (_NOTES_LEFT_AFTER_RUN if run else _NOTES_LEFT_NO_RUN).format(
+                count=notes_left) + _NOTES_LEFT_HOLD)
     file_text = residue.get("file_text")
     left, counted_left, chosen_alone = _occurrences_left(preview, file_text)
     # What left them (v0.15.4): a list, phrases to keep, or both
@@ -22874,7 +22961,9 @@ def _pseudonymise_warnings(preview: Dict[str, Any],
         if memo_block.get("totals", {}).get("rows", 0):
             # v0.14.2: a note that names someone else who shares a name is
             # rewritten as well, and the server cannot tell the two apart.
-            warnings.append(_SHARED_NAME_IN_NOTES_WARNING)
+            # With memo_scope "file" (v0.15.5), this file's notes alone
+            warnings.append(_SHARED_NAME_IN_FILE_NOTES_WARNING if file_notes
+                            else _SHARED_NAME_IN_NOTES_WARNING)
         private = memo_block.get("memos_rewritten_with_private_part", 0)
         if private:
             warnings.append(
@@ -23064,7 +23153,8 @@ def _no_replacement_warning(preview: Dict[str, Any]) -> str:
     either (the lead's third ruling for Brief 2). Occurrences left or
     kept by choice (v0.15.3, v0.15.4) are said as such, never that no
     name occurs; and where the file holds no name and every one the note
-    rewrite finds lies inside a phrase (v0.15.4), so are the notes'."""
+    rewrite finds lies inside a phrase (v0.15.4), so are the notes'. With
+    memo_scope "file" (v0.15.5) the notes said are this file's."""
     memo_block = preview.get("memo_rewrites")
     retention = preview.get("mapping_retention") or {}
     note_rows = (memo_block or {}).get("totals", {}).get("rows", 0)
@@ -23095,8 +23185,12 @@ def _no_replacement_warning(preview: Dict[str, Any]) -> str:
                 f"with rewrite_memos on, an execute would rewrite "
                 f"{note_rows} note(s) or journal entr(ies) and nothing in "
                 f"the file text.")
+    file_notes = _file_notes_only(preview)
     if _kept_in_notes(preview):
-        return _NO_NAME_HERE_NOTES_KEPT + no_save
+        return (_NO_NAME_HERE_FILE_NOTES_KEPT if file_notes
+                else _NO_NAME_HERE_NOTES_KEPT) + no_save
+    if file_notes:
+        return _NO_NAME_IN_FILE_OR_ITS_NOTES + no_save
     return ("None of the names in this mapping occurs in this file or in "
             "any note or journal entry, so an execute would rewrite "
             "nothing." + no_save)
@@ -23483,7 +23577,8 @@ def _pseudonymise_journal_name(files: Sequence[Dict[str, Any]],
 def _pseudonymise_journal_body(plan: Dict[str, Any], written: Dict[str, Any],
                                compiled, backup_name: Optional[str],
                                manifest_name: str,
-                               retention: Optional[Dict[str, Any]] = None
+                               retention: Optional[Dict[str, Any]] = None,
+                               memo_scope: str = "project"
                                ) -> str:
     """The audit the PROJECT itself carries, with no original in it.
 
@@ -23564,6 +23659,11 @@ def _pseudonymise_journal_body(plan: Dict[str, Any], written: Dict[str, Any],
             f"Notes rewritten: {totals['rows_updated']}"
             + (f" ({per_field})" if per_field else "")
             + f"; replacements: {totals['replacements']}.")
+        if memo_scope == "file":
+            # A run limited to this file's notes (v0.15.5)
+            lines.append(
+                "Only this file's notes were rewritten (memo_scope \"file\"); "
+                "every other note and journal entry was left as it was.")
         lines.append(
             f"Notes with a private part whose public part was rewritten: "
             f"{totals['rewritten_with_private_part']}. Notes left as they "
@@ -23647,7 +23747,8 @@ def _pseudonymise_manifest(plan: Dict[str, Any], written: Dict[str, Any],
                            when: datetime, secret: str,
                            project_path_at_start: str,
                            rewrite_memos: bool = False,
-                           retention: Optional[Dict[str, Any]] = None
+                           retention: Optional[Dict[str, Any]] = None,
+                           memo_scope: str = "project"
                            ) -> Dict[str, Any]:
     """The run record kept in the state home (D1 3.2), format 3.
 
@@ -23822,6 +23923,10 @@ def _pseudonymise_manifest(plan: Dict[str, Any], written: Dict[str, Any],
         manifest["memos_not_rewritten_marker_risk_note"] = (
             QualcoderDatabase.PSEUDONYMISE_MEMO_MARKER_RISK_NOTE
             + " They are not in the memos list above.")
+        if memo_scope == "file":
+            # This file's notes alone (v0.15.5): a key added, so the
+            # format stays 3; absent for a rewrite across the project
+            manifest["memo_scope"] = "file"
     manifest["record_note"] = PSEUDONYMISE_RECORD_NOTE
     if project_path is None or (backup_path and safe_backup_path is None):
         manifest["paths_withheld"] = (
@@ -23843,6 +23948,7 @@ def pseudonymise_source(
     case_mode: str = "exact",
     overlap_policy: str = "snap_to_pseudonym",
     rewrite_memos: bool = False,
+    memo_scope: str = "project",
     save_mapping_to_project: bool = False,
     researcher_keeps_mapping: bool = False,
     preview_token: Optional[str] = None,
@@ -24179,6 +24285,20 @@ def pseudonymise_source(
         return json.dumps({"error": (
             f"residue_detail must be one of "
             f"{', '.join(QualcoderDatabase.RESIDUE_DETAIL)}.")}, indent=2)
+    # Whose notes the note rewrite reaches (v0.15.5): its two values, and
+    # "file" only with the rewrite it limits, both before any read. With
+    # rewrite_memos off no note would change where the call asked for
+    # some, and guessing which was meant is refused, as it is for two
+    # mapping sources below
+    if memo_scope not in QualcoderDatabase.MEMO_SCOPES:
+        return json.dumps({"error": (
+            f"memo_scope must be one of "
+            f"{', '.join(QualcoderDatabase.MEMO_SCOPES)}.")}, indent=2)
+    file_notes = memo_scope == "file"
+    if file_notes and not bool(rewrite_memos):
+        return json.dumps({"error": _MEMO_SCOPE_WITHOUT_NOTE_REWRITE,
+                           "reason": "memo_scope_without_rewrite_memos"},
+                          indent=2)
 
     try:
         context_chars = _pseudonymise_count_arg(
@@ -24323,7 +24443,11 @@ def pseudonymise_source(
         overlap_policy=overlap_policy, rewrite_memos=rewrite_memos,
         save_mapping_to_project=save, leave_occurrences=leave,
         leave_numbers=numbers, numbering=code,
-        keep_phrases=pseudo.canonical_phrases(phrases))
+        keep_phrases=pseudo.canonical_phrases(phrases),
+        memo_scope=memo_scope)
+    # The file whose notes alone the note plan reads (memo_scope "file",
+    # v0.15.5), in both phases; None reads every note
+    notes_of = file_id if file_notes else None
 
     # The plan is the expensive part of everything below it: it reads
     # every eligible file's text, runs the pattern over all of it, and
@@ -24371,7 +24495,8 @@ def pseudonymise_source(
             return None
         if read_phase.get("memo_conn") is db_.conn:
             return read_phase["memo_plan"]
-        memo_plan = db_.pseudonymise_memo_plan(compiled, _read_plan(db_))
+        memo_plan = db_.pseudonymise_memo_plan(compiled, _read_plan(db_),
+                                               file_id=notes_of)
         if "memo_plan" not in read_phase:
             read_phase["memo_plan"] = memo_plan
             read_phase["memo_conn"] = db_.conn
@@ -24575,7 +24700,8 @@ def pseudonymise_source(
                                      leave=leave, leave_numbers=numbers,
                                      numbering=code, phrases=phrases)
         captured["write_plan"] = plan
-        memo_plan = (wdb.pseudonymise_memo_plan(compiled, plan)
+        memo_plan = (wdb.pseudonymise_memo_plan(compiled, plan,
+                                                file_id=notes_of)
                      if rewrite_memos else None)
         captured["write_memo_plan"] = memo_plan
         return fingerprint_rows(wdb.pseudonymise_effect(plan, memo_plan),
@@ -24664,7 +24790,7 @@ def pseudonymise_source(
             journal_entry = _pseudonymise_write_journal(
                 wdb, plan, written, compiled, owner,
                 Path(backup).name if backup else None, manifest_name,
-                retention)
+                retention, memo_scope=memo_scope)
         captured["plan"] = plan
         captured["written"] = written
         captured["journal_entry"] = journal_entry
@@ -24672,7 +24798,11 @@ def pseudonymise_source(
                   if not report["position_safe"]]
         message = f"Pseudonymised {len(written['files'])} file(s)"
         memos = written.get("memos")
-        if memos is not None:
+        if memos is not None and file_notes:
+            # This file's notes alone (memo_scope "file", v0.15.5)
+            message += (f" and {memos['totals']['rows_updated']} note(s) of "
+                        f"file {file_id}")
+        elif memos is not None:
             message += (f" and {memos['totals']['rows_updated']} note(s) or "
                         f"journal entr(ies)")
         files = written["files"]
@@ -24740,6 +24870,8 @@ def pseudonymise_source(
                 "file_id": file_id,
                 "use_project_pseudonyms": use_project_pseudonyms,
                 "rewrite_memos": rewrite_memos,
+                # Bound when "file", so repeated as it binds (v0.15.5)
+                **({"memo_scope": "file"} if file_notes else {}),
                 # Bound, so always repeated, false included; the
                 # attestation only when the preview call gave it.
                 "save_mapping_to_project": save,
@@ -24872,13 +25004,19 @@ def pseudonymise_source(
                 Path(tmp).unlink()
             except OSError:
                 pass
+    # A reading copy shows its own file's notes and no other, so a run
+    # limited to this file's notes (v0.15.5) removes this file's folder
+    # alone, also when only its notes changed; a note rewrite across the
+    # whole project, the project's
     _forget_reading_copies(
+        [file_id] if file_notes else
         None if captured["written"].get("memos") is not None else
         [item["file_id"] for item in captured["written"]["files"]])
     manifest = _pseudonymise_manifest(
         captured["plan"], captured["written"], compiled, bind, backup_path,
         captured.get("journal_entry"), when, secret, project_path_at_start,
-        rewrite_memos=rewrite_memos, retention=retention)
+        rewrite_memos=rewrite_memos, retention=retention,
+        memo_scope=memo_scope)
     written_to = _write_run_manifest(manifest, manifest_name)
     if written_to is None:
         result["manifest_path"] = None
@@ -24903,7 +25041,15 @@ def pseudonymise_source(
         chat_history=qualcoder_history.chat_history_found(project_folder))
     result["notes"].extend(_sessions_note(holding, to_apply, places))
     memos = captured["written"].get("memos")
-    if memos is not None:
+    if memos is not None and file_notes:
+        # This file's notes alone (memo_scope "file", v0.15.5)
+        result["notes"].append(
+            f"The public part of {memos['totals']['rows_updated']} of this "
+            f"file's notes was rewritten (memo_scope \"file\"), and every "
+            f"other note and journal entry was left as it is; every private "
+            f"part was carried across unread. Re-read a note before quoting "
+            f"it.")
+    elif memos is not None:
         result["notes"].append(
             f"The public part of {memos['totals']['rows_updated']} note(s) "
             f"and journal entr(ies) was rewritten across the whole project, "
@@ -24920,7 +25066,8 @@ def _pseudonymise_write_journal(wdb, plan: Dict[str, Any],
                                 owner: Optional[str],
                                 backup_name: Optional[str],
                                 manifest_name: str,
-                                retention: Optional[Dict[str, Any]] = None
+                                retention: Optional[Dict[str, Any]] = None,
+                                memo_scope: str = "project"
                                 ) -> Optional[str]:
     """Add the run's journal entry, and refuse if the rewrite died with it.
 
@@ -24942,7 +25089,7 @@ def _pseudonymise_write_journal(wdb, plan: Dict[str, Any],
     """
     name = _pseudonymise_journal_attempt(
         wdb, plan, written, compiled, owner, backup_name, manifest_name,
-        retention)
+        retention, memo_scope=memo_scope)
     if not wdb.conn.in_transaction:
         raise RuntimeError(
             "The journal entry could not be written and the rewrite was "
@@ -24956,7 +25103,8 @@ def _pseudonymise_journal_attempt(wdb, plan: Dict[str, Any],
                                   owner: Optional[str],
                                   backup_name: Optional[str],
                                   manifest_name: str,
-                                  retention: Optional[Dict[str, Any]] = None
+                                  retention: Optional[Dict[str, Any]] = None,
+                                  memo_scope: str = "project"
                                   ) -> Optional[str]:
     """Write the entry, or return None with the reason logged.
 
@@ -24987,7 +25135,8 @@ def _pseudonymise_journal_attempt(wdb, plan: Dict[str, Any],
                        "pseudonymisation run; no entry was written.")
         return None
     body = _pseudonymise_journal_body(
-        plan, written, compiled, backup_name, manifest_name, retention)
+        plan, written, compiled, backup_name, manifest_name, retention,
+        memo_scope=memo_scope)
     try:
         wdb.add_journal_entry(name=name, entry=body, owner=owner,
                               auto_commit=False)

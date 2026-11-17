@@ -93,12 +93,12 @@ CHANGES = [
     ("README.md",
      "| Create a project | Yes | Yes (Experimental) |",
      f"{FULL_TOOLS}: every tool, creating a project"),
-    # without the count, which the names-list piece moves
+    # without the count, which the names-list piece moves (v0.15.5: the
+    # earlier names of two renamed tools, removed, no longer counted)
     ("README.md",
      "creating a project (Experimental) and two renamed tools' earlier "
      "names included",
-     "every tool, creating a project and the earlier names of two renamed "
-     "tools included"),
+     "every tool, creating a project included"),
     # v0.15.2: the Terminal routes moved to the Terminal guide
     ("docs/installing-from-the-terminal.md",
      "includes creating a project (Experimental): the assistant",

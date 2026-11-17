@@ -901,7 +901,7 @@ annotation, which takes priority)." Under a server's default, `auto`,
 Codex asks before a tool that can replace or remove, and runs a
 read-only tool without asking. It also runs without asking a tool that
 is neither but is marked as reaching nothing beyond this computer. Here
-that is the 18 tools that only add (`import_text_file`,
+that is the 17 tools that only add (`import_text_file`,
 `apply_codings`, `create_proposed_codes`, `create_code` and the rest,
 `open_file_for_reading` and `import_documents` among them from 0.14.3,
 and `prepare_names_list` from 0.15.0). Codex does not read the

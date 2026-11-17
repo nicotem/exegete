@@ -348,9 +348,12 @@ CREATION_LINE = ("and so is the line saying that a new project is in "
 class TestTheSmallerPoints:
 
     def test_blocking_a_new_name(self):
+        """The CHANGELOG's entry for 0.15.0, a record, keeps the advice;
+        TOOLS.md's section "Earlier names" no longer gives it, since 0.15.5
+        removed the earlier names that could still run the tool."""
         tools = _flat(_read("TOOLS.md"))
         earlier = tools[tools.index("## Earlier names"):]
-        assert BLOCK_BOTH in earlier[:earlier.index("## ", 5)]
+        assert BLOCK_BOTH not in earlier[:earlier.index("## ", 5)]
         entry = _flat(_unreleased())
         upgrading = entry[entry.index("### Upgrading from 0.14.3"):]
         upgrading = upgrading[:upgrading.index("### ", 5)]

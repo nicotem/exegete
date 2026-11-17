@@ -398,7 +398,7 @@ within each description's first 2,048 characters. The few named
 exceptions reach the model through `read_brief` or the tools' answers.
 The descriptions are longer on Python 3.11 and 3.12 than on 3.13, which
 strips the indentation they are written with. On Python 3.13, 4 of
-`full`'s 80 descriptions are longer than 4,096 characters
+`full`'s 78 descriptions are longer than 4,096 characters
 (`pseudonymise_source`, about 18,000; `start_coding_session`, about
 6,000; `search_files`, about 4,800; `record_suggestions`, about 4,500).
 On 3.11 and 3.12, the same four are, at about 19,000, 6,300, 5,200 and
@@ -587,10 +587,10 @@ output improperly formatted tool calls"
 reports place the practical minimum for work with many tools around
 14B parameters.
 
-**Step 3. Use the small tool set.** Exegete offers 80 tools by default,
+**Step 3. Use the small tool set.** Exegete offers 78 tools by default,
 and the serialised tool definitions alone measure about 210,000
 characters, roughly 53,000 tokens, against about 76,000 characters,
-roughly 19,000 tokens, for the 28 tools of `core` (measured on Python 3.13
+roughly 19,000 tokens, for the 26 tools of `core` (measured on Python 3.13
 with the libraries in `uv.lock`; TOOLS.md says how, and
 [docs/snapshot/](snapshot/) gives the exact figures). The full set
 fills LM Studio's default context of 8k several times over before you
@@ -913,7 +913,9 @@ and `approval_mode = "prompt"` under it: that tool was removed in
 0.15.0, so you can delete both lines. A table of the same kind that you
 added for one of the three tools removed in 0.15.1 (the CHANGELOG's
 "Upgrading from 0.15.0" names them) can be deleted in the same way,
-with the lines under it.
+with the lines under it, and so can one for the earlier names of the
+two renamed tools, removed in 0.15.5 (TOOLS.md, "Earlier names", lists
+them).
 
 **Other ways to add it.** The desktop app has a settings screen for
 this (Settings, MCP servers, Add server: the name `exegete`, STDIO, and
@@ -1132,11 +1134,10 @@ the two of the check for new versions (`EXEGETE_UPDATE_CHECK` and
   opened by whichever tool comes first (since v0.14; before, the backup
   tools and a few others answered that no project was selected until
   another tool had run). Without it, select a project with the tools.
-- `EXEGETE_TOOLSET`: `full` (default) registers 80 tools, every tool,
+- `EXEGETE_TOOLSET`: `full` (default) registers 78 tools, every tool,
   creating a project included, so that a study can be started from the
-  conversation (TOOLS.md, "Starting a project from the conversation");
-  two of them are the earlier names of two renamed tools (TOOLS.md,
-  "Earlier names"). `core` registers the 28-tool supervised coding set
+  conversation (TOOLS.md, "Starting a project from the conversation").
+  `core` registers the 26-tool supervised coding set
   for local models (see the LM Studio recipe), which cannot create a
   project. `lifecycle`, the earlier name of `full` (the desktop
   extension's default before 0.15.0), is read as `full` until v1.0, and

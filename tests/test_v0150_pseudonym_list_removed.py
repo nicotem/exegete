@@ -418,7 +418,9 @@ class TestInstall:
 
     def test_codex_and_the_summary(self):
         install = _flat(_read("INSTALL.md"))
-        assert ("Here that is the 18 tools that only add (`import_text_file`, "
+        # (v0.15.5: 17, analyze_for_coding removed;
+        # tests/test_v0141_intro_openai.py holds the count to the code)
+        assert ("Here that is the 17 tools that only add (`import_text_file`, "
                 "`apply_codings`, `create_proposed_codes`, `create_code` and "
                 "the rest, `open_file_for_reading` and `import_documents` "
                 "among them from 0.14.3, and `prepare_names_list` from "
@@ -461,9 +463,10 @@ class TestToolsReadmePrivacy:
     def test_tools(self):
         tools = _read("TOOLS.md")
         # (79 since v0.15.1's removals; the snapshot's count since,
-        # 80 with v0.15.2's undo)
+        # 80 with v0.15.2's undo, 78 since 0.15.5 removed the two earlier
+        # names)
         assert ("extension and when you configure Exegete yourself) "
-                f"registers {FULL_TOOLS} tools,") in tools
+                f"registers {FULL_TOOLS} tools.") in tools
         assert ("(`pseudonymise_source`): replace the names you list, or a "
                 "list you fill in on your own computer (`prepare_names_list`, "
                 "`save_names_list`), as whole words,") in tools
@@ -472,8 +475,8 @@ class TestToolsReadmePrivacy:
         readme = _read("README.md")
         # the count is the snapshot's, and the size any figure
         assert re.search(re.escape(
-            f"| `full` | {FULL_TOOLS}: every tool, creating a project and the "
-            "earlier names of two renamed tools included | about ") + FIGURE
+            f"| `full` | {FULL_TOOLS}: every tool, creating a project "
+            "included | about ") + FIGURE
             + " characters, " + FIGURE + r" tokens \|", readme)
         # (the readability reading: the list filled in by you, said so)
         assert ("with the project's names list, or afterwards. You can fill "

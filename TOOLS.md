@@ -1112,9 +1112,8 @@ answered, though no longer listed, until v1.0.
 
 The assistant uses these tools on your project. The full toolset
 (`EXEGETE_TOOLSET=full`, the default everywhere: in the Claude Desktop
-extension and when you configure Exegete yourself) registers 80
-tools, two of them the earlier names of two renamed tools (see "Earlier
-names" below). The argument lists below give every argument each tool
+extension and when you configure Exegete yourself) registers 78
+tools. The argument lists below give every argument each tool
 declares, and each tool's own description says what each one does.
 
 > **Creating projects:** `create_project` makes a new, empty project
@@ -1125,7 +1124,7 @@ declares, and each tool's own description says what each one does.
 > **Reduced toolset for local models (Experimental):** with
 > `EXEGETE_TOOLSET=core` in Exegete's environment (in the extension,
 > the switch "Limit Exegete to its small tool set"), only the
-> 28-tool supervised coding set is registered: read_brief,
+> 26-tool supervised coding set is registered: read_brief,
 > list_available_projects, select_project, get_current_project,
 > get_project_summary,
 > search_files, read_file_with_codings, search_memos,
@@ -1136,7 +1135,7 @@ declares, and each tool's own description says what each one does.
 > update_suggestion_status, apply_codings, create_code, set_memo,
 > set_project_ai_coder_name,
 > copy_project_to_workspace, delete_coding, list_backups,
-> restore_backup, undo_changes, and the two earlier names below.
+> restore_backup and undo_changes.
 > Meant for local models, and optional elsewhere. An unknown value
 > stops Exegete at startup, with a message giving the valid values. Measured on Python 3.13 with the libraries in
 > `uv.lock` (the serialised tool definitions: name, description and
@@ -1311,16 +1310,14 @@ narrower set (see its own entry).
 
 ## Earlier names
 
-Two tools have been renamed. Their earlier names are still listed,
-and do exactly what the new ones do, until a later release (planned as
-v0.15.5) removes them: `analyze_for_coding` is now
-`start_coding_session`, and `analyze_file_with_coding` is now
-`read_file_with_codings`. If your host remembers a choice to run one of
-the earlier names without asking, it may ask again for the new one.
-Likewise, a choice to block or switch off an earlier name does not
-carry over to its new name: if you blocked one, you may want to block
-the new name too. Blocking or switching off a new name leaves its
-earlier name able to run the same tool, so you may want to block both.
+Two tools were renamed in 0.15.0, and their earlier names were removed
+in 0.15.5: `analyze_for_coding` is now `start_coding_session`, and
+`analyze_file_with_coding` is now `read_file_with_codings`. A call of
+an earlier name is refused, as for any tool that does not exist, so a
+saved instruction, skill or script that calls one needs the new name.
+A choice your host saved for an earlier name, to run it without asking
+or to block it, no longer applies; a choice saved for a new name is
+kept.
 
 ## Available prompts
 

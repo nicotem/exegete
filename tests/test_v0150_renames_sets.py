@@ -507,8 +507,8 @@ class TestTheDocuments:
         # here, each FIGURE any figure written as the documents write one
         readme = _flat("README.md")
         assert _with_figures(
-            f"| `full` | {EXPECTED_FULL}: every tool, creating a project and "
-            f"the earlier names of two renamed tools included | about FIGURE "
+            f"| `full` | {EXPECTED_FULL}: every tool, creating a project "
+            f"included | about FIGURE "
             f"characters, FIGURE tokens | hosted models, such as Claude or "
             f"OpenAI's | every route |").search(readme)
         # The design's "before 0.15.0" gives way to the README's own rule

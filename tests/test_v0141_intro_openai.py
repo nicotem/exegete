@@ -622,12 +622,13 @@ class TestCodexAsksBeforeEveryChange:
         # 0.14.3: open_file_for_reading and import_documents add, so
         # Codex's default mode runs them unasked too, which INSTALL.md
         # says (allow the import once elsewhere); 0.15.0: and
-        # analyze_for_coding, the earlier name of start_coding_session,
-        # listed with its annotations; and prepare_names_list, which
-        # makes the names file once (the files design, piece 3)
-        assert len(adding) == 18
+        # prepare_names_list, which makes the names file once (the files
+        # design, piece 3); 0.15.5: no longer analyze_for_coding, the
+        # earlier name of start_coding_session, removed
+        assert len(adding) == 17
         assert "prepare_names_list" in adding
-        assert {"start_coding_session", "analyze_for_coding"} <= set(adding)
+        assert "start_coding_session" in adding
+        assert "analyze_for_coding" not in tools
         assert "import_documents" in adding
         for name in ("import_text_file", "apply_codings",
                      "create_proposed_codes", "create_code"):
@@ -637,7 +638,7 @@ class TestCodexAsksBeforeEveryChange:
             assert codex_asks(tools[name].annotations, "auto"), name
         marks = _between(_flat("INSTALL.md"), "**Codex** (the ChatGPT "
                          "desktop app", "So, for work on real data")
-        assert ("Here that is the 18 tools that only add "
+        assert (f"Here that is the {len(adding)} tools that only add "
                 "(`import_text_file`, `apply_codings`, "
                 "`create_proposed_codes`, `create_code` and the rest, "
                 "`open_file_for_reading` and `import_documents` among them "

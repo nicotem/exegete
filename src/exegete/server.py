@@ -581,18 +581,18 @@ there are some, ask the researcher before writing."""
 
 TWO_STEP_PARAGRAPH = """Two-step by design. Call without preview_token: nothing in the project
 is written, and the result is a preview of exactly what would change,
-with a preview_token. Show the researcher the preview (including its
-collateral block, which says whose codings it affects, and every
-warning) and ask whether to proceed. Only if they agree, call again
-with the same arguments and preview_token=<the token>. The token is
-valid for 60 minutes and only while the rows it covers are unchanged;
-if what it covers changed in between, the second call is refused and
-you must preview again. A backup is always created first."""
+with a preview_token. Show the researcher the preview, with every
+warning and its collateral block, which says whose codings it affects,
+and ask whether to proceed. Only if they agree, call again with the
+same arguments and preview_token=<the token>. The token is valid for 60
+minutes, and only while the rows it covers stay unchanged. If any of
+them changed in between, the second call is refused and you must
+preview again. A backup is always created first."""
 
 EXPORT_FULL_MEMOS_PARAGRAPH = """Full memos on export: like QualCoder's own exports, the exported file
-keeps memo text in full, including any private '#####' section that
-read tools never show the AI. Mention this to the researcher if they
-plan to share the exported file."""
+keeps memo text in full, including any private '#####' section, which
+the tools that read the project never show you. Mention this to the
+researcher if they plan to share the exported file."""
 
 CODER_VISIBILITY_COUNTS_PARAGRAPH = """Coder visibility: a project in the format of QualCoder 3.8.2, or of
 4.0 onwards, can hide some coders' work. When it does, counts cover
@@ -3389,7 +3389,8 @@ def _ask_refusal() -> Dict[str, Any]:
         "is free text; a model name such as \"Qwen 3.8 6bit\" is a good "
         "choice, because codings by different models can then be compared "
         "later. Quick picks: \"AI Coding Assistant\" (the name on AI "
-        "codings made before each project had a name of its own)")
+        "codings made before each project had an AI coder name of its "
+        "own)")
     if offer_ai_agent:
         text += (", \"AI Agent\" (if the researcher also uses QualCoder "
                  "4.0's own assistant, this name puts both assistants' "
@@ -4899,8 +4900,8 @@ def list_all_codes() -> str:
 
     Returns all codes with their names, categories, colours, memos, and metadata,
     as a flat list ordered by category, then name. Each code's category
-    gives its place in the tree, and in QualCoder 4.0's format so do its
-    parent code and its path ("Category > Parent code > Code").
+    gives its place in the tree. In a project in QualCoder 4.0's format,
+    its parent code and its path ("Category > Parent code > Code") do too.
     """
     codes = get_db().list_codes()
     return _ai_json(codes, indent=2)
@@ -5823,8 +5824,8 @@ def set_project_ai_coder_name(name: str, note: str = "",
     name is theirs to choose. It is plain text on one line, up to 80
     characters. A model name such as "Qwen 3.8 6bit" lets codings by
     different models be compared later. Quick picks: "AI Coding Assistant"
-    (the name on AI codings made before each project had a name of its
-    own), "AI Agent" (QualCoder 4.0's own assistant). The setting is
+    (the name on AI codings made before each project had an AI coder name
+    of its own), "AI Agent" (QualCoder 4.0's own assistant). The setting is
     stored with the project (exegete.json in the project folder), so it
     travels with backups and copies. It can be changed at any time;
     earlier rows keep the name they were written under. Names are
@@ -5998,10 +5999,10 @@ CODER_NAME_IS_AI_REFUSAL = (
     "\"{name}\" is a name AI work is stored under: this project's AI coder "
     "name or an earlier one, the AI coder name in Exegete's settings, "
     "\"AI Coding Assistant\" (the name on AI codings made before each "
-    "project had a name of its own) or \"AI Agent\" (the name QualCoder "
-    "4.0's assistant writes under). The researcher's own coder name must "
-    "differ, or AI rows could not be told apart from theirs. Nothing was "
-    "changed.")
+    "project had an AI coder name of its own) or \"AI Agent\" (the name "
+    "QualCoder 4.0's assistant writes under). The researcher's own coder "
+    "name must differ, or AI rows could not be told apart from theirs. "
+    "Nothing was changed.")
 CODER_NAME_SPEAKER_REFUSAL = (
     "\"{speaker}\" is QualCoder's speaker coder, which every project lists; "
     "it is not a person's coder name. Ask the researcher for their own "
@@ -8201,11 +8202,14 @@ def search_coded_text(query: str, code_name: Optional[str] = None,
         cursor: next_cursor from a previous page of this same search
 
     Returns:
-        JSON object with results, each matching coding with its passage,
-        file, code, positions, memo and coder (the coded passage alone,
-        without the text around it); result_count; total_results, or
-        total_before_novelty_filter with exclude_code_ids; and the page
-        block
+        JSON object with:
+        - results: each matching coding with its passage, file, code,
+          positions, memo and coder. The passage is the coded text alone,
+          without the text around it
+        - result_count
+        - total_results, or total_before_novelty_filter when
+          exclude_code_ids is given
+        - the page block
     """
     db_ = get_db()
     try:
@@ -13133,16 +13137,17 @@ def import_text_file(
                    the text before storing it, as QualCoder does to every
                    text file it imports. Default false, so no name in the
                    text is replaced unless you ask.
-                   Case-sensitive, whole-word, like QualCoder. Two
-                   differences: QualCoder applies the entries one after
-                   another, so a later entry can rewrite what an earlier one
-                   produced; this applies them all in a single pass, longest
-                   form first, so nothing it writes is ever replaced again.
-                   And a list QualCoder would apply is refused, with nothing
-                   imported, when an entry begins or ends with a space, a
-                   name is shorter than 2 characters or a pseudonym shorter
-                   than 3, a name appears twice, or a pseudonym is also a
-                   name in the list.
+                   Case-sensitive and whole-word, like QualCoder. It
+                   differs from QualCoder's import in two ways. First,
+                   QualCoder applies the entries one after another, so a
+                   later entry can rewrite what an earlier one produced.
+                   Exegete applies them all in one pass, longest form
+                   first, so nothing it writes is replaced again. Second,
+                   Exegete refuses a list that QualCoder would apply, and
+                   imports nothing, when an entry begins or ends with a
+                   space, a name is shorter than 2 characters or a
+                   pseudonym shorter than 3, a name appears twice, or a
+                   pseudonym is also a name in the list.
                    The result carries per-pseudonym counts and which
                    encoding pseudonyms.json was read in.
 
@@ -17887,7 +17892,7 @@ def explain_ai_coding_tools(tool_name: Optional[str] = None) -> str:
                           "show the researcher that preview and the "
                           "warnings, then call again with the preview_token "
                           "it returned. The token covers that operation on "
-                          "those rows, so if what it covers changed in "
+                          "those rows, so if any of them changed in "
                           "between, the second call is refused and you "
                           "preview again."
             },
@@ -18513,9 +18518,9 @@ def review_proposals(coding_session_id: str,
     Args:
         coding_session_id: The session ID
         proposal_guids: Specific proposals to show (default: all)
-        show_examples: Include the evidence segments, each text up to its
-                       first 200 characters, a longer one ending in "…"
-                       (default: False)
+        show_examples: Include the evidence segments (default: False).
+                       Each shows its text up to its first 200 characters,
+                       and a longer one ends in "…"
     """
     # Bridge fix: some MCP middleware strips arguments named
     # 'session_id' (reserved for its own routing); the tool
@@ -20010,9 +20015,10 @@ def move_category(category_id: int,
 
     It writes to the database. The result gives the parent the category was
     filed under (`new_parent`, null at the top level). Refuses any move that
-    would create a cycle (make a category its own ancestor): QualCoder 3.8.2
-    and QualCoder 4.0's reports would hide the category and all its codes,
-    and QualCoder 4.0's Codebook would never finish. When the category is
+    would create a cycle, making a category its own ancestor. In QualCoder
+    3.8.2, and in QualCoder 4.0's reports, such a cycle would hide the
+    category and all its codes, and QualCoder 4.0's Codebook would never
+    finish. When the category is
     already under the requested parent (or already at the top level) the
     result is `changed: false, reason: unchanged` with nothing written and
     no backup made. Successful moves carry `changed: true`.
@@ -22681,9 +22687,11 @@ _NOTES_LEFT_HOLD = (
     " That count takes in the notes memo_scope \"file\" leaves as they "
     "are: other files' notes, those of PDFs, recordings and images "
     "included; the notes of cases, codes, categories, attribute types and "
-    "the project; journal entries; and any of this file's notes left for a "
-    "marker. It also takes in this file's notes into which a pseudonym "
-    "writes a name of this mapping back. Change them by hand, or by a run "
+    "the project; journal entries; and any of this file's notes in which "
+    "the rewrite would form a private-part marker. It also takes in notes "
+    "of this file that the run rewrites, where a pseudonym puts a name of "
+    "this mapping back into them, as \"Ann Smith\" would with Ann in the "
+    "mapping. Change them by hand, or by a run "
     "across the whole project when no one else named in those notes "
     "shares a name in this mapping.")
 
@@ -25154,11 +25162,11 @@ def update_annotation(annotation_id: int, memo: str,
                       allow_hidden_coder: bool = False) -> str:
     """Edit an annotation's note. An empty note deletes the annotation.
 
-    It writes to the database. It follows QualCoder: editing updates the
-    note and its date (owner and the anchored span never change); clearing
-    the note to "" deletes the annotation row, since QualCoder never keeps
-    an empty annotation. One difference: a note of spaces alone counts as
-    empty here, since it shows nothing, where QualCoder keeps it. The
+    It writes to the database. It follows QualCoder. Editing updates the
+    note and its date, never its owner or its anchored span. Clearing the
+    note to "" deletes the annotation row, since QualCoder never keeps an
+    empty annotation. One difference: a note of spaces alone counts as
+    empty here, since it shows nothing, while QualCoder keeps it. The
     response says whether it updated or deleted.
 
     Memo privacy (QualCoder 4.0 convention): only the note text before
@@ -25911,8 +25919,8 @@ def rename_file(file_id: int, new_name: str) -> str:
     keeps '.txt' or '.transcribed' exactly; '.pdf' is neither gained nor
     lost; '.transcribed' is not gained; an image, audio or video file
     keeps its stored file's extension; a text with no stored file whose
-    name ends in '.txt' or has no dot keeps the ending '.txt', or no dot
-    at all. QualCoder's own Rename, if the researcher uses it, can still
+    name ends in '.txt' or has no dot can lose '.txt' or gain it, but no
+    other ending. QualCoder's own Rename, if the researcher uses it, can still
     make those changes. Any other name changes freely ('Thomas.Jones' to
     'P01'). A rename may put back an ending that the stored file's own
     name has. Even so, a transcript may not lose both its endings, nor a
@@ -26942,10 +26950,10 @@ def export_frequencies_csv(output_path: str,
     QualCoder's report does.
 
     Columns: `Code Tree, Id, {coder…}, Total` (coders alphabetical).
-    Tree rows in depth order with `--` per level in the Code Tree cell,
-    as QualCoder 3.8.2's text export marks a level (QualCoder 4.0 indents
-    with spaces instead), so the hierarchy survives a flat CSV. UTF-8 with
-    BOM, CRLF rows.
+    Tree rows in depth order, with `--` for each level in the Code Tree
+    cell, so the hierarchy survives a flat CSV. QualCoder 3.8.2's text
+    export marks a level the same way, and QualCoder 4.0's indents with
+    spaces. UTF-8 with BOM, CRLF rows.
 
     Args:
         output_path: Target .csv file, or an existing directory (default
@@ -27373,8 +27381,8 @@ CODER_NAME_SETTING_IS_SPEAKER_REFUSAL = (
 # 1, parity: creation took "AI Agent" and the correction refused it).
 CODER_NAME_CREATION_IS_AI_REFUSAL = (
     "\"{name}\" is a name AI work is stored under: \"AI Coding Assistant\" "
-    "(the name on AI codings made before each project had a name of its "
-    "own) or \"AI Agent\" (the name QualCoder 4.0's assistant writes "
+    "(the name on AI codings made before each project had an AI coder name "
+    "of its own) or \"AI Agent\" (the name QualCoder 4.0's assistant writes "
     "under). The researcher's own coder name must differ, or AI rows could "
     "not be told apart from theirs. {ask} Nothing was created.")
 CODER_NAME_CREATION_IS_AI_ASK_GIVEN = (
@@ -27757,9 +27765,10 @@ def create_project(name: str, directory: Optional[str] = None,
     When the AI coder name is filled in Exegete's settings, the new project
     stores it too, and the answer says so.
 
-    Names: spaces around the name are dropped first. The name becomes a
-    folder, so it may not hold / \\ : < > | ? * or ", end in a dot or a
-    space, start with a dot, be a Windows device name such as CON, hold
+    Names: spaces around the name are dropped first, and then a typed
+    ".qda". What is left becomes a folder, so it may not hold
+    / \\ : < > | ? * or ", end in a dot or a space ("Study .qda" ends in
+    one), start with a dot, be a Windows device name such as CON, hold
     "_backup_" or "_BKUP_", or pass 200 bytes. A name already used in that
     folder, in any letter case, is refused, and so is a name whose older
     backup folders sit there. Each refusal says why.

@@ -221,8 +221,8 @@ categories and attributes. Ask the researcher before calling it: the
 name is theirs to choose. It is plain text on one line, up to 80
 characters. A model name such as "Qwen 3.8 6bit" lets codings by
 different models be compared later. Quick picks: "AI Coding Assistant"
-(the name on AI codings made before each project had a name of its
-own), "AI Agent" (QualCoder 4.0's own assistant). The setting is
+(the name on AI codings made before each project had an AI coder name
+of its own), "AI Agent" (QualCoder 4.0's own assistant). The setting is
 stored with the project (exegete.json in the project folder), so it
 travels with backups and copies. It can be changed at any time;
 earlier rows keep the name they were written under. Names are
@@ -537,11 +537,14 @@ Args:
     cursor: next_cursor from a previous page of this same search
 
 Returns:
-    JSON object with results, each matching coding with its passage,
-    file, code, positions, memo and coder (the coded passage alone,
-    without the text around it); result_count; total_results, or
-    total_before_novelty_filter with exclude_code_ids; and the page
-    block
+    JSON object with:
+    - results: each matching coding with its passage, file, code,
+      positions, memo and coder. The passage is the coded text alone,
+      without the text around it
+    - result_count
+    - total_results, or total_before_novelty_filter when
+      exclude_code_ids is given
+    - the page block
 
 
 ==== Tool search_coded_text: the rest of its entry ====
@@ -3029,8 +3032,8 @@ Get a list of all codes in the project.
 
 Returns all codes with their names, categories, colours, memos, and metadata,
 as a flat list ordered by category, then name. Each code's category
-gives its place in the tree, and in QualCoder 4.0's format so do its
-parent code and its path ("Category > Parent code > Code").
+gives its place in the tree. In a project in QualCoder 4.0's format,
+its parent code and its path ("Category > Parent code > Code") do too.
 
 
 ==== Resource exegete://codes/list: the rest of its entry ====

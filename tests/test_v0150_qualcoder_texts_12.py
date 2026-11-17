@@ -222,8 +222,8 @@ ASK_HEAD = (
     "models can then be compared later. Quick picks: \"AI Coding "
     # v0.15.5: what the name is, where it was "Exegete's built-in default"
     # (the claims audit's point 58: no write falls back to it)
-    "Assistant\" (the name on AI codings made before each project had a "
-    "name of its own)")
+    "Assistant\" (the name on AI codings made before each project had an "
+    "AI coder name of its own)")
 AI_AGENT = (", \"AI Agent\" (if the researcher also uses QualCoder 4.0's "
             "own assistant, this name puts both assistants' codings under "
             "one coder)")
@@ -805,10 +805,12 @@ class TestTheDocuments:
             # v0.15.5: what the name is, where it was "Exegete's built-in
             # default" (the claims audit's point 58)
             "Quick picks if you have no preference: `AI Coding Assistant`, "
-            "the name on the AI codings Exegete made before each project "
-            "had one of its own, or a name of your own. A REFI-QDA export "
-            "also gives the AI that name when neither the project nor "
-            "Exegete's settings name one, and no write falls back to it. "
+            "or a name of your own. `AI Coding Assistant` is the name on "
+            "the AI codings Exegete made before each project had an AI "
+            "coder name of its own. A REFI-QDA export also gives the AI "
+            "that name when neither the project nor Exegete's settings "
+            "hold one. No write falls back to it: a write that needs a "
+            "name asks you. "
             # (v0.15.2: the signs in a sentence of their own)
             "When the project shows that QualCoder's AI may have been "
             "used, the picks also include `AI Agent`. The signs are rows "

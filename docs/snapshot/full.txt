@@ -7865,8 +7865,9 @@ stores it too, and the answer says so.
 
 Names: spaces around the name are dropped first, and then a typed
 ".qda". What is left becomes a folder, so it may not hold
-/ \ : < > | ? * or ", end in a dot or a space ("Study .qda" ends in
-one), start with a dot, be a Windows device name such as CON, hold
+/ \ : < > | ? * or ", end in a dot or a space (as what is left of
+"Study .qda" does), start with a dot, be a Windows device name such as
+CON, hold
 "_backup_" or "_BKUP_", or pass 200 bytes. A name already used in that
 folder, in any letter case, is refused, and so is a name whose older
 backup folders sit there. Each refusal says why.

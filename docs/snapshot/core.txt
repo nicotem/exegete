@@ -221,11 +221,12 @@ categories and attributes. Ask the researcher before calling it: the
 name is theirs to choose. It is plain text on one line, up to 80
 characters. A model name such as "Qwen 3.8 6bit" lets codings by
 different models be compared later. Quick picks: "AI Coding Assistant"
-(Exegete's built-in default), "AI Agent" (QualCoder 4.0's own
-assistant). The setting is stored with the project (exegete.json in the
-project folder), so it travels with backups and copies. It can be
-changed at any time; earlier rows keep the name they were written
-under. Names are compared exactly, after trimming spaces, and letter
+(the name on AI codings made before each project had a name of its
+own), "AI Agent" (QualCoder 4.0's own assistant). The setting is
+stored with the project (exegete.json in the project folder), so it
+travels with backups and copies. It can be changed at any time;
+earlier rows keep the name they were written under. Names are
+compared exactly, after trimming spaces, and letter
 case counts: QualCoder's format keeps coder names apart letter for
 letter, so "AI Agent" and "ai agent" are two coders. Exegete compares
 code, category and case names ignoring letter case.
@@ -536,7 +537,11 @@ Args:
     cursor: next_cursor from a previous page of this same search
 
 Returns:
-    JSON array of matching segments with their codes, files, and context
+    JSON object with results, each matching coding with its passage,
+    file, code, positions, memo and coder (the coded passage alone,
+    without the text around it); result_count; total_results, or
+    total_before_novelty_filter with exclude_code_ids; and the page
+    block
 
 
 ==== Tool search_coded_text: the rest of its entry ====
@@ -862,7 +867,8 @@ Returns:
     - results: Array of matching files with:
         - file_id: ID for use with other tools
         - file_name: Name of the file
-        - file_type: Type (text, audio, video, image, pdf)
+        - file_type: Type (text, audio, video, image, pdf, or media
+          for a file whose stored location fits none of these)
         - matched_in: {filename: bool, content: bool}
         - match_count: The number of matches listed for this file
           (its name and the content matches shown), not
@@ -881,7 +887,8 @@ Examples:
     The researcher says: "Search all file content for 'workplace stress'"
     → search_files("workplace stress", search_content=True)
 
-    The researcher says: "Search everywhere for 'motivation'"
+    The researcher says: "Search the documents and the notes for
+    'motivation'"
     → search_files("motivation", search_filename=True,
                   search_content=True), and search_memos for notes
 
@@ -2279,9 +2286,10 @@ Example:
 ==== Tool list_backups: its description ====
 List the automatic backups of the currently open project.
 
-Exegete takes a backup before every change (apply_codings,
-import_text_file (not available in this tool set), delete_coding, restore_backup and the other write
-tools). Each is a timestamped folder next to the project, named
+Exegete takes a backup of the project before every change to its
+database (apply_codings, import_text_file (not available in this tool set), delete_coding,
+restore_backup and the other tools that change it). Each is a
+timestamped folder next to the project, named
 '<project>_backup_<timestamp>.qda'. This tool lists them (kind 'exegete')
 together with QualCoder's own '<project>_BKUP_*' backups found next to
 the project (kind 'qualcoder'), newest first, so you can pick one for
@@ -2721,8 +2729,9 @@ Text containing '#####', QualCoder's private-note marker, is refused before anyt
 Colours are stored as the nearest QualCoder palette colour (120 fixed
 colours, as the QualCoder colour picker offers); the result reports
 the stored colour (`color`) and whether it was snapped
-(`color_requested`, `color_snapped`). Greys may snap to a pale hue:
-the palette has five greys and the matching rule is QualCoder's own.
+(`color_requested`, `color_snapped`). Black and dark greys snap to a
+green, and white to a pale pink: the palette has five greys, none of
+them dark, and the matching rule is QualCoder's own.
 
 Args:
     name: The code name (unique among codes, case-insensitively; no
@@ -3018,8 +3027,10 @@ Returns project metadata including version, date, coder name, and memo.
 ==== Resource exegete://codes/list: its description ====
 Get a list of all codes in the project.
 
-Returns all codes with their names, categories, colours, memos, and metadata.
-Codes are organised hierarchically by category.
+Returns all codes with their names, categories, colours, memos, and metadata,
+as a flat list ordered by category, then name. Each code's category
+gives its place in the tree, and in QualCoder 4.0's format so do its
+parent code and its path ("Category > Parent code > Code").
 
 
 ==== Resource exegete://codes/list: the rest of its entry ====
@@ -3238,7 +3249,8 @@ The decision is yours to make and to explain; for coding suggestions
 and code proposals the safety mechanism is the researcher's approval of
 each item, which you relay: Exegete writes only what is marked
 approved, and cannot see who marked it. The direct write tools write on
-the call itself, with a backup.
+the call itself, and Exegete takes a backup of the project before every
+change to its database.
 
 ## Where the study's framework lives
 

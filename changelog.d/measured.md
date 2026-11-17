@@ -7,8 +7,8 @@ Python 3.13 with the libraries in `uv.lock`:
 
 | | 0.15.5, Python 3.13 | 0.15.4, Python 3.13 |
 |---|---|---|
-| `full` (78 tools) | 207,485 | 214,132 |
-| `core` (26 tools) | 75,977 | 78,208 |
+| `full` (78 tools) | 209,955 | 214,132 |
+| `core` (26 tools) | 76,423 | 78,208 |
 | The opening text | 2,047 | 2,047 |
 | The full brief | 14,630 | 14,630 |
 | The brief in `core` | 1,928 | 1,928 |
@@ -31,3 +31,13 @@ Python 3.13 with the libraries in `uv.lock`:
   each of the 22 tools that took it, its two lines in the description
   and its entry in the input schema: 5,500 from `full`, and 1,000 from
   `core`, where four of them are.
+- The claims audit's wording adds 2,470 characters to `full` and 446 to
+  `core`, across 31 tools, where a description now says what its tool
+  does. The most are in import_text_file (472: the byte-order mark and
+  line endings, and when it refuses a names list), search_coded_text
+  (211), list_attribute_types (162) and update_annotation (133). In
+  `core`, five tools change: search_coded_text, search_files,
+  create_code, set_project_ai_coder_name and list_backups. As Python
+  3.11 and 3.12 keep it, pseudonymise_source's description is 19,956
+  characters, 67 more than before, within the 20,000 the Terminal
+  guide gives.

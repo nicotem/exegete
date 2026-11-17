@@ -221,11 +221,12 @@ categories and attributes. Ask the researcher before calling it: the
 name is theirs to choose. It is plain text on one line, up to 80
 characters. A model name such as "Qwen 3.8 6bit" lets codings by
 different models be compared later. Quick picks: "AI Coding Assistant"
-(Exegete's built-in default), "AI Agent" (QualCoder 4.0's own
-assistant). The setting is stored with the project (exegete.json in the
-project folder), so it travels with backups and copies. It can be
-changed at any time; earlier rows keep the name they were written
-under. Names are compared exactly, after trimming spaces, and letter
+(the name on AI codings made before each project had a name of its
+own), "AI Agent" (QualCoder 4.0's own assistant). The setting is
+stored with the project (exegete.json in the project folder), so it
+travels with backups and copies. It can be changed at any time;
+earlier rows keep the name they were written under. Names are
+compared exactly, after trimming spaces, and letter
 case counts: QualCoder's format keeps coder names apart letter for
 letter, so "AI Agent" and "ai agent" are two coders. Exegete compares
 code, category and case names ignoring letter case.
@@ -718,7 +719,11 @@ Args:
     cursor: next_cursor from a previous page of this same search
 
 Returns:
-    JSON array of matching segments with their codes, files, and context
+    JSON object with results, each matching coding with its passage,
+    file, code, positions, memo and coder (the coded passage alone,
+    without the text around it); result_count; total_results, or
+    total_before_novelty_filter with exclude_code_ids; and the page
+    block
 
 
 ==== Tool search_coded_text: the rest of its entry ====
@@ -1044,7 +1049,8 @@ Returns:
     - results: Array of matching files with:
         - file_id: ID for use with other tools
         - file_name: Name of the file
-        - file_type: Type (text, audio, video, image, pdf)
+        - file_type: Type (text, audio, video, image, pdf, or media
+          for a file whose stored location fits none of these)
         - matched_in: {filename: bool, content: bool}
         - match_count: The number of matches listed for this file
           (its name and the content matches shown), not
@@ -1063,7 +1069,8 @@ Examples:
     The researcher says: "Search all file content for 'workplace stress'"
     → search_files("workplace stress", search_content=True)
 
-    The researcher says: "Search everywhere for 'motivation'"
+    The researcher says: "Search the documents and the notes for
+    'motivation'"
     → search_files("motivation", search_filename=True,
                   search_content=True), and search_memos for notes
 
@@ -1330,11 +1337,10 @@ Export the project, or one AI coding session, as a REFI-QDA .qdpx file for other
 REFI-QDA is the interchange standard supported by QualCoder, NVivo,
 ATLAS.ti, MAXQDA and others.
 
-Full memos on export (as in QualCoder's own exports): the exported
-FILE keeps memo text in full, including any private '#####' section
-that read tools never show the AI.
-Mention this to the user if they plan to share the exported
-file.
+Full memos on export: like QualCoder's own exports, the exported file
+keeps memo text in full, including any private '#####' section that
+read tools never show the AI. Mention this to the researcher if they
+plan to share the exported file.
 
 Two modes:
 - Default (no coding_session_id): the whole project, each coding
@@ -1387,8 +1393,9 @@ complete, so with overwrite an earlier file stays whole until then;
 an earlier file Exegete cannot write is refused.
 
 Args:
-    output_path: Where to write the .qdpx file (must end in .qdpx; the
-                 directory must already exist)
+    output_path: Where to write the .qdpx file, as a full path or one
+                 starting with ~ (it must end in .qdpx, and its folder
+                 must already exist)
     coding_session_id: Optional AI coding session to export instead of the
                 project
     overwrite: Allow replacing an existing file (default: False)
@@ -1678,11 +1685,14 @@ Attributes are used to store demographics, metadata, or other characteristics
 about files or cases (e.g., age, gender, location, data_source).
 
 Returns:
-    JSON array of attribute types with:
+    JSON object with attribute_count and attributes, a list of the
+    attribute types, each with:
     - name: Attribute name
     - value_type: Data type (character, numeric)
-    - applies_to: Whether it's for 'case' or 'file'
+    - applies_to: 'case' or 'file', or 'journal' for an attribute on
+      journal entries, which Exegete lists but no longer sets
     - memo: Description of the attribute
+    - owner and date
 
 
 ==== Tool list_attribute_types: the rest of its entry ====
@@ -1726,7 +1736,8 @@ Args:
              refused
 
 Returns:
-    JSON array of attributes with their values for this file
+    JSON object with file_id, attribute_count and attributes, a list of
+    the file attributes with their values for this file
 
 
 ==== Tool get_file_attributes: the rest of its entry ====
@@ -1778,7 +1789,8 @@ Args:
              refused
 
 Returns:
-    JSON array of attributes with their values for this case
+    JSON object with case_id, attribute_count and attributes, a list of
+    the case attributes with their values for this case
 
 
 ==== Tool get_case_attributes: the rest of its entry ====
@@ -3315,7 +3327,9 @@ Args:
               not a name already in the project's documents folder
               (compared ignoring letter case), which QualCoder would
               take for this text's stored copy
-    content: The full text content of the file
+    content: The full text content of the file. A byte-order mark at
+             its start is removed, and its line endings are stored as
+             LF, as QualCoder's import stores a text file
     memo: Optional memo/description for the file
     case_name: Optional existing case to link the new file to.
                The same name, once spaces and Unicode forms are
@@ -3327,13 +3341,18 @@ Args:
                case_match says which rule matched
     apply_project_pseudonyms: Apply the project's own pseudonyms.json to
                the text before storing it, as QualCoder does to every
-               text file it imports. Default false, so the text is
-               stored exactly as given unless you ask.
-               Case-sensitive, whole-word, like QualCoder. One
-               difference: QualCoder applies the entries one after
+               text file it imports. Default false, so no name in the
+               text is replaced unless you ask.
+               Case-sensitive, whole-word, like QualCoder. Two
+               differences: QualCoder applies the entries one after
                another, so a later entry can rewrite what an earlier one
                produced; this applies them all in a single pass, longest
                form first, so nothing it writes is ever replaced again.
+               And a list QualCoder would apply is refused, with nothing
+               imported, when an entry begins or ends with a space, a
+               name is shorter than 2 characters or a pseudonym shorter
+               than 3, a name appears twice, or a pseudonym is also a
+               name in the list.
                The result carries per-pseudonym counts and which
                encoding pseudonyms.json was read in.
 
@@ -3735,9 +3754,10 @@ Example:
 ==== Tool list_backups: its description ====
 List the automatic backups of the currently open project.
 
-Exegete takes a backup before every change (apply_codings,
-import_text_file, delete_coding, restore_backup and the other write
-tools). Each is a timestamped folder next to the project, named
+Exegete takes a backup of the project before every change to its
+database (apply_codings, import_text_file, delete_coding,
+restore_backup and the other tools that change it). Each is a
+timestamped folder next to the project, named
 '<project>_backup_<timestamp>.qda'. This tool lists them (kind 'exegete')
 together with QualCoder's own '<project>_BKUP_*' backups found next to
 the project (kind 'qualcoder'), newest first, so you can pick one for
@@ -3817,9 +3837,9 @@ Returns:
 Delete this project's own backups to reclaim disk space.
 
 It removes recovery points: preview first, then execute with the
-token that preview returns. Every write creates a backup copy of the
-project, and the copies accumulate until pruned. This tool prunes them
-by a retention policy you choose:
+token that preview returns. Exegete takes a backup of the project
+before every change to its database, and the copies accumulate until
+pruned. This tool prunes them by a retention policy you choose:
 
 - keep_last=N: keep only the N newest of Exegete's backups
 - older_than_days=D: remove Exegete's backups older than D days
@@ -4368,8 +4388,8 @@ how the assistant suggests codings and the researcher decides on
 them.
 
 Args:
-    tool_name: Specific tool to explain (optional); left out, the
-              answer is an overview of all tools
+    tool_name: Specific tool to explain (optional); left out, or
+              "overview", the answer is an overview of the coding loop
 
 Returns:
     JSON with tool documentation, examples, and tips
@@ -4457,8 +4477,9 @@ Args:
         creation). Colours are stored as the nearest QualCoder
         palette colour (120 fixed colours, as the QualCoder colour
         picker offers); the recorded entry reports the stored colour
-        and whether it was snapped. Greys may snap to a pale hue:
-        the palette has five greys and the matching rule is
+        and whether it was snapped. Black and dark greys snap to a
+        green, and white to a pale pink: the palette has five
+        greys, none of them dark, and the matching rule is
         QualCoder's own.
         category: optional name of an existing category to place
         it in
@@ -4543,7 +4564,9 @@ show_examples) the evidence spans.
 Args:
     coding_session_id: The session ID
     proposal_guids: Specific proposals to show (default: all)
-    show_examples: Include the evidence segments (default: False)
+    show_examples: Include the evidence segments, each text up to its
+                   first 200 characters, a longer one ending in "…"
+                   (default: False)
 
 
 ==== Tool review_proposals: the rest of its entry ====
@@ -4631,8 +4654,9 @@ Args:
     color: New #RRGGBB colour, stored as the nearest QualCoder palette
            colour (120 fixed colours, as the QualCoder colour picker
            offers); the result reports the stored colour and whether
-           it was snapped. Greys may snap to a pale hue: the palette
-           has five greys and the matching rule is QualCoder's own.
+           it was snapped. Black and dark greys snap to a green, and
+           white to a pale pink: the palette has five greys, none of
+           them dark, and the matching rule is QualCoder's own.
     category: Existing category name, or "" to clear
     memo: New definition text
     example_segments: Replacement evidence spans
@@ -5039,7 +5063,8 @@ there are some, ask the researcher before writing.
 Text containing '#####', QualCoder's private-note marker, is refused before anything is written or backed up: what follows it is the researcher's own, not the assistant's to write.
 
 Args:
-    name: A short unique title for the entry
+    name: A short title, unique in the project, of letters A to Z
+          without accents, digits, spaces, underscores and hyphens
     entry: The journal text
 
 Returns:
@@ -5130,8 +5155,9 @@ Text containing '#####', QualCoder's private-note marker, is refused before anyt
 Colours are stored as the nearest QualCoder palette colour (120 fixed
 colours, as the QualCoder colour picker offers); the result reports
 the stored colour (`color`) and whether it was snapped
-(`color_requested`, `color_snapped`). Greys may snap to a pale hue:
-the palette has five greys and the matching rule is QualCoder's own.
+(`color_requested`, `color_snapped`). Black and dark greys snap to a
+green, and white to a pale pink: the palette has five greys, none of
+them dark, and the matching rule is QualCoder's own.
 
 Args:
     name: The code name (unique among codes, case-insensitively; no
@@ -5313,8 +5339,9 @@ Set a code's colour (#RRGGBB). It writes to the database.
 Colours are stored as the nearest QualCoder palette colour (120 fixed
 colours, as the QualCoder colour picker offers); the result reports
 the stored colour (`new_color`) and whether it was snapped
-(`color_requested`, `color_snapped`). Greys may snap to a pale hue:
-the palette has five greys and the matching rule is QualCoder's own.
+(`color_requested`, `color_snapped`). Black and dark greys snap to a
+green, and white to a pale pink: the palette has five greys, none of
+them dark, and the matching rule is QualCoder's own.
 When the code already has exactly the target colour the result is
 `changed: false, reason: unchanged` with nothing written and no
 backup made; a stored value that differs only by letter case, or a
@@ -5632,12 +5659,12 @@ Move a category under another category (or to the top level).
 
 It writes to the database. The result gives the parent the category was
 filed under (`new_parent`, null at the top level). Refuses any move that
-would create a cycle (make a category its own ancestor); such a cycle
-would silently hide the category and all its codes from QualCoder's code
-tree. When the category is already under the requested parent (or
-already at the top level) the result is `changed: false, reason:
-unchanged` with nothing written and no backup made. Successful moves
-carry `changed: true`.
+would create a cycle (make a category its own ancestor): QualCoder 3.8.2
+and QualCoder 4.0's reports would hide the category and all its codes,
+and QualCoder 4.0's Codebook would never finish. When the category is
+already under the requested parent (or already at the top level) the
+result is `changed: false, reason: unchanged` with nothing written and
+no backup made. Successful moves carry `changed: true`.
 
 Refused while the project's lock file is active (QualCoder 3.8.2 has
 the project open, or another conversation using Exegete is writing
@@ -5709,22 +5736,22 @@ Merge one code into another, deleting the first: preview, then confirm.
 
 It writes to the database. All codings of `from_code_id` are reassigned
 to `into_code_id`, then `from_code_id` is deleted. This follows
-QualCoder's merge exactly, and it loses codings by design: where both
+QualCoder's merge, and it loses codings by design: where both
 codes already mark the same text span by the same coder, the source
 coding is discarded, with its memo and important flag, and the
 destination coding is kept. Audio/video and image codings are reassigned
 without de-duplication (as QualCoder does), which can create visual
 duplicates.
 
-Two-step by design. Call without preview_token: nothing is written and the
-result is a preview of exactly what would change, with a preview_token.
-Show the researcher the preview (including its collateral block, which
-says whose codings it affects, and every warning) and
-ask whether to proceed. Only if they agree, call again with the same
-arguments and preview_token=<the token>. The token is valid for 60
-minutes and only while the rows it covers are unchanged; if the project
-changed in between, the second call is refused and you must preview
-again. A backup is always created first.
+Two-step by design. Call without preview_token: nothing in the project
+is written, and the result is a preview of exactly what would change,
+with a preview_token. Show the researcher the preview (including its
+collateral block, which says whose codings it affects, and every
+warning) and ask whether to proceed. Only if they agree, call again
+with the same arguments and preview_token=<the token>. The token is
+valid for 60 minutes and only while the rows it covers are unchanged;
+if what it covers changed in between, the second call is refused and
+you must preview again. A backup is always created first.
 
 Refused while the project's lock file is active (QualCoder 3.8.2 has
 the project open, or another conversation using Exegete is writing
@@ -5824,15 +5851,15 @@ It writes to the database. Deleting a code removes the code itself and
 every coded segment made with it (text, audio/video, and image codings).
 Categories, annotations, case links and other codes are not affected.
 
-Two-step by design. Call without preview_token: nothing is written and the
-result is a preview of exactly what would change, with a preview_token.
-Show the researcher the preview (including its collateral block, which
-says whose codings it affects, and every warning) and
-ask whether to proceed. Only if they agree, call again with the same
-arguments and preview_token=<the token>. The token is valid for 60
-minutes and only while the rows it covers are unchanged; if the project
-changed in between, the second call is refused and you must preview
-again. A backup is always created first.
+Two-step by design. Call without preview_token: nothing in the project
+is written, and the result is a preview of exactly what would change,
+with a preview_token. Show the researcher the preview (including its
+collateral block, which says whose codings it affects, and every
+warning) and ask whether to proceed. Only if they agree, call again
+with the same arguments and preview_token=<the token>. The token is
+valid for 60 minutes and only while the rows it covers are unchanged;
+if what it covers changed in between, the second call is refused and
+you must preview again. A backup is always created first.
 
 Refused while the project's lock file is active (QualCoder 3.8.2 has
 the project open, or another conversation using Exegete is writing
@@ -5930,15 +5957,15 @@ tree instead deletes the whole branch, codes and codings included.
 This tool does not, by design: moving the codes and sub-categories to
 the top level works on every schema and never destroys coded data.
 
-Two-step by design. Call without preview_token: nothing is written and the
-result is a preview of exactly what would change, with a preview_token.
-Show the researcher the preview (including its collateral block, which
-says whose codings it affects, and every warning) and
-ask whether to proceed. Only if they agree, call again with the same
-arguments and preview_token=<the token>. The token is valid for 60
-minutes and only while the rows it covers are unchanged; if the project
-changed in between, the second call is refused and you must preview
-again. A backup is always created first.
+Two-step by design. Call without preview_token: nothing in the project
+is written, and the result is a preview of exactly what would change,
+with a preview_token. Show the researcher the preview (including its
+collateral block, which says whose codings it affects, and every
+warning) and ask whether to proceed. Only if they agree, call again
+with the same arguments and preview_token=<the token>. The token is
+valid for 60 minutes and only while the rows it covers are unchanged;
+if what it covers changed in between, the second call is refused and
+you must preview again. A backup is always created first.
 
 Refused while the project's lock file is active (QualCoder 3.8.2 has
 the project open, or another conversation using Exegete is writing
@@ -6013,15 +6040,15 @@ coding belongs to a code, not to a category. Merging into a category
 below the source is refused, since it would cut that branch off from
 the code tree.
 
-Two-step by design. Call without preview_token: nothing is written and the
-result is a preview of exactly what would change, with a preview_token.
-Show the researcher the preview (including its collateral block, which
-says whose codings it affects, and every warning) and
-ask whether to proceed. Only if they agree, call again with the same
-arguments and preview_token=<the token>. The token is valid for 60
-minutes and only while the rows it covers are unchanged; if the project
-changed in between, the second call is refused and you must preview
-again. A backup is always created first.
+Two-step by design. Call without preview_token: nothing in the project
+is written, and the result is a preview of exactly what would change,
+with a preview_token. Show the researcher the preview (including its
+collateral block, which says whose codings it affects, and every
+warning) and ask whether to proceed. Only if they agree, call again
+with the same arguments and preview_token=<the token>. The token is
+valid for 60 minutes and only while the rows it covers are unchanged;
+if what it covers changed in between, the second call is refused and
+you must preview again. A backup is always created first.
 
 Refused while the project's lock file is active (QualCoder 3.8.2 has
 the project open, or another conversation using Exegete is writing
@@ -6284,8 +6311,8 @@ Args:
              repeat it on the execute call.
     memo_scope: "file" keeps rewrite_memos to this file's notes: those
              of its codings, annotations and case links, its own, and
-             those of the recording segments its codings are linked
-             to. Default "project". Bound into the token when "file".
+             those of its recording's segments that its codings are
+             linked to. Default "project". "file" is bound into the token.
     save_mapping_to_project: On a typed mapping, write it into the
              project's own pseudonyms.json in QualCoder's format,
              merging with what is there. A name the file already maps
@@ -6316,7 +6343,8 @@ Args:
              maps says when the file holds every typed name under its
              typed pseudonym, which confirms an exact pair. This
              argument is bound into the token: the preview must be run
-             with it, and the execute repeats it.
+             with it, and the execute repeats it. A run with nothing
+             to rewrite saves nothing.
     researcher_keeps_mapping: On a typed mapping, attest that the
              researcher keeps their own record of it. Not bound into
              the token: an attestation with no side effect, which may
@@ -6631,8 +6659,9 @@ The note must not be empty, since the note is the annotation. Clearing
 it later (update_annotation with "") deletes the annotation, exactly
 as QualCoder does. The exception is a note with a '#####' private
 section: the annotation is then kept, with the private section intact,
-and only the public text is cleared. Each coder can have one
-annotation on a given span.
+and only the public text is cleared. A coder's annotations on a file
+do not overlap, as in QualCoder: a new one on the same span as one of
+theirs, or overlapping it, is refused.
 
 Refused while the project's lock file is active (QualCoder 3.8.2 has
 the project open, or another conversation using Exegete is writing
@@ -6712,11 +6741,12 @@ Returns:
 ==== Tool update_annotation: its description ====
 Edit an annotation's note. An empty note deletes the annotation.
 
-It writes to the database. It follows QualCoder exactly: editing updates
-the note and its date (owner and the anchored span never change);
-clearing the note to "" deletes the annotation row, since QualCoder
-never keeps an empty annotation. The response says whether it updated or
-deleted.
+It writes to the database. It follows QualCoder: editing updates the
+note and its date (owner and the anchored span never change); clearing
+the note to "" deletes the annotation row, since QualCoder never keeps
+an empty annotation. One difference: a note of spaces alone counts as
+empty here, since it shows nothing, where QualCoder keeps it. The
+response says whether it updated or deleted.
 
 Memo privacy (QualCoder 4.0 convention): only the note text before
 the first '#####' marker is replaced; a private section after the
@@ -6743,7 +6773,8 @@ Text containing '#####', QualCoder's private-note marker, is refused before anyt
 Args:
     annotation_id: The annotation's anid (from read_file_with_codings
                    or search_memos)
-    memo: The new note text ('' deletes the annotation)
+    memo: The new note text ('', or spaces alone, deletes the
+          annotation)
     allow_hidden_coder: Override to edit a hidden coder's annotation
 
 
@@ -7083,13 +7114,13 @@ Endings are refused only where QualCoder acts on them: a transcript
 keeps '.txt' or '.transcribed' exactly; '.pdf' is neither gained nor
 lost; '.transcribed' is not gained; an image, audio or video file
 keeps its stored file's extension; a text with no stored file whose
-name ends in '.txt' or has no dot keeps it that way. QualCoder's own
-Rename, if the researcher uses it, can still make those changes. Any
-other name changes freely ('Thomas.Jones' to 'P01'). A rename may put
-back an ending that the stored file's own name has. Even so, a
-transcript may not lose both its endings, nor a media file its
-extension. Exegete does not look for earlier names in the project's
-backups.
+name ends in '.txt' or has no dot keeps the ending '.txt', or no dot
+at all. QualCoder's own Rename, if the researcher uses it, can still
+make those changes. Any other name changes freely ('Thomas.Jones' to
+'P01'). A rename may put back an ending that the stored file's own
+name has. Even so, a transcript may not lose both its endings, nor a
+media file its extension. Exegete does not look for earlier names in
+the project's backups.
 
 The result carries `changed: true`, `old_name` and `file_type`, and
 what kept the old name:
@@ -7349,11 +7380,10 @@ in depth order, each code with its colour and its coding count,
 counted exactly as QualCoder counts it (text + image + A/V codings,
 all coders, no filters, orphaned codings included).
 
-Full memos on export (as in QualCoder's own exports): the exported
-FILE keeps memo text in full, including any private '#####' section
-that read tools never show the AI.
-Mention this to the user if they plan to share the exported
-file.
+Full memos on export: like QualCoder's own exports, the exported file
+keeps memo text in full, including any private '#####' section that
+read tools never show the AI. Mention this to the researcher if they
+plan to share the exported file.
 
 Formats:
 - "csv": flat table `Tree, Id, Type, Color, Count[, Memo]`; the
@@ -7369,7 +7399,8 @@ All files are UTF-8 with BOM (QualCoder's export encoding).
 
 Args:
     output_path: Target file (matching extension), or an existing
-                 directory; then the default name `Codebook.csv`
+                 directory, as a full path or one starting with ~;
+                 for a directory the default name `Codebook.csv`
                  etc. is used, with `_0`, `_1` collision suffixes
     format: "csv" (default), "txt" or "md"
     include_memos: Include code/category memos (default True)
@@ -7466,11 +7497,10 @@ exactly:
 - Text codings only; image/AV codings are not included, and the
   response says so.
 
-Full memos on export (as in QualCoder's own exports): the exported
-FILE keeps memo text in full, including any private '#####' section
-that read tools never show the AI.
-Mention this to the user if they plan to share the exported
-file.
+Full memos on export: like QualCoder's own exports, the exported file
+keeps memo text in full, including any private '#####' section that
+read tools never show the AI. Mention this to the researcher if they
+plan to share the exported file.
 
 Coder visibility: this file export reads every coder's codings,
 whatever the project's coder visibility setting, as QualCoder's own
@@ -7479,7 +7509,8 @@ codings.
 
 Args:
     output_path: Target file, or an existing directory (default name
-                 `Coded_segments.csv`/`.txt`, `_0` collision suffixes)
+                 `Coded_segments.csv`/`.txt`, `_0` collision suffixes),
+                 as a full path or one starting with ~
     code_names: Codes to include (default: all). Exact name wins,
                 else unique case-insensitive match.
     case_names: Switch to case mode and filter to these cases
@@ -7651,13 +7682,15 @@ only, so its numbers can be lower than this export, which counts as
 QualCoder's report does.
 
 Columns: `Code Tree, Id, {coder…}, Total` (coders alphabetical).
-Tree rows in depth order with `--` per level in the Code Tree cell
-(QualCoder's text-export convention, kept so hierarchy survives a
-flat CSV). UTF-8 with BOM, CRLF rows.
+Tree rows in depth order with `--` per level in the Code Tree cell,
+as QualCoder 3.8.2's text export marks a level (QualCoder 4.0 indents
+with spaces instead), so the hierarchy survives a flat CSV. UTF-8 with
+BOM, CRLF rows.
 
 Args:
     output_path: Target .csv file, or an existing directory (default
-                 name `Code_frequencies.csv`, `_0` suffixes)
+                 name `Code_frequencies.csv`, `_0` suffixes), as a
+                 full path or one starting with ~
     sanitize_formulas: Neutralise spreadsheet formula injection
         (cells starting with = + - @ tab or CR get a ' prefix;
         code and coder names come from the database). Default
@@ -7735,12 +7768,13 @@ get_case_code_matrix honours visibility by default.
 
 Args:
     output_path: Target .csv file, or an existing directory (default
-                 name `Case_code_matrix.csv`, `_0` suffixes)
+                 name `Case_code_matrix.csv`, `_0` suffixes), as a
+                 full path or one starting with ~
     sanitize_formulas: Neutralise spreadsheet formula injection
         (cells starting with = + - @ tab or CR get a ' prefix;
         case and code names come from the database). Default
-        False, so the file is byte for byte what QualCoder writes;
-        set it to true to neutralise them.
+        False, so each name is written as it stands; set it to true
+        to neutralise them.
     overwrite: Allow replacing an existing file (default False)
 
 
@@ -7824,10 +7858,11 @@ without one, and the result says what that means.
 When the AI coder name is filled in Exegete's settings, the new project
 stores it too, and the answer says so.
 
-Names: the name becomes a folder, so it may not hold / \ : < > | ? * or ",
-end in a dot or a space, start with a dot, be a Windows device name such as
-CON, hold "_backup_" or "_BKUP_", or pass 200 bytes. A name already used in
-that folder, in any letter case, is refused, and so is a name whose older
+Names: spaces around the name are dropped first. The name becomes a
+folder, so it may not hold / \ : < > | ? * or ", end in a dot or a
+space, start with a dot, be a Windows device name such as CON, hold
+"_backup_" or "_BKUP_", or pass 200 bytes. A name already used in that
+folder, in any letter case, is refused, and so is a name whose older
 backup folders sit there. Each refusal says why.
 
 Args:
@@ -8396,8 +8431,10 @@ Returns project metadata including version, date, coder name, and memo.
 ==== Resource exegete://codes/list: its description ====
 Get a list of all codes in the project.
 
-Returns all codes with their names, categories, colours, memos, and metadata.
-Codes are organised hierarchically by category.
+Returns all codes with their names, categories, colours, memos, and metadata,
+as a flat list ordered by category, then name. Each code's category
+gives its place in the tree, and in QualCoder 4.0's format so do its
+parent code and its path ("Category > Parent code > Code").
 
 
 ==== Resource exegete://codes/list: the rest of its entry ====
@@ -8616,7 +8653,8 @@ The decision is yours to make and to explain; for coding suggestions
 and code proposals the safety mechanism is the researcher's approval of
 each item, which you relay: Exegete writes only what is marked
 approved, and cannot see who marked it. The direct write tools write on
-the call itself, with a backup.
+the call itself, and Exegete takes a backup of the project before every
+change to its database.
 
 ## Where the study's framework lives
 

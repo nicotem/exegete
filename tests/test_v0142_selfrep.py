@@ -619,10 +619,10 @@ class TestTheDocumentsSayExegete:
             "check whether the change was made (ask for the project summary, "
             "or the list of backups): Exegete may have finished it."),
         "TOOLS.md": (
-            # (v0.15.2: without the release numbers)
-            "`AI Coding Assistant` (Exegete's built-in default, and the "
-            "name already on AI codings made before each project had a "
-            "name of its own for them)",),
+            # (v0.15.2: without the release numbers; v0.15.5, the claims
+            # audit's point 58: what the name is, not a default)
+            "`AI Coding Assistant`, the name on the AI codings Exegete "
+            "made before each project had one of its own",),
     }
     SAID_THE_SERVER = (
         "the server only stores and applies what is marked approved",

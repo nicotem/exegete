@@ -2731,41 +2731,39 @@ near the top of this document, set them out.
     runs, which the preview counts and warns about.
 
     **Two people who share a name:** one file per call gives each their
-    own pseudonym in the file text. Inside one file, a first run can
-    leave the second person's occurrences as they are
-    (`choose_occurrences`, then the numbers or ids to leave), and a
-    second run then replaces them with the second person's pseudonym.
-    With `rewrite_memos` on, whichever run carries it rewrites that name
-    in notes across the whole project, the other person's notes
-    included, whatever the order of the runs, so a note about one
-    person can end up carrying the other person's pseudonym. With
-    `memo_scope` set to `"file"`, a run rewrites the notes of its own
-    file alone: those of its codings, annotations and case links, the
-    file's own note, and those of its recording's segments that its
-    codings are linked to. So where each person has a file of their
-    own, you could run each file with `rewrite_memos` and `memo_scope`
-    `"file"`, and change by hand the notes the preview counts as left:
-    other files' notes (those of PDFs, recordings and images included),
-    the notes of cases, codes, categories, attribute types and the
-    project, and journal entries. A note of the file about someone else
-    with the same name takes the pseudonym too, so the preview asks
-    whether anyone named in the file's notes shares a name. Where both
-    are in one file, you could keep `rewrite_memos` off on every run of
-    a shared name, and change the notes that name either person by
-    hand. Since `pseudonyms.json` holds one pseudonym per name, you
-    could give the second person a typed mapping with
-    `save_mapping_to_project` off and `researcher_keeps_mapping` on: the
-    names list then holds one pseudonym for that name, while the file's
-    text holds two. Several
-    things lead back from the second person's pseudonym to their name:
-    the mapping you typed for the second run, which is in the
-    conversation, and so with your AI provider unless the model runs on
-    your own computer, and in the host's own records; your own record of
-    that mapping; and every copy of the file's text from before the
-    second run, which holds the name where that pseudonym now stands.
-    Those copies include every backup taken before that run, the first
-    run's among them, and, for an imported document, its original in
-    the project's folder of originals.
+    own pseudonym in the file text. Inside one file, a first run can leave
+    the second person's occurrences as they are (`choose_occurrences`,
+    then the numbers or ids to leave), and a second run then replaces them
+    with the second person's pseudonym. By default, with `rewrite_memos`
+    on, whichever run carries it rewrites that name in notes across the
+    whole project, the other person's notes included, whatever the order
+    of the runs, so a note about one person can end up carrying the other
+    person's pseudonym. With `memo_scope` set to `"file"`, a run rewrites
+    the notes of its own file alone: those of its codings, annotations and
+    case links, the file's own note, and those of its recording's segments
+    that its codings are linked to. So where each person has a file of
+    their own, you could run each file with `rewrite_memos` and
+    `memo_scope` `"file"`, and change by hand the notes the preview counts
+    as left: other files' notes (those of PDFs, recordings and images
+    included), the notes of cases, codes, categories, attribute types and
+    the project, and journal entries. A note of the file about someone
+    else with the same name takes the pseudonym too, so the preview asks
+    whether anyone named in the file's notes shares a name. Where both are
+    in one file, you could keep `rewrite_memos` off on every run of a
+    shared name, and change the notes that name either person by hand.
+    Since `pseudonyms.json` holds one pseudonym per name, you could give
+    the second person a typed mapping with `save_mapping_to_project` off
+    and `researcher_keeps_mapping` on: the names list then holds one
+    pseudonym for that name, while the file's text holds two. Several
+    things lead back from the second person's pseudonym to their name: the
+    mapping you typed for the second run, which is in the conversation,
+    and so with your AI provider unless the model runs on your own
+    computer, and in the host's own records; your own record of that
+    mapping; and every copy of the file's text from before the second run,
+    which holds the name where that pseudonym now stands. Those copies
+    include every backup taken before that run, the first run's among
+    them, and, for an imported document, its original in the project's
+    folder of originals.
   - **What the preview counts.** The preview's `residue` block counts
     the names left in those fields, and, as occurrences, in the text of
     every file. In the file this call rewrites, those are names inside a

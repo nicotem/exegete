@@ -462,11 +462,10 @@ copy's answer gave. "Troubleshooting", below, says how to find it. If
 QualCoder 4.0 had the project open already, close it there and open it
 again to see the new codings. Under **Coding > Code text**, select the
 files you analysed. Each of the assistant's codings has the project's
-AI coder name as its owner. That name is `AI Coding Assistant` if you
-chose Exegete's built-in default. A coding's memo begins
-"Reading: explicit" or "Reading: interpretive", then gives the
-reasoning. A coding without a reading has the reasoning alone
-(step 5).
+AI coder name as its owner: `AI Coding Assistant`, for example, if you
+chose that name. A coding's memo begins "Reading: explicit" or
+"Reading: interpretive", then gives the reasoning. A coding without a
+reading has the reasoning alone (step 5).
 
 ## Example conversations
 
@@ -960,7 +959,7 @@ delete.
   project's visibility setting for each coder (see "QualCoder's
   conventions in the project" in TOOLS.md)
 - Exegete takes a backup, named with its date and time, before every
-  change ("Backups", above)
+  change to the project's database ("Backups", above)
 - A session is read, decided and applied only while its project is
   selected: the project whose `Exegete coding sessions` folder holds it,
   so a copy of the project works on its own copy of the session, or,
@@ -996,7 +995,8 @@ the memos, ask for the codings with `get_coded_segments`.
 ### "File ID X does not exist"
 
 The file was deleted, or the project has changed. Ask for the
-project's files (`list_all_files`), and use the IDs that answer gives.
+project's list of files (the resource `exegete://files/list`), and use
+the IDs that answer gives.
 
 ### Suggestions seem off-target
 
@@ -1126,8 +1126,9 @@ which you choose in one of two ways:
   each project it creates, without asking, and says so;
 - in a project that has no AI coder name, the first time a write needs
   one. The write stops and asks you, offering the name in the settings
-  first. Exegete's built-in default, `AI Coding Assistant`, is among the
-  names it offers. Your answer is stored with the project
+  first. `AI Coding Assistant`, the name on the AI codings Exegete made
+  before each project had one of its own, is among the names it offers.
+  Your answer is stored with the project
   (`set_project_ai_coder_name`).
 
 A project that already has another AI coder name keeps it, and the
@@ -1252,7 +1253,8 @@ in it. The run's answer lists those sessions. Pseudonymised data is still person
 what that means before you send it anywhere.
 
 **What happens to my original project?** Exegete changes a project
-made in Exegete directly, with a backup before every change. A project
+made in Exegete directly, with a backup before every change to its
+database. A project
 made in another program, or one you want to keep as it is, stays as it
 was if you work on a copy in the workspace. Copy it first and work on
 the copy. You can compare the two, in the conversation or in QualCoder

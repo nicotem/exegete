@@ -7,7 +7,7 @@ Python 3.13 with the libraries in `uv.lock`:
 
 | | 0.15.5, Python 3.13 | 0.15.4, Python 3.13 |
 |---|---|---|
-| `full` (78 tools) | 210,212 | 214,132 |
+| `full` (78 tools) | 210,225 | 214,132 |
 | `core` (26 tools) | 76,476 | 78,208 |
 | The opening text | 2,047 | 2,047 |
 | The full brief | 14,630 | 14,630 |
@@ -31,7 +31,7 @@ Python 3.13 with the libraries in `uv.lock`:
   each of the 22 tools that took it, its two lines in the description
   and its entry in the input schema: 5,500 from `full`, and 1,000 from
   `core`, where four of them are.
-- The claims audit's wording adds 2,727 characters to `full` and 499 to
+- The claims audit's wording adds 2,740 characters to `full` and 499 to
   `core`, across 31 tools, where a description now says what its tool
   does. The most are in import_text_file (534: the byte-order mark and
   line endings, and when it refuses a names list), search_coded_text

@@ -13962,7 +13962,8 @@ class QualcoderDatabase:
         return rows
 
     def pseudonymise_memo_plan(self, compiled,
-                               file_plan: Optional[Dict[str, Any]] = None
+                               file_plan: Optional[Dict[str, Any]] = None,
+                               file_id: Optional[int] = None
                                ) -> Dict[str, Any]:
         """What `rewrite_memos` would do to the notes, without writing.
 
@@ -13972,6 +13973,13 @@ class QualcoderDatabase:
         refuses to act on. Built like the file plan, on the read
         connection for the preview and again on the write connection
         inside the transaction, and never cached across the two.
+
+        With `file_id` (memo_scope "file", v0.15.5) the plan is that
+        file's notes alone: the five fields of
+        `PSEUDONYMISE_MEMO_FILE_CONDITIONS`, each read with its condition
+        naming the file, by one SQL text in both phases, and the other
+        seven not read at all; the plan carries `scope: "file"`. Every
+        row read goes through the same loop, phrases to keep included.
 
         Each note is split at its first private-part marker and the
         rewriter (`compiled.pattern`, the run's whole-word rule) runs over
@@ -14028,12 +14036,22 @@ class QualcoderDatabase:
             key_column = self.PSEUDONYMISE_MEMO_KEYS[table]
             owned = table in self.PSEUDONYMISE_MEMO_OWNED
             owner_column = ", owner" if owned else ""
+            # This file's notes alone (memo_scope "file", v0.15.5): a field
+            # no file names is not read; the others by their condition
+            condition, parameters = "", ()
+            if file_id is not None:
+                named_by = self.PSEUDONYMISE_MEMO_FILE_CONDITIONS.get(table)
+                if named_by is None:
+                    continue
+                condition = f"AND ({named_by}) "
+                parameters = (int(file_id),) * named_by.count("?")
             try:
                 stored_rows = self.conn.execute(
                     f"SELECT {key_column}, {column}{owner_column} "
                     f"FROM {table} "
                     f"WHERE {column} IS NOT NULL AND {column} != '' "
-                    f"ORDER BY {key_column}").fetchall()
+                    f"{condition}"
+                    f"ORDER BY {key_column}", parameters).fetchall()
             except sqlite3.Error:
                 # A table or column this schema does not have: listed, as
                 # the residue scan lists it, and neither counted nor
@@ -14050,19 +14068,13 @@ class QualcoderDatabase:
                 if not isinstance(value, str) or key in gone:
                     continue
                 public, private = split_public_private_memo(value)
-                replacements = engine.find_replacements(compiled, public)
-                if phrases and replacements:
-                    # Phrases to keep (v0.15.4), in the public part alone:
-                    # the matches inside one are counted, then dropped
-                    # before the skip of a note with none
-                    kept_at, _each = engine.places_kept(
-                        replacements, engine.phrase_spans(phrases, public))
-                    if kept_at:
-                        totals["kept_by_phrases"] += len(kept_at)
-                        inside = {replacements[place].start
-                                  for place in kept_at}
-                        replacements = [item for item in replacements
-                                        if item.start not in inside]
+                # Phrases to keep (v0.15.4), in the public part alone: the
+                # matches inside one are counted, then dropped before the
+                # skip of a note with none
+                replacements, kept = self.pseudonymise_note_matches(
+                    compiled, public, phrases)
+                if kept:
+                    totals["kept_by_phrases"] += kept
                 if not replacements:
                     continue
                 has_private = private != ""
@@ -14095,8 +14107,37 @@ class QualcoderDatabase:
                     by_entry[replacement.entry] = by_entry.get(
                         replacement.entry, 0) + 1
             fields.append(field)
-        return {"fields": fields, "unreadable": unreadable,
+        plan = {"fields": fields, "unreadable": unreadable,
                 "totals": totals, "by_entry": by_entry}
+        if file_id is not None:
+            plan["scope"] = "file"
+        return plan
+
+    @staticmethod
+    def pseudonymise_note_matches(compiled, public: str,
+                                  phrases: Sequence[Any] = ()
+                                  ) -> Tuple[List[Any], int]:
+        """The replacements the note rewrite makes in a note's public part,
+        and how many of the rule's matches there it keeps inside a phrase
+        to keep (v0.15.4): the run's whole-word rule (`compiled.pattern`),
+        a match wholly inside an occurrence of a phrase dropped.
+
+        One reading for the note plan and for the residue's count of the
+        notes a run limited to one file leaves (v0.15.5), so that count
+        never reads a note otherwise than the plan does.
+        """
+        from . import pseudonymise as engine
+
+        replacements = engine.find_replacements(compiled, public)
+        if not (phrases and replacements):
+            return replacements, 0
+        kept_at, _each = engine.places_kept(
+            replacements, engine.phrase_spans(phrases, public))
+        if not kept_at:
+            return replacements, 0
+        inside = {replacements[place].start for place in kept_at}
+        return ([item for item in replacements if item.start not in inside],
+                len(kept_at))
 
     @staticmethod
     def _pseudonymise_collisions(file_id: int,
@@ -14436,6 +14477,35 @@ class QualcoderDatabase:
         "source": "id", "cases": "caseid", "code_name": "cid",
         "code_cat": "catid", "project": "rowid", "attribute_type": "name",
         "journal": "jid", "code_av": "avid", "code_image": "imid",
+    }
+    # The values of pseudonymise_source's `memo_scope` (v0.15.5): "project",
+    # the default, rewrites every note and journal entry; "file" this file's
+    # notes alone.
+    MEMO_SCOPES = ("file", "project")
+    # This file's notes (memo_scope "file", v0.15.5): each field by the
+    # column QualCoder's schema gives for its file (`__main__.py` 2222-2252
+    # at 4.0; 3.8.2's 2351-2381), each `?` given the file's id. A case link
+    # is a row of its own for each file it links, so its note goes with its
+    # own file; a case's note (`cases.memo`) is no file's. A recording's
+    # segment is this file's when a coding of this file links to it
+    # (`code_text.avid`, the link QualCoder's coding window makes from a
+    # transcript's coding to its recording's segment, whose note QualCoder
+    # 4.0 fills with the coded passage) and its recording names this file
+    # as its transcript (`source.av_text_id`): a link can outlive its
+    # segment, and the segment's number pass to a segment of another
+    # recording, since `code_av.avid` has no AUTOINCREMENT, and QualCoder's
+    # REFI-QDA import writes a recording's file id where a segment's number
+    # goes. The other seven fields are no file's here and are not read: a
+    # media or PDF file's own codings (`code_av.id`, `code_image.id`) name
+    # a file this tool refuses. One SQL text for the read and the write
+    # phases, so both choose the same rows.
+    PSEUDONYMISE_MEMO_FILE_CONDITIONS = {
+        "code_text": "fid = ?",
+        "annotation": "fid = ?",
+        "case_text": "fid = ?",
+        "source": "id = ?",
+        "code_av": ("avid IN (SELECT avid FROM code_text WHERE fid = ?) "
+                    "AND id IN (SELECT id FROM source WHERE av_text_id = ?)"),
     }
     # Ruling 9: the date is stamped where QualCoder's interface stamps it
     # on an edit of the note, for an annotation (`code_text.py:1017-1020`)
@@ -15144,10 +15214,24 @@ class QualcoderDatabase:
         why that number is not zero and, with phrases to keep (v0.15.4),
         that a name inside one stays. Labels and attribute values are
         never rewritten and gain nothing.
+
+        With a note plan limited to one file (its `scope` "file", v0.15.5)
+        each note count also gains `whole_word_after_rewrite`: the notes
+        whose public part, as the run would leave it, the run's own rule
+        still matches outside every phrase to keep, read by
+        `pseudonymise_note_matches` as the plan reads a note. It counts
+        the notes the run leaves (every note outside the file, and any of
+        the file's left for a marker) with no second reading path, and
+        `scope_note` and `after_rewrite_note` say that the file's notes
+        alone are rewritten.
         """
         residue: Dict[str, Any] = {"counts": "fields, not occurrences",
                                    "memos": {}, "unreadable": []}
         private_zones = 0
+        # A run limited to one file's notes (v0.15.5), with the phrases to
+        # keep its plans read, for the count of the notes it leaves
+        file_scope = (memo_plan or {}).get("scope") == "file"
+        phrases = (plan or {}).get("keep_phrases") or ()
         # The public part each planned note would have after the run, by
         # field and key; every other note keeps the one it has.
         after_run: Dict[str, Dict[Any, str]] = {}
@@ -15176,6 +15260,8 @@ class QualcoderDatabase:
             hits = {"wide": 0, "whole_word": 0}
             if memo_plan is not None:
                 hits["wide_after_rewrite"] = 0
+            if file_scope:
+                hits["whole_word_after_rewrite"] = 0
             rewritten = after_run.get(table, {})
             for row in rows:
                 value = row[-1]
@@ -15190,9 +15276,18 @@ class QualcoderDatabase:
                     hits["wide"] += 1
                 if compiled.pattern.search(public):
                     hits["whole_word"] += 1
-                if memo_plan is not None and compiled.carries_a_name(
-                        rewritten.get(row[0], public)):
+                if memo_plan is None:
+                    continue
+                after = rewritten.get(row[0], public)
+                if compiled.carries_a_name(after):
                     hits["wide_after_rewrite"] += 1
+                # The run's own rule over the note as the run leaves it,
+                # a match inside a phrase to keep left out, as the plan
+                # leaves it out
+                if file_scope and compiled.pattern.search(after) and \
+                        self.pseudonymise_note_matches(compiled, after,
+                                                       phrases)[0]:
+                    hits["whole_word_after_rewrite"] += 1
             residue["memos"][key] = hits
         residue["memos_with_private_zones_not_scanned"] = private_zones
 
@@ -15278,9 +15373,14 @@ class QualcoderDatabase:
             if places[key]]
         listed = (unreached[0] if len(unreached) == 1 else
                   ", ".join(unreached[:-1]) + ", or " + unreached[-1])
+        # With memo_scope "file" (v0.15.5) the notes rewritten are this
+        # file's alone, so the first sentences say so; the report is still
+        # the whole project
+        scope = (self.PSEUDONYMISE_SCOPE_FILE if file_scope else
+                 "file_id chooses which file is rewritten. The notes and the "
+                 "report always cover the whole project. ")
         residue["scope_note"] = (
-            "file_id chooses which file is rewritten. The notes and the "
-            "report always cover the whole project. This block covers the "
+            scope + "This block covers the "
             "notes, the "
             "labels and the attribute values as fields, and the file text "
             "of every file with stored text as occurrences, under "
@@ -15308,11 +15408,15 @@ class QualcoderDatabase:
                 "scanned; it may still hold the previous text.")
         if memo_plan is not None:
             # With phrases to keep, one sentence more (v0.15.4); the note's
-            # own words stay those of every other run
+            # own words stay those of every other run. With memo_scope
+            # "file" (v0.15.5), both in the form that names the third count
             residue["after_rewrite_note"] = (
-                self.PSEUDONYMISE_AFTER_REWRITE_NOTE
-                + (self.PSEUDONYMISE_AFTER_REWRITE_PHRASES
-                   if (plan or {}).get("keep_phrases") else ""))
+                (self.PSEUDONYMISE_AFTER_REWRITE_FILE_NOTE if file_scope
+                 else self.PSEUDONYMISE_AFTER_REWRITE_NOTE)
+                + ((self.PSEUDONYMISE_AFTER_REWRITE_FILE_PHRASES
+                    if file_scope else
+                    self.PSEUDONYMISE_AFTER_REWRITE_PHRASES)
+                   if phrases else ""))
         try:
             residue["file_text"] = self._pseudonymise_file_text(
                 compiled, plan, may_echo_names, detail)
@@ -15336,6 +15440,32 @@ class QualcoderDatabase:
         "or forms one with the words around it, writes that name into the "
         "notes it rewrites, where wide_after_rewrite counts it too. Read what "
         "remains as a list of fields to check by hand.")
+    # The residue's first sentences, and its note on the counts after the
+    # run, where memo_scope "file" keeps the rewrite to this file's notes
+    # (v0.15.5): the rest are counted as they stand, and a third count
+    # says how many the run's own rule still matches
+    PSEUDONYMISE_SCOPE_FILE = (
+        "file_id chooses which file is rewritten. With memo_scope \"file\", "
+        "only this file's notes are rewritten and the rest are counted as "
+        "they stand; the report always covers the whole project. ")
+    PSEUDONYMISE_AFTER_REWRITE_FILE_NOTE = (
+        "With rewrite_memos on and memo_scope \"file\", only this file's "
+        "notes are rewritten, and the note counts are read three times: wide "
+        "as the project stands, wide_after_rewrite as it would stand after "
+        "the run, and whole_word_after_rewrite, the notes this run's own rule "
+        "would still match after it, outside every phrase to keep. The third "
+        "counts the notes the run leaves as they are (every note outside "
+        "this file, and any of this file's left for a marker) and any note "
+        "into which a pseudonym writes a name back. wide_after_rewrite is not "
+        "zero and is not meant to be: the rewrite replaces whole words in the "
+        "case mode you chose, and the wide reading is wider, so a name inside "
+        "a longer word, in a different letter case, or spelled with its "
+        "parts joined is still counted and is still there. Read what remains "
+        "as a list of fields to check by hand.")
+    PSEUDONYMISE_AFTER_REWRITE_FILE_PHRASES = (
+        " A name inside a phrase to keep stays in the notes as it is: "
+        "wide_after_rewrite counts it, and whole_word_after_rewrite does "
+        "not.")
 
     def _pseudonymise_by_owner(self, item: Dict[str, Any],
                                ai_coder_names: Sequence[str]
@@ -15952,6 +16082,13 @@ class QualcoderDatabase:
         "a coder the project hides; their names are not shown. "
         "Rewriting a note changes no coding decision, so it needs no "
         "allow_hidden_coder.")
+    # The block's note where memo_scope "file" keeps the rewrite to this
+    # file's notes (v0.15.5), given whether or not the residue is scanned
+    PSEUDONYMISE_MEMO_FILE_SCOPE_NOTE = (
+        "With memo_scope \"file\", the rows above are this file's notes "
+        "alone: those of its codings, annotations and case links, its own "
+        "note, and those of its recording's segments that its codings are "
+        "linked to. Every other note and journal entry is left as it is.")
 
     def _pseudonymise_memo_block(self, memo_plan: Dict[str, Any],
                                  pseudonym_of) -> Dict[str, Any]:
@@ -15962,7 +16099,9 @@ class QualcoderDatabase:
         carries the caller's indices, which are what the model can relay,
         and each pseudonym through `pseudonym_of`, so on the sidecar path
         a pseudonym that carries a name is withheld here as on every
-        other route of the preview (the owner's F-1 ruling).
+        other route of the preview (the owner's F-1 ruling). With a plan
+        limited to one file (v0.15.5), `memo_scope` "file" and its note;
+        the fields it did not read have zeros, as any field with no row.
         """
         planned = {field["table"]: field for field in memo_plan["fields"]}
         fields = {}
@@ -16007,6 +16146,9 @@ class QualcoderDatabase:
             block["totals"]["kept_by_phrases"] = totals["kept_by_phrases"]
         if memo_plan["unreadable"]:
             block["unreadable"] = list(memo_plan["unreadable"])
+        if memo_plan.get("scope") == "file":
+            block["memo_scope"] = "file"
+            block["memo_scope_note"] = self.PSEUDONYMISE_MEMO_FILE_SCOPE_NOTE
         return block
 
     # ------------------------------------------------------------------

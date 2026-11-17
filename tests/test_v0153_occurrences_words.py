@@ -57,7 +57,9 @@ PSEUDONYMS_LINE = ("Where the researcher uses pseudonyms, use them, and never "
 TOOL = "pseudonymise_source"
 # The two arguments the brief and the paragraph name
 ARGUMENTS = ("choose_occurrences", "leave_occurrences")
-PARAGRAPH = "Two people who share a name:"
+# (v0.15.5: the paragraph opens with the case of two files, so its
+# first words are matched without the colon)
+PARAGRAPH = "Two people who share a name"
 # What Claude Code keeps of a description outside its tool search
 KEPT = 4096
 

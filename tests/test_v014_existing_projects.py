@@ -1068,9 +1068,22 @@ class TestTheSharedNameCaveat:
                 _flat((REPO / where).read_text(encoding="utf-8")))
         if where == "CHANGELOG.md":
             text = text.split("## [0.13")[0]    # the release being written
-        assert "whichever run carries it rewrites that name in notes " \
-               "across the whole project" in text
-        assert "the other person's notes included" in text
+        if where == "description":
+            # v0.15.5: the description gives the routine alone, two
+            # people each in a file of their own first; what a run across
+            # the whole project does is said by its preview's warning
+            assert ("each in a file of their own: run each file with "
+                    "rewrite_memos and memo_scope \"file\", and change by "
+                    "hand the notes the preview counts as left") in text
+        else:
+            assert "whichever run carries it rewrites that name in notes " \
+                   "across the whole project" in text
+            assert "the other person's notes included" in text
+        if where in ("TOOLS.md", "PRIVACY.md"):
+            # v0.15.5: and the documents give memo_scope "file" beside it
+            assert ("run each file with rewrite_memos and memo_scope "
+                    "\"file\", and change by hand the notes the preview "
+                    "counts as left") in text
         assert "keep rewrite_memos off on every run" in text.lower()
         assert "change the notes that name either person by hand" in text
         assert "save_mapping_to_project off" in text

@@ -1307,11 +1307,10 @@ the two of the check for new versions (`EXEGETE_UPDATE_CHECK` and
 - `EXEGETE_CALL_SECONDS` (0.15.0): how many seconds one call of
   `import_documents` may take, counted from its start, before it stops
   between files and leaves the rest for the next call, whose answer
-  says how to go on: a whole number from 30 to 600. Unset, it is 30
-  seconds on every route, the desktop extension included: Claude
-  Desktop's Cowork stops waiting for an extension's call after 60
-  seconds, and its ordinary chat after 4 minutes (measured on 19
-  October 2026). A host stops a tool
+  says how to go on: a whole number from 30 to 600. Unset, it is 50
+  seconds in the desktop extension and 30 on every other route: Claude
+  Desktop stops waiting for an extension's call after 80 seconds, in a
+  chat and in Cowork alike (measured on 17 November 2026). A host stops a tool
   call that runs past its own limit, and a call stopped so loses its
   answer while Exegete reads on to the end; until a call has finished,
   Exegete answers no other call, from any chat. So a higher figure
@@ -1326,8 +1325,8 @@ the two of the check for new versions (`EXEGETE_UPDATE_CHECK` and
 - `EXEGETE_INSTALLED_AS`: set by the desktop extension (to
   `extension`), so that the update steps Exegete gives fit the way it
   was installed. It also makes checking on by default, as the
-  extension's setting is, and would give an import call the extension's
-  time, today the same 30 seconds as on every route
+  extension's setting is, and gives an import call the extension's
+  time, 50 seconds where every other route has 30
   (`EXEGETE_CALL_SECONDS`, above). Do not set it yourself.
 
 ---

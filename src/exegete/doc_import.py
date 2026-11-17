@@ -52,13 +52,16 @@ MAX_MEMO = 10_000
 # its answer. The desktop extension's figure comes from the owner's timing
 # of Claude Desktop (T, the earlier cut-off of his two runs, less the
 # larger of 30 seconds and a sixth of T, rounded down to a multiple of 10).
-# Measured on 19 October 2026: Cowork cuts an extension's call at 60
-# seconds and the ordinary chat at 240, so T is 60 and the figure 30, the
-# same as every other way of installing. EXEGETE_CALL_SECONDS, a whole number from CALL_SECONDS_LEAST to
+# Measured on 19 October 2026: Cowork cut an extension's call at 60
+# seconds and the ordinary chat at 240, so T was 60 and the figure 30.
+# Measured on 17 November 2026: Claude Desktop, its chat and Cowork now
+# one conversation, cut it at 80 seconds in both, so T is 80 and the
+# figure 50 (the owner's word that day, ruling 130); every other way of
+# installing keeps 30. EXEGETE_CALL_SECONDS, a whole number from CALL_SECONDS_LEAST to
 # CALL_SECONDS_MOST, sets it on any route. The preview reads within it;
 # the import, which uses the text the preview read (kept_texts), works
 # within the same time and reads a file again only when it must.
-EXTENSION_CALL_SECONDS = 30
+EXTENSION_CALL_SECONDS = 50
 TERMINAL_CALL_SECONDS = 30
 CALL_SECONDS_LEAST = 30
 CALL_SECONDS_MOST = 600

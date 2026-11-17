@@ -492,6 +492,15 @@ TIME_PATTERNS = (
      r"(?P<b>\d+)", {"a": ("call_seconds_least",),
                      "b": ("call_seconds_most",)}),
     (r"\b(?P<n>\d+)\s+seconds\s+on\s+every\s+route", {"n": ROUTES}),
+    # since 17 November 2026 the extension's figure differs from every
+    # other route's (ruling 130): each sentence names the one it gives
+    (r"\b(?P<n>\d+)\s+seconds\s+in\s+the\s+(?:Claude\s+Desktop\s+)?"
+     r"(?:desktop\s+)?extension\b", {"n": ("extension_call_seconds",)}),
+    (r"\band\s+(?P<n>\d+)\s+on\s+every\s+other\s+route",
+     {"n": ("terminal_call_seconds",)}),
+    (r"\b(?P<n>\d+)\s+seconds\s+where\s+every\s+other\s+route\s+has\s+"
+     r"(?P<m>\d+)", {"n": ("extension_call_seconds",),
+                     "m": ("terminal_call_seconds",)}),
     (r"\bkeeps\s+the\s+(?P<n>\d+)\s+seconds", {"n": ROUTES}),
     (r"\b(?P<n>\d+)\s+seconds\s+at\s+the\s+preview,\s+(?P<m>\d+)\s+when\s+"
      r"the\s+import\s+reads", PREVIEW_AND_IMPORT),
@@ -2673,6 +2682,7 @@ def _values(facts: Facts) -> Dict[str, object]:
             "full_without": len(facts.registered_tools - facts.earlier_names),
             "core_without": len(facts.core_tools - facts.earlier_names),
             "routes": facts.terminal_call_seconds,
+            "ext_s": facts.extension_call_seconds,
             "ext": facts.extension_workspace_folder,
             "old_ext": facts.old_extension_workspace_folder,
             "ws": facts.workspace_folder,
@@ -2693,8 +2703,12 @@ CHANGELOG_LINES = (
      "two tools renamed below).", False),
     ("`full`: {full} tools ({full} with the earlier names of the two tools "
      "renamed below).", True),
-    ("One call is given {routes} seconds on every route.", False),
-    ("One call is given {routes_plus} seconds on every route.", True),
+    ("One call is given {ext_s} seconds in the desktop extension and "
+     "{routes} on every other route.", False),
+    ("One call is given {ext_s_plus} seconds in the desktop extension and "
+     "{routes} on every other route.", True),
+    ("One call is given {ext_s} seconds in the desktop extension and "
+     "{routes_plus} on every other route.", True),
     ("New projects go to `~/Documents/Other projects`.", True),
 )
 
@@ -2707,7 +2721,8 @@ def test_the_changelog_is_read_in_its_unreleased_part_alone(tmp_path, line,
     facts = facts_from_the_code()
     values = _values(facts)
     values.update(full_minus=values["full"] - 1,
-                  routes_plus=values["routes"] + 15)
+                  routes_plus=values["routes"] + 15,
+                  ext_s_plus=values["ext_s"] + 15)
     root = _scratch_copy(tmp_path)
     released = "`full` registers {full_minus} tools.".format(**values)
     (root / CHANGELOG).write_text(

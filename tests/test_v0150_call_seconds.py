@@ -318,13 +318,17 @@ def _figures():
             doc_import.CALL_SECONDS_LEAST, doc_import.CALL_SECONDS_MOST)
 
 
-# The owner's timing session of 19 October 2026: Cowork stops waiting for
-# an extension's call after 60 seconds, and Claude Desktop's ordinary chat
-# after 4 minutes. The extension cannot tell which is calling, and a call
-# can run past its time while it finishes the file it is reading, so its
-# figure stays 30, the same as every other route's (the code unchanged).
+# The owner's timing session of 19 October 2026: Cowork stopped waiting
+# for an extension's call after 60 seconds, and Claude Desktop's ordinary
+# chat after 4 minutes; the CHANGELOG's entries of that time say so.
 COWORK_SECONDS = 60
 CHAT_MINUTES = 4
+# The owner's timing session of 17 November 2026: Claude Desktop, its
+# chat and Cowork now one conversation, stopped an extension's call after
+# 80 seconds in both. The extension's figure follows the rule of October
+# (rulings 69 and 71): the limit less the larger of 30 seconds and a sixth
+# of it, rounded down to a multiple of 10, so 50 (ruling 130).
+HOST_SECONDS = 80
 WAITING_FOR_A_MEASUREMENT = ("follows a measurement", "until a measurement",
                              "waits for a measurement", "for now",
                              "provisional", "near 180")
@@ -332,22 +336,22 @@ WAITING_FOR_A_MEASUREMENT = ("follows a measurement", "until a measurement",
 
 def test_the_extension_s_figure_answers_the_measurement():
     e, t, _least, _most = _figures()
-    assert e == t == 30
-    # the preview's time and one file's whole time stay within Cowork's
-    assert e + int(import_reading.READ_TIMEOUT_SECONDS) <= COWORK_SECONDS
+    assert e == (HOST_SECONDS - max(30, HOST_SECONDS // 6)) // 10 * 10 == 50
+    assert t == 30
+    # the preview's time and one file's whole time stay within the host's
+    assert e + int(import_reading.READ_TIMEOUT_SECONDS) <= HOST_SECONDS
 
 
 def test_tools_says_the_figures():
     e, t, least, most = _figures()
     tools = _flat("TOOLS.md")
-    # One figure on every route, the extension's measured on 19 October
-    # 2026. A change to either constant moves these sentences with it.
-    assert e == t
+    # The extension's figure from the timing of 17 November 2026, and
+    # every other route's. A change to either constant moves these
+    # sentences with it.
     assert (f"Each call stops between files within its time, counted from "
-            f"the call's start: {e} seconds on every route, the Claude "
-            f"Desktop extension included (Cowork stops waiting for an "
-            f"extension's call after {COWORK_SECONDS} seconds, and Claude "
-            f"Desktop's ordinary chat after {CHAT_MINUTES} minutes), or the "
+            f"the call's start: {e} seconds in the Claude Desktop extension "
+            f"(Claude Desktop stops waiting for an extension's call after "
+            f"{HOST_SECONDS} seconds) and {t} on every other route, or the "
             f"whole number of seconds from {least} to {most} set in "
             f"`{SETTING}` (docs/installing-from-the-terminal.md); the preview "
             f"reads for that long and the import works within the same "
@@ -363,12 +367,11 @@ def test_install_says_the_figures():
             f"`import_documents` may take, counted from its start, before "
             f"it stops between files and leaves the rest for the next "
             f"call, whose answer says how to go on: a whole number from "
-            f"{least} to {most}. Unset, it is {e} seconds on every route, "
-            f"the desktop extension included: Claude Desktop's Cowork stops "
-            f"waiting for an extension's call after {COWORK_SECONDS} "
-            f"seconds, and its ordinary chat after {CHAT_MINUTES} minutes "
-            f"(measured on 19 October 2026).") in install
-    assert e == t
+            f"{least} to {most}. Unset, it is {e} seconds in the desktop "
+            f"extension and {t} on every other route: Claude Desktop stops "
+            f"waiting for an extension's call after {HOST_SECONDS} seconds, "
+            f"in a chat and in Cowork alike (measured on 17 November "
+            f"2026).") in install
     section = install[install.index(f"- `{SETTING}` (0.15.0)"):]
     section = section[:section.index("- `EXEGETE_INSTALLED_AS`")]
     for words in WAITING_FOR_A_MEASUREMENT:
@@ -387,14 +390,13 @@ def test_install_says_the_figures():
             "other call, from any chat.") in install
     assert ("The desktop extension's settings do not offer it."
             in install)
-    # (the staleness audit of 20 October 2026: the extension's figure is
-    # today the same as every other route's, so the mark changes nothing
-    # in an import's time; the sentence says so while the two agree)
-    assert doc_import.EXTENSION_CALL_SECONDS == \
-        doc_import.TERMINAL_CALL_SECONDS
-    assert (f"would give an import call the extension's time, today the "
-            f"same {doc_import.EXTENSION_CALL_SECONDS} seconds as on every "
-            f"route (`{SETTING}`, above)") in install
+    # (the staleness audit of 20 October 2026; since 17 November 2026 the
+    # extension's figure differs from every other route's, and the
+    # sentence says so)
+    assert (f"gives an import call the extension's time, "
+            f"{doc_import.EXTENSION_CALL_SECONDS} seconds where every other "
+            f"route has {doc_import.TERMINAL_CALL_SECONDS} (`{SETTING}`, "
+            f"above)") in install
 
 
 def test_the_changelog_says_the_figures():
@@ -402,9 +404,11 @@ def test_the_changelog_says_the_figures():
     changelog = _flat("CHANGELOG.md")
     unreleased = changelog[changelog.index("## [0.15.0-alpha]"):]
     unreleased = unreleased[:unreleased.index("## [0.14.3-alpha]")]
-    # One figure on every route, the extension's measured on 19 October
-    # 2026, in the opening, in Upgrading and in the imports' part
-    assert e == t
+    # 0.15.0's entry, history: one figure, 30 seconds on every route, the
+    # extension's measured on 19 October 2026, in the opening, in Upgrading
+    # and in the imports' part (the extension's figure moved to 50 on 17
+    # November 2026, in a later entry)
+    e = 30
     assert "### An import reads each document once, within a time for each call " in unreleased
     assert "by the way Exegete runs" not in unreleased
     assert (f"{e} seconds on every route, counted from the call's start, "

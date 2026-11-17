@@ -518,9 +518,10 @@ describes it.
 
 If a new version causes a problem, you can install an earlier release's
 `.mcpb`, from https://github.com/nicotem/exegete/releases, the same way.
-On the maintainer's computer, checked on 23 October 2026, installing an
-older extension, 0.15.0, over a newer test build cleared the
-extension's settings. A cleared setting goes back to its default. So after
+On the maintainer's computer, checked on 17 November 2026, installing
+an older extension, 0.15.3, over a newer one, 0.15.4, cleared the
+extension's settings, and so did installing 0.15.4 again over a test
+build of the same version. A cleared setting goes back to its default. So after
 going back, look at each setting, and set again any you had changed.
 The settings this guide describes go back to these defaults:
 

@@ -99,6 +99,9 @@ from .database import (
     REMOVAL_REMOVED,
     BackupWithoutDatabaseError,
     BACKUP_WITHOUT_DATABASE_MESSAGE,
+    BackupNameTooLongError,
+    BACKUP_NAME_TOO_LONG_MESSAGE,
+    backup_name_too_long,
     CATEGORY_CYCLE_REFUSAL,
     _is_locked_error,
     default_workspace,
@@ -1448,6 +1451,11 @@ def _error_answer(where: str, e: BaseException,
         # text, which carries no path
         logger.error("No database to back up in %s", where)
         return json.dumps({"error": BACKUP_WITHOUT_DATABASE_MESSAGE})
+    if isinstance(e, BackupNameTooLongError):
+        # A project's name too long for its backups' names (v0.15.5), as
+        # at a restore's safety backup: its own fixed text, no path
+        logger.error("Backup name too long in %s", where)
+        return json.dumps({"error": BACKUP_NAME_TOO_LONG_MESSAGE})
     if isinstance(e, FileNotFoundError):
         logger.error("Not found in %s: %s", where, error_label(e))
         return json.dumps({"error": "File or project not found."})
@@ -3393,12 +3401,16 @@ def _rollback_if_open(write_db) -> bool:
         return False
 
 
-def _backup_failed_text(locked: bool, no_database: bool = False) -> str:
+def _backup_failed_text(locked: bool, no_database: bool = False,
+                        too_long: bool = False) -> str:
     """Why a write stopped at its backup (v0.14): a database another
-    program kept locked is said as such, not as a disk problem, and a
-    backup that would hold no database (fix round 1) says why."""
+    program kept locked is said as such, not as a disk problem, a backup
+    that would hold no database (fix round 1) says why, and so does a
+    project's name too long for its backups' names (v0.15.5)."""
     if no_database:
         return BACKUP_WITHOUT_DATABASE_MESSAGE
+    if too_long:
+        return BACKUP_NAME_TOO_LONG_MESSAGE
     if locked:
         return (DB_LOCKED_MESSAGE + " No backup could be taken, so "
                 "nothing was written.")
@@ -3513,7 +3525,8 @@ def _backup_before_change(write_db, fail_message: str, check=None,
         logger.error("Failed to create backup: %s", error_label(e))
         return None, {"error": _backup_failed_text(
             isinstance(e, DatabaseLockedError),
-            isinstance(e, BackupWithoutDatabaseError)),
+            isinstance(e, BackupWithoutDatabaseError),
+            isinstance(e, BackupNameTooLongError)),
             "message": fail_message}
     finished = False
     try:
@@ -3528,7 +3541,8 @@ def _backup_before_change(write_db, fail_message: str, check=None,
             logger.error("Failed to create backup: %s", error_label(e))
             return None, {"error": _backup_failed_text(
                 isinstance(e, DatabaseLockedError),
-                isinstance(e, BackupWithoutDatabaseError)),
+                isinstance(e, BackupWithoutDatabaseError),
+                isinstance(e, BackupNameTooLongError)),
                 "message": fail_message}
         finished = True
         return backup_path, None
@@ -6196,9 +6210,12 @@ def save_names_list(preview_token: Optional[str] = None) -> str:
             except Exception as e:                      # noqa: BLE001
                 logger.error("save_names_list made no backup: %s",
                              error_label(e))
-                return json.dumps({"error": NO_BACKUP_NAMES_LIST,
-                                   "reason": "no_backup",
-                                   "nothing_changed": True}, indent=2)
+                return json.dumps({
+                    "error": (BACKUP_NAME_TOO_LONG_MESSAGE
+                              if isinstance(e, BackupNameTooLongError)
+                              else NO_BACKUP_NAMES_LIST),
+                    "reason": "no_backup", "nothing_changed": True},
+                    indent=2)
             kept_backup = {"nothing_changed": True, "backup": backup.name}
             tmp: Optional[Path] = None
             written: Optional[str] = None
@@ -12026,20 +12043,14 @@ def _hidden_name_too_long(stem: str,
     """Whether a backup of the project called `stem` was left whole for
     the length of the name a prune gives it (v0.15.5). That hidden name
     is 45 characters longer than the project's name, so a project's name
-    of more than 210 bytes, which a backup made before 0.15.1 can carry,
-    takes it past the 255 a file system allows a name: bytes in UTF-8 on
-    macOS and Linux, UTF-16 units on Windows. Every prune then leaves
-    the backup whole. Read from the rename's error (ENAMETOOLONG) and
-    from the name's length, since Windows gives another error."""
-    if isinstance(error, OSError) and error.errno == errno.ENAMETOOLONG:
-        return True
-    name = partial_backup_name(stem, "00000000_000000")
-    try:
-        if os.name == "nt":
-            return len(name.encode("utf-16-le", "surrogatepass")) // 2 > 255
-        return len(os.fsencode(name)) > 255
-    except UnicodeError:
-        return False
+    of more than 210 characters, which a backup made before 0.15.1 can
+    carry, can take it past what a file system allows a name. Every
+    prune then leaves the backup whole, and no backup of the project can
+    be made. Read by the one rule every backup reads
+    (`backup_name_too_long`): the rename's error on every system, and on
+    Windows, which gives another error, the name's length too."""
+    return backup_name_too_long(partial_backup_name(stem, "00000000_000000"),
+                                error)
 
 
 def _never_removed_block(names: List[str]) -> Dict[str, Any]:
@@ -12270,8 +12281,10 @@ def _prune_not_removed_note(not_removed: List[Dict[str, Any]],
             f"{pick(too_long, 'it was', 'they were')}, and every prune "
             f"will: this project's name is too long for the name Exegete "
             f"gives a backup to take it out of the listing before removing "
-            f"it. list_backups still lists {it} and restore_backup accepts "
-            f"{it}. You could delete {it} by hand.")
+            f"it. list_backups still lists {it}, but restore_backup cannot "
+            f"restore {it}, since a restore first backs the project up "
+            f"under a name as long, as every change does. You could delete "
+            f"{it} by hand.")
     if links:
         note.append(pick(
             links,
@@ -14194,7 +14207,9 @@ def _undo_names_list(change: undo.ChangePlan, receipts: Sequence[str],
             except Exception as e:                      # noqa: BLE001
                 logger.error("An undo of the names list made no backup: %s",
                              error_label(e))
-                return {"error": _backup_failed_text(False),
+                too_long = isinstance(e, BackupNameTooLongError)
+                return {"error": _backup_failed_text(False,
+                                                     too_long=too_long),
                         "nothing_changed": True}
             kept = {"nothing_changed": True, "backup_path": str(made)}
             tmp: Optional[Path] = None

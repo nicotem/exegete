@@ -3485,6 +3485,22 @@ BACKUP_WITHOUT_DATABASE_MESSAGE = (
     "retry.")
 
 
+class BackupNameTooLongError(OSError):
+    """No backup could be made because the project's name is too long for
+    the names Exegete gives its backups (v0.15.5): a backup is first made
+    under a hidden name 45 characters longer than the project's
+    (`_partial_backup_name`), which a name of more than 210 can take past
+    what a file system allows (`backup_name_too_long`). It carries its
+    fixed message alone, never a name or a path."""
+
+
+BACKUP_NAME_TOO_LONG_MESSAGE = (
+    "No backup could be made because this project's name is too long for "
+    "the names Exegete gives its backups, so nothing was changed. The "
+    "project can still be read, and a copy of it under a shorter name can "
+    "be backed up and changed.")
+
+
 def _side_file_is_live(path: str) -> bool:
     """A side file that SQLite would act on: a link, or a file with
     something in it (an empty journal or WAL file is ignored by SQLite,
@@ -4115,6 +4131,24 @@ def _partial_backup_name(stem: str, timestamp: str) -> str:
     return f".{stem}_backup_{timestamp}_partial_{uuid.uuid4().hex[:8]}.qda"
 
 
+def backup_name_too_long(name: str, error: Optional[BaseException],
+                         windows: Optional[bool] = None) -> bool:
+    """Whether a backup could not take the name `name` for its length
+    (v0.15.5): the error says so (ENAMETOOLONG), or, on Windows, which
+    reports a name too long as another error, the name passes the 255
+    UTF-16 units its file systems allow. Never a count of bytes, which
+    macOS, and a Windows disk read from Linux, do not count by.
+    `windows` is this system's by default, an argument for the tests."""
+    if isinstance(error, OSError) and error.errno == errno.ENAMETOOLONG:
+        return True
+    if not (os.name == "nt" if windows is None else windows):
+        return False
+    try:
+        return len(name.encode("utf-16-le", "surrogatepass")) // 2 > 255
+    except UnicodeError:
+        return False
+
+
 def _is_link_or_junction(found: os.stat_result) -> bool:
     """Whether `os.lstat` saw a link, or on Windows a junction, told by
     its reparse tag as shutil.rmtree tells one."""
@@ -4380,6 +4414,8 @@ def start_backup(project_path: Union[str, Path],
     Raises:
         FileNotFoundError: If project doesn't exist
         BackupWithoutDatabaseError: data.qda links outside the project
+        BackupNameTooLongError: the hidden name is too long for the disk
+            (`backup_name_too_long`); nothing was made
         OSError: If the copy fails; nothing is left under the backup's
             name, and the folder is removed
     """
@@ -4431,6 +4467,15 @@ def start_backup(project_path: Union[str, Path],
         # The folder appeared under someone else's hand and is never
         # ours to remove (S-H5)
         logger.error("Failed to create backup: %s", error_label(e))
+        raise OSError(f"Backup failed: {error_label(e)}") from None
+    except OSError as e:
+        logger.error("Failed to create backup: %s", error_label(e))
+        # A name too long for the hidden name (v0.15.5): said as such,
+        # since no backup of this project can be made until its name is
+        # shorter; nothing was made
+        if backup_name_too_long(partial.name, e):
+            raise BackupNameTooLongError(
+                BACKUP_NAME_TOO_LONG_MESSAGE) from None
         raise OSError(f"Backup failed: {error_label(e)}") from None
     except Exception as e:
         logger.error(f"Failed to create backup: {error_label(e)}")

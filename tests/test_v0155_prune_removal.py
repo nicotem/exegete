@@ -914,15 +914,16 @@ def test_a_backup_whose_name_is_too_long_to_hide_is_left_whole(
 
 
 def test_the_length_of_the_hidden_name():
-    """45 characters more than the project's name: past 255 bytes in
-    UTF-8 on macOS and Linux, 255 UTF-16 units on Windows; the rename's
-    ENAMETOOLONG says so too."""
+    """45 characters more than the project's name, read by the rule every
+    backup reads: the rename's ENAMETOOLONG on every system, and on
+    Windows alone, whose error is another, more than 255 UTF-16 units;
+    never a count of bytes."""
     too_long = server._hidden_name_too_long
     assert too_long("s" * 210, None) is False
-    assert too_long("s" * 211, None) is True
+    assert too_long("s" * 211, None) is WINDOWS
     assert too_long("s", OSError(errno.ENAMETOOLONG, "too long")) is True
     # 120 letters of two bytes each: 285 bytes, 165 UTF-16 units
-    assert too_long("\u00e9" * 120, None) is (not WINDOWS)
+    assert too_long("\u00e9" * 120, None) is False
 
 
 # Each outcome's item, as _prune_remove gives it
@@ -974,9 +975,11 @@ def test_the_note_for_each_system_and_outcome(system):
         assert all("network drive" in s for s in sentences_with(whole, "open"))
         assert "network drive" in whole and "not writable" in whole
         assert ("locked" in whole) is (system == "darwin")
-    # Left whole for its name's length
+    # Left whole for its name's length, which no restore can complete
+    # either, since a restore's safety backup takes a name as long
     assert "too long" in too_long and "by hand" in too_long
     assert "run again" not in too_long and "open" not in too_long
+    assert "cannot" in too_long and "accepts" not in too_long
     # A link
     assert "link" in link and "open" not in link
     # Remains

@@ -922,7 +922,7 @@ def test_the_length_of_the_hidden_name():
     assert too_long("s" * 211, None) is True
     assert too_long("s", OSError(errno.ENAMETOOLONG, "too long")) is True
     # 120 letters of two bytes each: 285 bytes, 165 UTF-16 units
-    assert too_long("é" * 120, None) is (not WINDOWS)
+    assert too_long("\u00e9" * 120, None) is (not WINDOWS)
 
 
 # Each outcome's item, as _prune_remove gives it

@@ -198,11 +198,13 @@ def test_contributing_gives_onnxruntimes_own_note_beside_the_package():
     release = next(package["version"] for package in lock["package"]
                    if package["name"] == "onnxruntime")
     assert set(re.findall(r"onnxruntime (\d+(?:\.\d+)+)", step)) == {release}
+    lock_sentence = _sentence_with(step, "`uv.lock`")
+    assert f"onnxruntime {release}" in lock_sentence, lock_sentence
+    # (the readability reading of v0.15.5: the reading said with its
+    # subject, in a sentence of its own; the facts held, not the words)
     package = _sentence_with(step, "Windows package")
-    assert "`uv.lock`" in package and f"onnxruntime {release}" in package, \
-        package
-    assert re.search(r"\bread from its files at \d+\.\d+\.\d+\b", package), \
-        package
+    assert re.search(r"\bread\b", package), package
+    assert re.search(r"\bat \d+\.\d+\.\d+\b", package), package
     # Another release, which the install of step 3 may bring
     warning = _sentence_with(step, "may treat the setting")
     assert "install above" in warning and "switch" in warning, warning

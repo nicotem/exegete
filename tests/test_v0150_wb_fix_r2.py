@@ -474,7 +474,10 @@ class TestTheSmallerPoints:
     def test_the_comments_on_claude_code_s_cut(self):
         # counted, not compared, so that a failure does not make pytest
         # explain the difference within the whole module's source
-        source = _flat(_read("src/exegete/server.py").replace("#", " "))
+        # (v0.15.5: one of the two is above a warning now in texts.py)
+        source = _flat(" ".join(
+            _read(f"src/exegete/{name}") for name in ("server.py", "texts.py")
+        ).replace("#", " "))
         old = (source.count("where Claude Code cuts a description (v0.14.2)")
                + source.count("sits past the 2,048 characters Claude Code "
                               "shows of a tool description"))

@@ -152,9 +152,8 @@ Routines in the package
 11. QualCoder 4.0's methodology vocabulary (closely ported), and the
     order and ideas of four sections of the assistant's brief (followed
     in this project's own words)
-    Here: src/exegete/server.py, METHODOLOGY_VOCABULARY and
-    explain_ai_coding_tools.
-    Here: src/exegete/server.py, BRIEF_FULL.
+    Here: src/exegete/texts.py, METHODOLOGY_VOCABULARY and BRIEF_FULL.
+    Here: src/exegete/server.py, explain_ai_coding_tools.
     From: ai_prompts/_agent.md, lines 81-88; for the brief, the same
     file on QualCoder's main branch at commit 67cbb8e (last changed at
     bb71301, 1 September 2026), lines 5-10 (its principles), 46-58
@@ -290,7 +289,7 @@ Values in the package
     reference-manager attributes.
 
 27. The method literature QualCoder's prompt library cites
-    Here: src/exegete/server.py, METHODS_GUIDANCE.
+    Here: src/exegete/texts.py, METHODS_GUIDANCE.
     From: in ai_prompts/text-analysis/,
     themes-generation-friese-2024.md, line 7;
     reconstructive-srp-lieder-schaffer-2024.md, line 5;
@@ -309,8 +308,8 @@ Values in the package
 
 29. Two menu labels of QualCoder's Manage Files
     Here: src/exegete/database.py, _ENDING_STILL_POSSIBLE.
-    Here: src/exegete/server.py, RENAME_FILE_NOTE, rename_file and
-    _stored_copy_block.
+    Here: src/exegete/texts.py, RENAME_FILE_NOTE.
+    Here: src/exegete/server.py, rename_file and _stored_copy_block.
     From: manage_files.py, lines 1081 and 1087 (3.8.2 manage_files.py,
     lines 511 and 517).
     Why: to point the researcher to QualCoder's own commands, "Rename
@@ -501,7 +500,7 @@ is the one the format dictates.
     Here: src/exegete/database.py, saved_display_values,
     saved_filter_values, _SAVED_DISPLAY_OPERATORS,
     _SAVED_FILTER_OPERATORS and QualcoderDatabase.old_name_left_in.
-    Here: src/exegete/server.py, OLD_NAME_LEFT_IN_NOTE.
+    Here: src/exegete/texts.py, OLD_NAME_LEFT_IN_NOTE.
     From: __main__.py, lines 1835-1838 and 1861-1862; manage_files.py,
     lines 745-783 and 1165-1186; report_attributes.py, lines 139-161,
     265-308 and 710-712 (3.8.2 __main__.py, lines 2395-2398 and

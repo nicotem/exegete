@@ -38,7 +38,7 @@ sys.path.insert(0, str(REPO / "src"))
 sys.path.insert(0, str(REPO / "scripts"))
 
 import exegete.server as server                   # noqa: E402
-from exegete import names                         # noqa: E402
+from exegete import names, texts                  # noqa: E402
 
 
 def _read(name):
@@ -755,7 +755,8 @@ def test_the_example_shows_the_steps_the_software_takes():
     assert ("The assistant labels it explicit, when the passage states what "
             "the code names, or interpretive, when the code rests on what "
             "the passage implies.") in _flat(readme)
-    grounding = " ".join(inspect.getsource(server).split())
+    # (v0.15.5: record_suggestions' grounding block is in texts.py)
+    grounding = " ".join(inspect.getsource(texts).split())
     assert "where the passage states what the code names" in grounding
     assert ("where the code rests on what the passage implies rather than "
             "on what it says") in grounding

@@ -32,7 +32,7 @@ name, which other changes set aside. A save of the names list (route
 own.
 
 A refusal here is a reason and its counts, never a value, a name or a
-path; the words are server.py's (UNDO_REFUSAL_TEXTS).
+path; the words are in texts.py (UNDO_REFUSAL_TEXTS).
 """
 
 import os

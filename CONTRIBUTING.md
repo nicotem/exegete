@@ -223,8 +223,11 @@ it is fixed. Describe it there without copying data, as above.
    changed: the docstrings are the descriptions the assistant reads.
    Some paragraphs are shared by several tools, such as the refusal
    while the project's lock file is active. Each is written once, as a
-   constant in `src/exegete/server.py`, and `_with_paragraphs` puts it
+   constant in `src/exegete/texts.py`, and `_with_paragraphs` puts it
    back into each tool's docstring, so a change to it is made there.
+   The opening text, the brief and the notes, warnings and refusals
+   that the tools' answers give are constants in `texts.py` too, and
+   `server.py` imports each by its name.
    Three tool texts also give the lock paragraph's words, typed by hand:
    - `apply_codings`' safety guarantees
    - `restore_backup`'s list of safeguards
@@ -530,6 +533,7 @@ exegete/                     # the clone (its folder's name does not matter)
 │   │   ├── env_settings.py      # The settings, read under both spellings
 │   │   ├── state_folder.py      # The state folder and its one move
 │   │   ├── server.py            # Main MCP server with resources, tools, prompts
+│   │   ├── texts.py             # The texts Exegete serves that are written once: the opening text, the brief, the shared paragraphs, the answers' notes and refusals (0.15.5)
 │   │   ├── database.py          # SQLite database interface
 │   │   ├── file_kinds.py        # What kind of entry sits at a name: a named pipe is refused, never opened (0.15.1)
 │   │   ├── memo_privacy.py      # QualCoder's '#####' private-memo convention

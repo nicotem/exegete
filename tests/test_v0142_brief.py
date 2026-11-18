@@ -334,8 +334,9 @@ class TestTheSharedRulesHaveOneSource:
     def test_the_brief_is_composed_from_the_constants(self):
         """BRIEF_FULL names the two constants rather than copying their
         words, and those words are typed once in the package: a copy
-        pasted into the brief (or anywhere else) would drift."""
-        source = (REPO / "src" / "exegete" / "server.py").read_text(
+        pasted into the brief (or anywhere else) would drift. (v0.15.5:
+        the brief and the opening text are in texts.py.)"""
+        source = (REPO / "src" / "exegete" / "texts.py").read_text(
             encoding="utf-8")
         tree = ast.parse(source)
         assigned = {}

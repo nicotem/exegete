@@ -670,8 +670,8 @@ def _create_backup_refusal():
     refusal of a call passing it names (_CREATE_BACKUP_REMOVED, and the
     rows it gives REMOVED_ARGUMENTS). They are passed over there alone,
     so that any other text that tells the model to pass it fails (v0.15.5,
-    the second part's review)."""
-    path = Path(exegete.__file__).parent / "server.py"
+    the second part's review). Both are in texts.py (v0.15.5)."""
+    path = Path(exegete.__file__).parent / "texts.py"
     tree_ = ast.parse(path.read_text(encoding="utf-8"))
     places = set()
     for node in tree_.body:

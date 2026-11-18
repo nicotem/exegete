@@ -525,7 +525,7 @@ def test_the_repository_passes():
                  "pyproject.toml", texts.OLD_NAME_README, texts.MANIFEST,
                  *texts.PAGES, *texts.TOML_DESCRIPTIONS, *texts.GUIDES,
                  ".github/ISSUE_TEMPLATE/bug_report.yml",
-                 "src/exegete/server.py"):
+                 "src/exegete/server.py", "src/exegete/texts.py"):
         assert name in report.files, name
     assert {sentence.place for sentence in report.sentences} == {
         "document", "served", "path"}

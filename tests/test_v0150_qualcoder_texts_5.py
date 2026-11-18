@@ -539,7 +539,8 @@ class TestFixRound1:
                 ) in _unreleased()
 
     def test_the_comment_on_the_opening_text_gives_its_length(self):
-        source = (REPO / "src" / "exegete" / "server.py").read_text(
+        # (v0.15.5: the opening text and its comment are in texts.py)
+        source = (REPO / "src" / "exegete" / "texts.py").read_text(
             encoding="utf-8")
         comment = _comment_above(source, "SERVER_INSTRUCTIONS = BRIEF_SHORT")
         # (the whole-branch review, round 1: 2,048 now a margin, since

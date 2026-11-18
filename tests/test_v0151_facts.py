@@ -84,6 +84,9 @@ UPDATE_PAGE = "pages/update/index.html"
 GUIDE = "docs/installing-from-the-terminal.md"
 LOCK = "uv.lock"
 SERVER_SOURCE = "src/exegete/server.py"
+# The texts Exegete serves that are written once, as constants (v0.15.5:
+# moved there from server.py)
+TEXTS_SOURCE = "src/exegete/texts.py"
 # The sizes of what each tool set serves, which scripts/served_texts.py
 # writes from the code and tests/test_served_texts.py holds to it
 SIZES = "docs/snapshot/sizes.json"
@@ -950,7 +953,7 @@ FACTS: Dict[str, Fact] = {
         documents=("README.md", "INSTALL.md", GUIDE, "PRIVACY.md",
                    "TOOLS.md", "CONTRIBUTING.md",
                    "packaging/pypi-old-name/README.md", UPDATE_PAGE,
-                   SERVER_SOURCE, "src/exegete/updates.py"),
+                   SERVER_SOURCE, TEXTS_SOURCE, "src/exegete/updates.py"),
         patterns=RELEASE_NAMED + (VERSION_NAMED, NAMES_EXEGETE, ADDRESS),
         code_texts=True),
     "the occurrences listed": Fact(
@@ -3813,8 +3816,8 @@ def test_the_code_texts_are_read():
     the refusal's sentence in place of the note that said it was
     ignored); the rename's rows moved name the other three."""
     real, documents, before = _on_the_branch()
-    removed = (SERVER_SOURCE, _code_text_line(
-        SERVER_SOURCE, "create_backup was removed in 0.15.5"))
+    removed = (TEXTS_SOURCE, _code_text_line(
+        TEXTS_SOURCE, "create_backup was removed in 0.15.5"))
     topic = (SERVER_SOURCE, _code_text_line(SERVER_SOURCE,
                                             "still work until v1.0"))
     update = ("src/exegete/updates.py", _code_text_line(

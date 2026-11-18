@@ -38,9 +38,10 @@ Python 3.13 with the libraries in `uv.lock`:
   tools change: search_coded_text, search_files, create_code,
   set_project_ai_coder_name and list_backups.
 - Python 3.11 and 3.12 now send the descriptions as 3.13 does, without
-  the indentation they kept from Exegete's source code: there `full`
-  measures 210,033 characters, where it was 221,045 with the changes
-  above, and `core` 76,476, where it was 80,536. pseudonymise_source's
-  description is 18,784 characters on every Python, where 0.15.4's was
-  19,897 on Python 3.11, within the 20,000 the Terminal guide gives.
-  Nothing changes on 3.13.
+  the indentation they kept from Exegete's source code, so the 0.15.5
+  figures above are what every Python is sent. On Python 3.11, 0.15.4
+  sent 225,172 characters for `full` and 82,252 for `core` (measured
+  on 3.11.13 with the libraries of its `uv.lock`), and
+  pseudonymise_source's description was 19,897 characters there; it is
+  now 18,784 on every Python, within the 20,000 the Terminal guide
+  gives. On 3.13 this change alters nothing.

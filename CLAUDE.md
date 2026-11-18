@@ -43,11 +43,13 @@ of a project from the conversation. It runs as an MCP server.
   text, the brief's words, the paragraphs that several descriptions
   share, the notes, warnings and refusals of its answers) and the
   description of every tool, prompt and resource,
-  `<ITS NAME IN CAPITALS>_DESCRIPTION`. `server.py` imports each
-  constant by its name and gives each description to its function with
+  `<ITS NAME IN CAPITALS>_DESCRIPTION`. `server.py` imports each of the
+  other constants by its name; it reads each description as
+  `texts.<NAME>_DESCRIPTION` and gives it to its function with
   `@_with_description`, or, for `read_brief` and the two guidance
-  resources, in the call that registers them. The other modules keep their own texts, and a
-  text built inside a function stays in its function.
+  resources, in the call that registers them. The other modules keep
+  their own texts, and a text built inside a function stays in its
+  function.
 - `database.py`: the project database, in QualCoder's format (schema
   v17, as QualCoder 4.0 writes it). `new_project.py`: creating a project.
 - `preview_tokens.py`: preview before confirm. `memo_privacy.py`: the

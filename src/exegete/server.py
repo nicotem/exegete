@@ -735,9 +735,8 @@ def _with_description(text: str):
 
     The text is set as written, flush, on every Python (the owner's
     ruling of 17 November 2026). Until 0.15.5 the descriptions were these
-    functions' docstrings, which Python 3.11 and 3.12 served as the
-    source wrote them, with four spaces of indentation before each line
-    after the first that had text and at the end, and 3.13 without them.
+    functions' docstrings, which Python 3.11 and 3.12 kept with the
+    indentation of the source and 3.13 without it.
     """
     def deco(fn):
         if fn.__doc__ is not None:

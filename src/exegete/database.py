@@ -3855,6 +3855,14 @@ def _withhold_exegete_folder_links(source: Path, skipped: List[str],
 # backup of that project once its time is BACKUP_LEFTOVER_SECONDS old:
 # never sooner, since another copy of Exegete may still be filling it.
 #
+# A prune takes a backup out of the listing by giving it this name before
+# it removes it (v0.15.5, `remove_backup_folder`), so what a removal
+# stopped partway leaves is under it too: nothing lists or restores it,
+# and the sweep removes what it can of it, an hour after the prune at the
+# earliest. On Windows the sweep hands the disk each path in its long
+# form (`disk_path`), since the name is longer than the backup's, so that
+# such remains go whatever their paths' length.
+#
 # Its two steps (v0.15.1, the backup's moment): `start_backup` claims
 # the hidden folder and copies everything but the database, outside
 # SQLite's lock; `StartedBackup.finish` copies the database by SQLite's
@@ -3916,8 +3924,8 @@ def sweep_partial_backups(project_path: Union[str, Path],
                 continue
         except (OSError, ValueError):
             continue
-        shutil.rmtree(entry.path, ignore_errors=True)
-        if not os.path.lexists(entry.path):
+        shutil.rmtree(disk_path(entry.path), ignore_errors=True)
+        if not os.path.lexists(disk_path(entry.path)):
             removed += 1
     if removed:
         logger.info("Removed %d backup folder(s) left unfinished", removed)

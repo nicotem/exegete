@@ -612,10 +612,10 @@ class TestTheTexts:
     def test_the_description_fits_the_guides_figure(self):
         """Every description as Exegete serves it, the same on every
         Python since 0.15.5 (the owner's ruling of 17 November 2026: 3.11
-        and 3.12 no longer add the four spaces a line that they kept
-        while the descriptions were docstrings), is no longer than the
-        figure the Terminal guide gives for Claude Code's setting, read
-        from the guide; pseudonymise_source's is the longest."""
+        and 3.12 no longer keep the indentation of the source, as they
+        did while the descriptions were docstrings), is no longer than
+        the figure the Terminal guide gives for Claude Code's setting,
+        read from the guide; pseudonymise_source's is the longest."""
         guide = " ".join(GUIDE.read_text(encoding="utf-8").split())
         found = FIGURE.search(guide)
         assert found, (

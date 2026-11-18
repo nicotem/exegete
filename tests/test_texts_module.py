@@ -260,11 +260,10 @@ MADE_UP = {
 def test_each_description_is_given_as_written_on_every_python(
         monkeypatch, version):
     """The owner's ruling of 17 November 2026: Python 3.11 and 3.12 send
-    each description as 3.13 does, without the four spaces before every
-    line after the first that they kept while the descriptions were
-    docstrings. Each Python is the one sys.version_info names; the
-    suite's jobs on 3.11 also hold docs/snapshot/ to it exactly
-    (tests/test_served_texts.py)."""
+    each description as 3.13 does, without the indentation of the source
+    that they kept while the descriptions were docstrings. Each Python
+    is the one sys.version_info names; the suite's jobs on 3.11 also
+    hold docs/snapshot/ to it exactly (tests/test_served_texts.py)."""
     names = [value.split(".", 1)[1] for value in _given().values()]
     texts_given = [getattr(texts, name) for name in names]
     texts_given += list(MADE_UP.values())

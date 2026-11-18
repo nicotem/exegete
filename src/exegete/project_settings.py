@@ -85,7 +85,7 @@ SIDECAR_FORMAT_VERSION = 1
 OLD_SIDECAR_MOVED_VERSION = 2
 MOVED_TO_KEY = "moved_to"
 # The payload is a few hundred bytes with a full history; anything past
-# this is not ours (the MRU reader's rationale, server.py:144-170).
+# this is not ours (the reason server.py gives for MRU_READ_MAX_BYTES).
 SIDECAR_READ_MAX_BYTES = 64 * 1024
 # History is capped on write, oldest first; the current entry is never
 # dropped. Twenty entries are echoed into the conversation (ruling 11).
@@ -661,7 +661,7 @@ def store_ai_coder_name(project_folder: Any, name: str, note: str = "",
     the setter reports: whether it was marked, and when it could not be,
     why and under which name an older copy would go on writing.
 
-    The MRU write discipline (`_open_mru_tmp`, server.py:80-120), with
+    The MRU write discipline (`_open_mru_tmp` in server.py), with
     one addition: a single `fsync` before the replace, because this file
     is the only record of a choice the researcher made and re-creating it
     means asking them again. `tempfile.mkstemp` opens O_CREAT|O_EXCL at

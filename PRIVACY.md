@@ -2762,11 +2762,11 @@ near the top of this document, set them out.
     mapping you typed for the second run, which is in the conversation,
     and so with your AI provider unless the model runs on your own
     computer, and in the host's own records. Another is your own record of
-    that mapping. The third is every copy of the file's text from before
-    the second run, which holds the name where that pseudonym now stands.
-    Those copies include every backup taken before that run, the first
-    run's among them, and, for an imported document, its original in the
-    project's folder of originals.
+    that mapping. The third is every copy from before the second run of the
+    file's text and of any note or journal entry it rewrote, which holds
+    the name that pseudonym replaced: the backup that run took first, every
+    older backup that holds the file or one of those notes, and an imported
+    document's original in the project's folder of originals.
   - **What the preview counts.** The preview's `residue` block counts
     the names left in those fields, and, as occurrences, in the text of
     every file. In the file this call rewrites, those are names inside a

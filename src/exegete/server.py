@@ -18429,6 +18429,32 @@ def _pseudonymise_notes(backup_name: Optional[str],
     return notes
 
 
+def _what_the_run_rewrote(result: Dict[str, Any]) -> str:
+    """What a committed run's answer says it rewrote (v0.15.5): "text",
+    the file's text alone (`files`, the files written); "notes", notes or
+    journal entries alone (`memos.totals.rows_updated`); or "both". Read
+    with defaults, since it runs after the commit, where a raise would
+    turn the run's answer into an error: `memos` is absent without
+    rewrite_memos, and a value that cannot be read gives "both", the
+    form that names every copy."""
+    files = result.get("files")
+    text = bool(files) if isinstance(files, list) else None
+    memos = result.get("memos")
+    if memos is None:
+        notes: Optional[bool] = False
+    else:
+        totals = memos.get("totals") if isinstance(memos, dict) else None
+        rows = totals.get("rows_updated") if isinstance(totals, dict) \
+            else None
+        notes = (bool(rows) if isinstance(rows, int)
+                 and not isinstance(rows, bool) else None)
+    if text is True and notes is False:
+        return "text"
+    if text is False and notes is True:
+        return "notes"
+    return "both"
+
+
 def _pseudonymise_mapping_notes(result: Dict[str, Any],
                                 merge: Optional[Dict[str, Any]],
                                 save: bool) -> List[str]:
@@ -18438,13 +18464,32 @@ def _pseudonymise_mapping_notes(result: Dict[str, Any],
     for and not renamed into place, or attested. Then, when the file was
     saved, the variants note and the duplicate-pseudonym note, each only
     when it applies. Counts and the error's class name only.
+
+    The copies from before the run that lead back are those of what the
+    run rewrote (v0.15.5): an older backup holds a name of this run only
+    if it holds the file, or a note or journal entry the run rewrote.
     """
+    rewrote = _what_the_run_rewrote(result)
+    if rewrote == "text":
+        copies = ("So does every copy of the file's text from before the "
+                  "run, among them the backup Exegete took first, every "
+                  "older backup that holds the file and, for an imported "
+                  "document, its stored copy in the project's documents/ "
+                  "folder.")
+    elif rewrote == "notes":
+        copies = ("So does every earlier copy of each note or journal entry "
+                  "it rewrote, among them the backup Exegete took first and "
+                  "every older backup that holds one of them.")
+    else:
+        copies = ("So does every copy from before the run of the file's "
+                  "text and of each note or journal entry it rewrote, among "
+                  "them the backup Exegete took first, every older backup "
+                  "that holds the file or one of those notes and, for an "
+                  "imported document, its stored copy in the project's "
+                  "documents/ folder.")
     note = ("The mapping you gave leads back from each pseudonym of this "
-            "run to its name. So does every copy of the file's text from "
-            "before the run, among them the backup Exegete took first, "
-            "every older backup and, for an imported document, its stored "
-            "copy in the project's documents/ folder. Exegete does not "
-            "keep the mapping unless asked.")
+            "run to its name. " + copies + " Exegete does not keep the "
+            "mapping unless asked.")
     saved = bool(result.get("mapping_saved"))
     if save and saved:
         note += (f" On this run it was saved into the project's own "

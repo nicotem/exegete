@@ -605,11 +605,12 @@ GitHub Issues ("Getting help", below).
        0.15.4", above).
    - **The reading folder**, where Exegete writes the pages you read on
      your own computer, with a file's whole text and its codings, and
-     read-only copies of originals:
+     read-only copies of originals. It is
      `~/Library/Caches/Exegete/Reading.noindex` on a Mac,
-     `%LOCALAPPDATA%\Exegete\Reading` on Windows. Exegete tidies it
-     only while it runs, so after an uninstall it stays until you
-     delete it.
+     `%LOCALAPPDATA%\Exegete\Reading` on Windows, and
+     `~/.cache/exegete/reading` on Linux, or `exegete/reading` under
+     `$XDG_CACHE_HOME` if it is set. Exegete tidies it only while it
+     runs, so after an uninstall it stays until you delete it.
    - **Claude Desktop's log of the extension**,
      `mcp-server-Exegete.log` in `~/Library/Logs/Claude` on a Mac,
      `%APPDATA%\Claude\logs` on Windows or `~/.config/Claude/logs` on
@@ -651,8 +652,8 @@ how long".
   import's preview read stay in Exegete's own folder, and the pages and
   copies of originals stay in the reading folder. "Decide what to do
   with what stays", under "Uninstalling", says where both folders are.
-  0.15.2's extension, installed again, removes them at its first start
-  once their time has passed.
+  Installed again, 0.15.2's extension removes those texts, pages and
+  copies at its first start once their time has passed.
 - An empty "Folder for projects", or a coder name outside the rules
   under "The settings page", stops the extension from starting. The log
   says which setting is at fault, never its value ("Reading the server

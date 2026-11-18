@@ -4095,7 +4095,7 @@ def disk_path(path: Union[str, Path]) -> str:
     """A path as it is handed to the disk where its length could pass
     Windows' limit (v0.15.5): on Windows its long form
     (`windows_long_form`), elsewhere as it is."""
-    return windows_long_form(path) if os.name == "nt" else os.fspath(path)
+    return os.fspath(path)
 
 
 def _partial_backup_name(stem: str, timestamp: str) -> str:
@@ -4258,7 +4258,7 @@ def _remove_renamed(hidden: Path,
         shutil.rmtree(target)
     except OSError as e:
         error = e
-        _clear_backup_marks(target)
+        pass
         try:
             shutil.rmtree(target, ignore_errors=True)
         except OSError:

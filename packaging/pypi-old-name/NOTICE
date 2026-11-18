@@ -324,9 +324,11 @@ Values in the package
     Here: src/exegete/texts.py, CODER_NAME_QUALCODER_SWITCH_NOTE,
     CODER_NAME_ASK and CREATE_PROJECT_DESCRIPTION.
     From: GUI/ui_main.py, lines 368 and 379; code_pdf.py, lines
-    2018-2020 and 5792; __main__.py, lines 2482-2483 (3.8.2
-    __main__.py, lines 2723-2724); GUI/ui_dialog_settings.py, line 585
-    (3.8.2 GUI/ui_dialog_settings.py, line 547).
+    2018-2020 and 5792; __main__.py, lines 2034-2035 (at the 4.0 tag,
+    __main__.py, lines 2482-2483; 3.8.2 __main__.py, lines 2723-2724);
+    GUI/ui_dialog_settings.py, line 554 (at the 4.0 tag,
+    GUI/ui_dialog_settings.py, line 585; 3.8.2
+    GUI/ui_dialog_settings.py, line 547).
     Why: to point the researcher to QualCoder's own commands by the
     words on its menus and buttons: "Open Project" under Project,
     "Restructure" in the PDF view, "Keep" or "Switch" when QualCoder

@@ -223,7 +223,9 @@ it is fixed. Describe it there without copying data, as above.
    changed. Each tool's, prompt's and resource's description is in
    `src/exegete/texts.py`, as `<ITS NAME IN CAPITALS>_DESCRIPTION`,
    written flush; the decorator `_with_description`, innermost on its
-   function in `server.py`, gives it to that function.
+   function in `server.py`, gives it to that function (`read_brief` and
+   the two guidance resources take theirs in the call that registers
+   them).
    Some paragraphs are shared by several tools, such as the refusal
    while the project's lock file is active. Each is written once, as a
    constant in `texts.py`, and `_with_paragraphs` puts it back into each

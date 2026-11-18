@@ -23,10 +23,8 @@ Python 3.13 with the libraries in `uv.lock`:
   arguments to repeat on the execute, and its routine for two people
   who share a name now starts with two people each in a file of their
   own. It loses the sentence on the wide counts after a note rewrite,
-  which the preview's note gives beside those counts. As Python 3.11
-  and 3.12 keep it, with its indentation, the description is 19,889
-  characters, 8 fewer than before. The sizes of `core`, which has no
-  pseudonymisation tool, do not change.
+  which the preview's note gives beside those counts. The sizes of
+  `core`, which has no pseudonymisation tool, do not change.
 - `create_backup`, removed, takes 250 characters from the definition of
   each of the 22 tools that took it, its two lines in the description
   and its entry in the input schema: 5,500 from `full`, and 1,000 from
@@ -38,11 +36,11 @@ Python 3.13 with the libraries in `uv.lock`:
   arguments now indented less deeply), search_coded_text (254),
   list_attribute_types (162) and review_proposals (129). In `core`, five
   tools change: search_coded_text, search_files, create_code,
-  set_project_ai_coder_name and list_backups. As Python 3.11 and 3.12
-  keep it, pseudonymise_source's description is 19,956 characters, 67
-  more than before, within the 20,000 the Terminal guide gives.
+  set_project_ai_coder_name and list_backups.
 - Python 3.11 and 3.12 now send the descriptions as 3.13 does, without
-  the four spaces they kept before every line but the first: there
-  `full` measures 210,033 characters, where it was 221,045, `core`
-  76,476, where it was 80,536, and pseudonymise_source's description
-  18,784, where it was 19,956. Nothing changes on 3.13.
+  the indentation they kept from Exegete's source code: there `full`
+  measures 210,033 characters, where it was 221,045 with the changes
+  above, and `core` 76,476, where it was 80,536. pseudonymise_source's
+  description is 18,784 characters on every Python, where 0.15.4's was
+  19,897 on Python 3.11, within the 20,000 the Terminal guide gives.
+  Nothing changes on 3.13.

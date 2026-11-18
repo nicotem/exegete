@@ -253,7 +253,6 @@ from .texts import (
     TWO_STEP_PARAGRAPH,
     EXPORT_FULL_MEMOS_PARAGRAPH,
     CODER_VISIBILITY_COUNTS_PARAGRAPH,
-    READ_BRIEF_DESCRIPTION,
     BRIEF_START,
     BRIEF_SHORT,
     BRIEF_SHORT_SMALL_SET,
@@ -712,7 +711,7 @@ def _with_paragraphs(*blocks: str, before: str, gap: str = "\n\n"):
             start = doc.find(before, start + 1)
             if start < 0:
                 raise ValueError(
-                    f"{fn.__name__}: no line of its docstring starts with "
+                    f"{fn.__name__}: no line of its description starts with "
                     f"{before!r}, where the shared paragraphs go")
             line_start = doc.rfind("\n", 0, start) + 1
             if not doc[line_start:start].strip(" "):
@@ -736,9 +735,9 @@ def _with_description(text: str):
 
     The text is set as written, flush, on every Python (the owner's
     ruling of 17 November 2026). Until 0.15.5 the descriptions were these
-    functions' docstrings, which Python 3.11 and 3.12 served with the
-    four spaces of their indentation before every line after the first,
-    and 3.13 without them.
+    functions' docstrings, which Python 3.11 and 3.12 served as the
+    source wrote them, with four spaces of indentation before each line
+    after the first that had text and at the end, and 3.13 without them.
     """
     def deco(fn):
         if fn.__doc__ is not None:
@@ -4551,9 +4550,9 @@ def get_brief() -> str:
 
 # The assistant's brief, as a tool (v0.14.2): registered first, so that a
 # host listing the tools lists it first, and in every tool set
-# (CORE_TOOLSET names it). Its description is READ_BRIEF_DESCRIPTION, the
-# same on every interpreter.
-@mcp.tool(annotations=TOOL_READS, description=READ_BRIEF_DESCRIPTION)
+# (CORE_TOOLSET names it). Its description, texts.READ_BRIEF_DESCRIPTION,
+# is given here, as the two guidance resources' are.
+@mcp.tool(annotations=TOOL_READS, description=texts.READ_BRIEF_DESCRIPTION)
 @_tool_guard
 def read_brief() -> str:
     """The brief: its full version, or in the small set for local models

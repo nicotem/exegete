@@ -45,7 +45,8 @@ of a project from the conversation. It runs as an MCP server.
   description of every tool, prompt and resource,
   `<ITS NAME IN CAPITALS>_DESCRIPTION`. `server.py` imports each
   constant by its name and gives each description to its function with
-  `@_with_description`. The other modules keep their own texts, and a
+  `@_with_description`, or, for `read_brief` and the two guidance
+  resources, in the call that registers them. The other modules keep their own texts, and a
   text built inside a function stays in its function.
 - `database.py`: the project database, in QualCoder's format (schema
   v17, as QualCoder 4.0 writes it). `new_project.py`: creating a project.

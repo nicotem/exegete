@@ -11,11 +11,11 @@ tool, prompt and resource, as <ITS NAME IN CAPITALS>_DESCRIPTION.
 server.py imports each constant by its name, so `server.NAME` is the
 object defined here and every use reads it as before; it reads each
 description as `texts.NAME` where the function is registered, the
-descriptions of the two guidance resources in their `description=` and
-every other through _with_description, the function's innermost
-decorator. They stand in the order they had in server.py, under copies
-of the section headings they stood under there, each constant with the
-comments that stood above it.
+descriptions of read_brief and the two guidance resources in their
+`description=` and every other through _with_description, the
+function's innermost decorator. They stand in the order they had in
+server.py, under copies of the section headings they stood under there,
+each constant with the comments that stood above it.
 
 A description is written flush, with no indentation, as Exegete serves
 it on every Python. The texts of Exegete's other modules stay in those

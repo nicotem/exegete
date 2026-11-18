@@ -231,13 +231,13 @@ class TestTheStartTool:
             tools, _ = _listed(mode)
             assert tools[0].name == "read_brief", mode
             tool = tools[0]
-            assert tool.description == server.READ_BRIEF_DESCRIPTION
+            assert tool.description == server.texts.READ_BRIEF_DESCRIPTION
             assert tool.inputSchema.get("properties") == {}
             assert tool.annotations == server.TOOL_READS
         assert "read_brief" in server.CORE_TOOLSET
 
     def test_its_description_asks_to_be_called_first(self):
-        text = server.READ_BRIEF_DESCRIPTION
+        text = server.texts.READ_BRIEF_DESCRIPTION
         assert len(text) < 400
         assert text.startswith("Call this once at the start of every "
                                "conversation about a project")

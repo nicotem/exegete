@@ -182,7 +182,7 @@ REGISTERING = ("mcp.tool", "mcp.prompt", "mcp.resource")
 # The three whose registration gives `description=`, which FastMCP takes
 # in place of a docstring: each with the description it gives
 DESCRIBED_AT_REGISTRATION = {
-    "read_brief": "READ_BRIEF_DESCRIPTION",
+    "read_brief": "texts.READ_BRIEF_DESCRIPTION",
     "get_methods_guidance": "texts.GET_METHODS_GUIDANCE_DESCRIPTION",
     "get_brief": "texts.GET_BRIEF_DESCRIPTION"}
 

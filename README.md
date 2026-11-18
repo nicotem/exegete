@@ -598,7 +598,7 @@ github.com/nicotem/exegete
 ├── legal/
 │   └── GPL-3.0.txt    the GNU GPL the licence incorporates
 └── src/exegete/
-    ├── server.py           the tools, resources and brief
+    ├── server.py           the tools; their texts in texts.py
     ├── database.py         QualCoder's format, read and written
     ├── sessions.py         the review list of suggestions
     ├── pseudonymise.py     replacing names, keeping the coding

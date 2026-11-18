@@ -13,8 +13,8 @@
 - Each tool's, prompt's and resource's description is in
   `src/exegete/texts.py`, as `<ITS NAME IN CAPITALS>_DESCRIPTION`,
   written flush, no longer as its function's docstring in `server.py`.
-  The function takes it through `@_with_description(texts.NAME)`, its
-  innermost decorator, which refuses a function that also has a
+  The decorator `_with_description`, innermost on the function, gives
+  it to the function, and refuses a function that also has a
   docstring. The descriptions moved word for word, so `docs/snapshot/`
   did not change. `tests/test_texts_module.py` holds where each one is
   written and given.

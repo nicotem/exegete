@@ -219,15 +219,21 @@ it is fixed. Describe it there without copying data, as above.
    commit. A test may check facts from the code, but never the words of
    these files, which the release deletes.
 
-   Update the docstring of every tool whose arguments or behaviour
-   changed: the docstrings are the descriptions the assistant reads.
+   Update the description of every tool whose arguments or behaviour
+   changed. Each tool's, prompt's and resource's description is in
+   `src/exegete/texts.py`, as `<ITS NAME IN CAPITALS>_DESCRIPTION`,
+   written flush; the decorator `_with_description`, innermost on its
+   function in `server.py`, gives it to that function.
    Some paragraphs are shared by several tools, such as the refusal
    while the project's lock file is active. Each is written once, as a
-   constant in `src/exegete/texts.py`, and `_with_paragraphs` puts it
-   back into each tool's docstring, so a change to it is made there.
-   The opening text, the brief and the notes, warnings and refusals
-   that the tools' answers give are constants in `texts.py` too, and
-   `server.py` imports each by its name.
+   constant in `texts.py`, and `_with_paragraphs` puts it back into each
+   tool's description, so a change to it is made there. The other texts
+   `server.py` held as constants, the opening text, the brief and the
+   notes, warnings and refusals of its tools' answers among them, are
+   constants in `texts.py` too, and `server.py` imports each by its
+   name. The texts of Exegete's other modules stay in those modules,
+   and a text built inside a function when a tool runs stays in its
+   function.
    Three tool texts also give the lock paragraph's words, typed by hand:
    - `apply_codings`' safety guarantees
    - `restore_backup`'s list of safeguards
@@ -533,7 +539,7 @@ exegete/                     # the clone (its folder's name does not matter)
 │   │   ├── env_settings.py      # The settings, read under both spellings
 │   │   ├── state_folder.py      # The state folder and its one move
 │   │   ├── server.py            # Main MCP server with resources, tools, prompts
-│   │   ├── texts.py             # The texts Exegete serves that are written once: the opening text, the brief, the shared paragraphs, the answers' notes and refusals (0.15.5)
+│   │   ├── texts.py             # The texts server.py held as constants, and every tool's, prompt's and resource's description (0.15.5); the other modules keep their own
 │   │   ├── database.py          # SQLite database interface
 │   │   ├── file_kinds.py        # What kind of entry sits at a name: a named pipe is refused, never opened (0.15.1)
 │   │   ├── memo_privacy.py      # QualCoder's '#####' private-memo convention

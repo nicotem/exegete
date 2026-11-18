@@ -35,15 +35,18 @@ of a project from the conversation. It runs as an MCP server.
 ## Where things are
 
 - `src/exegete/server.py`: the MCP server, with its tools, resources,
-  prompts, help topics and the assistant's brief. Tool sets: `full`
-  and `core` (`EXEGETE_TOOLSET`, or the extension's switch
+  prompts and help topics. Tool sets: `full` and `core`
+  (`EXEGETE_TOOLSET`, or the extension's switch
   (`EXEGETE_SMALL_TOOLSET`)); `lifecycle`, the earlier name of `full`,
   is read as `full`.
-- `texts.py`: the texts Exegete serves that are written once, as
-  constants: the opening text, the brief's words, the paragraphs that
-  several descriptions share, and the notes, warnings and refusals of
-  the answers. `server.py` imports each by its name; a tool's
-  description is its docstring in `server.py`.
+- `texts.py`: the texts `server.py` held as constants (the opening
+  text, the brief's words, the paragraphs that several descriptions
+  share, the notes, warnings and refusals of its answers) and the
+  description of every tool, prompt and resource,
+  `<ITS NAME IN CAPITALS>_DESCRIPTION`. `server.py` imports each
+  constant by its name and gives each description to its function with
+  `@_with_description`. The other modules keep their own texts, and a
+  text built inside a function stays in its function.
 - `database.py`: the project database, in QualCoder's format (schema
   v17, as QualCoder 4.0 writes it). `new_project.py`: creating a project.
 - `preview_tokens.py`: preview before confirm. `memo_privacy.py`: the

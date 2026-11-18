@@ -291,6 +291,35 @@ def test_release_mode_fails_on_an_old_reading(tmp_path, capsys,
 
 
 @needs_git
+def test_a_reading_whose_date_is_no_day_is_refused(tmp_path, capsys):
+    """A reading whose date is no day, in either form, is listed with no
+    age and refused at release preparation; until v0.15.5 it was dropped
+    without a word (v0.15.3's deferred table, the dates check's first
+    point)."""
+    root = _commit(tmp_path / "repo", {"GUIDE.md": "\n\n".join((
+        "The page says so (read on 31 November 2026).",
+        "The terms say so (checked on February 30, 2026).",
+        "The page says so (read on 4 November 2026).")) + "\n"}, TODAY)
+    code, lines, _ = _run(capsys, root)
+    assert code == 0
+    assert _rows(lines, "Dated readings") == [
+        ["`GUIDE.md:1`", "read on 31 November 2026", "",
+         "refused: a date that is no day"],
+        ["`GUIDE.md:3`", "checked on February 30, 2026", "",
+         "refused: a date that is no day"],
+        ["`GUIDE.md:5`", "read on 4 November 2026", "5", ""]]
+    assert any("and 2 readings whose date is no day." in line
+               for line in lines)
+    code, lines, _ = _run(capsys, root, "--release")
+    assert code == 1
+    assert _refused(lines) == [
+        f'refused at release preparation: GUIDE.md:{line}: the reading '
+        f'"{words}" gives a date that is no day'
+        for line, words in ((1, "read on 31 November 2026"),
+                            (3, "checked on February 30, 2026"))]
+
+
+@needs_git
 def test_dated_readings_age_at_release_preparation(tmp_path, capsys):
     root = _commit(tmp_path / "repo", {"GUIDE.md": "\n\n".join((
         "The page says so (read on 4 October 2026).",

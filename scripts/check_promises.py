@@ -51,15 +51,17 @@ date ("4 November 2026", "November 4, 2026" or "2026-11-04"); or "Archive
 capture of" and a date, so that a page read in the Internet Archive ages
 from the day it was captured. "released on" and "merged on" are not
 readings. Each is listed with its age in days, counted from the date it
-gives, never from git. NOT_READINGS holds the words that take the form
-without being a reading, each with its reason.
+gives, never from git. A reading whose date is no day, such as 31
+November, is listed too, with no age. NOT_READINGS holds the words that
+take the form without being a reading, each with its reason.
 
 Every push prints the report in Markdown, and under GitHub Actions writes
 it to the job's step summary too. The run exits 0, or 2 when git fails or
 a tracked file is missing. With --release it also exits 1, naming each
 promise whose line is older than MAX_AGE_DAYS, whose sentence and block
 name no row of the plan, and that NOT_PROMISES does not hold, and each
-reading older than MAX_AGE_DAYS that NOT_READINGS does not hold. In a
+reading that NOT_READINGS does not hold, older than MAX_AGE_DAYS or with
+a date that is no day. In a
 shallow clone git gives every older line the day of the clone's oldest
 commit, so --release refuses there and exits 2. No workflow runs
 --release: it is a step of release preparation. Standard library only,
@@ -345,7 +347,7 @@ class Reading:
     file: str
     line: int
     words: str
-    day: datetime.date              # the day it gives
+    day: Optional[datetime.date]    # the day it gives; None for no day
     sentence: str
     not_a_reading: Optional[str]    # the reason NOT_READINGS gives
 
@@ -414,15 +416,15 @@ def _date(match: re.Match) -> Optional[datetime.date]:
 
 
 def readings_in(sentence: Sentence) -> List[Reading]:
-    """The dated readings of one sentence, inline code left out."""
+    """The dated readings of one sentence, inline code left out; one
+    whose date is no day is kept, with no day, for release preparation
+    to refuse (it was dropped without a word until v0.15.5)."""
     masked, found = texts.mask_code(sentence.text), []
     for match in READING.finditer(masked):
-        day = _date(match)
-        if day is not None:
-            found.append(Reading(
-                sentence.file, sentence.line_at(match.start()),
-                " ".join(match.group(0).split()), day, sentence.text,
-                _held(NOT_READINGS, sentence, match.start(), match.end())))
+        found.append(Reading(
+            sentence.file, sentence.line_at(match.start()),
+            " ".join(match.group(0).split()), _date(match), sentence.text,
+            _held(NOT_READINGS, sentence, match.start(), match.end())))
     return found
 
 
@@ -523,17 +525,19 @@ def refused(promises: Sequence[Promise], readings: Sequence[Reading],
             today: datetime.date) -> List[str]:
     """What release preparation refuses on `today`: each promise older
     than MAX_AGE_DAYS by its line that names no row of the plan and is no
-    state, and each reading older than MAX_AGE_DAYS by the day it gives."""
+    state, and each reading older than MAX_AGE_DAYS by the day it gives
+    or with a date that is no day."""
     found = [f"{each.file}:{each.line}: the promise \"{each.words}\", on a "
              f"line written on {each.written} ({age(each.written, today)} "
              f"days ago), names no row of the plan"
              for each in promises
              if not each.rows and not each.state
              and age(each.written, today) > MAX_AGE_DAYS]
-    found += [f"{each.file}:{each.line}: the reading \"{each.words}\" is "
-              f"{age(each.day, today)} days old"
+    found += [f"{each.file}:{each.line}: the reading \"{each.words}\" "
+              + ("gives a date that is no day" if each.day is None else
+                 f"is {age(each.day, today)} days old")
               for each in readings if not each.not_a_reading
-              and age(each.day, today) > MAX_AGE_DAYS]
+              and (each.day is None or age(each.day, today) > MAX_AGE_DAYS)]
     return found
 
 
@@ -552,6 +556,8 @@ def report(promises: Sequence[Promise], readings: Sequence[Reading],
     old_readings = sum(not each.not_a_reading
                        and age(each.day, today) > MAX_AGE_DAYS
                        for each in readings)
+    no_day = sum(not each.not_a_reading and each.day is None
+                 for each in readings)
     out = ["### Promises and dated readings", "",
            f"{files} documents read on {today}: {len(promises)} promises "
            f"({sum(bool(each.state) for each in promises)} of them states "
@@ -559,7 +565,9 @@ def report(promises: Sequence[Promise], readings: Sequence[Reading],
            f"Release preparation, with --release, would refuse "
            f"{old_promises} promises older than {MAX_AGE_DAYS} days that "
            f"name no row of the plan, and {old_readings} readings older "
-           f"than {MAX_AGE_DAYS} days.", ""]
+           f"than {MAX_AGE_DAYS} days"
+           + (f", and {no_day} readings whose date is no day" if no_day
+              else "") + ".", ""]
     if is_shallow:
         out += ["This clone is shallow: a line older than its oldest commit "
                 "is given that commit's day, and --release refuses to run.",
@@ -581,9 +589,11 @@ def report(promises: Sequence[Promise], readings: Sequence[Reading],
         days = age(each.day, today)
         verdict = (f"not a reading: {each.not_a_reading}"
                    if each.not_a_reading else
+                   "refused: a date that is no day" if each.day is None else
                    "refused" if days > MAX_AGE_DAYS else "")
         out.append(f"| `{each.file}:{each.line}` | {_cell(each.words)} | "
-                   f"{days} | {_cell(verdict)} |")
+                   f"{'' if each.day is None else days} | "
+                   f"{_cell(verdict)} |")
     return out
 
 

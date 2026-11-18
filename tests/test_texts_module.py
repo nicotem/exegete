@@ -16,8 +16,10 @@ docs/snapshot/, unchanged by either, shows that every byte served stayed
    server.py, by its one import from texts.py, to the same object, and
    server.py assigns it nowhere; no description is imported by name;
 3. server.py assigns at module level no text of four words or more, as
-   scripts/code_texts.py reads one, but the five no assistant receives,
-   inside an `if` or `try` block and by unpacking too;
+   scripts/code_texts.py reads one, but the five no assistant receives:
+   inside an `if`, `try`, `with`, `for`, `while` or `match` block too,
+   by unpacking, to an item or an attribute, by a walrus or as a `for`
+   statement's target;
 4. every function server.py registers takes its description from
    texts.py, through _with_description, its innermost decorator, with no
    docstring of its own; three give `description=`, which FastMCP takes
@@ -134,43 +136,83 @@ def test_each_text_is_imported_into_server_and_assigned_there_nowhere():
     assert sorted(set(bound) & set(names)) == []
 
 
+# The definitions whose bodies a module does not run as it is imported
+DEFINITIONS = (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef,
+               ast.Lambda)
+
+
 def _run_at_module_level(body):
     """The statements a module runs as it is imported: those of its body
-    and, at any depth, of the `if`, `try`, `with`, `for` and `while`
-    blocks there, never those of a function or a class."""
+    and, at any depth, of the `if`, `try`, `with`, `for`, `while` and
+    `match` blocks there, never those of a function or a class."""
     for node in body:
         yield node
-        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef,
-                             ast.ClassDef)):
+        if isinstance(node, DEFINITIONS):
             continue
         for field in ("body", "orelse", "finalbody"):
             yield from _run_at_module_level(getattr(node, field, []))
         for handler in getattr(node, "handlers", []):
             yield from _run_at_module_level(handler.body)
+        for case in getattr(node, "cases", []):
+            yield from _run_at_module_level(case.body)
 
 
-def _bound(node):
-    """The names an assignment binds, each name it unpacks into too."""
-    targets = node.targets if isinstance(node, ast.Assign) else [node.target]
-    return [name.id for target in targets for name in ast.walk(target)
-            if isinstance(name, ast.Name) and isinstance(name.ctx, ast.Store)]
+def _bound(target):
+    """What an assignment's target binds: each name, unpacked too, and
+    each item or attribute it sets, as the source writes it."""
+    return [each.id if isinstance(each, ast.Name) else ast.unparse(each)
+            for each in ast.walk(target)
+            if isinstance(each, (ast.Name, ast.Subscript, ast.Attribute))
+            and isinstance(each.ctx, ast.Store)]
+
+
+def _own_nodes(statement):
+    """The nodes of one statement the module runs, never those inside a
+    function, a class or a lambda it holds, nor the statements of its
+    blocks, which _run_at_module_level gives on their own."""
+    if isinstance(statement, DEFINITIONS):
+        return
+    stack = [child for child in ast.iter_child_nodes(statement)
+             if not isinstance(child, ast.stmt)]
+    while stack:
+        node = stack.pop()
+        yield node
+        stack += [child for child in ast.iter_child_nodes(node)
+                  if not isinstance(child, DEFINITIONS + (ast.stmt,))]
+
+
+def _holders(tree):
+    """Each place at module level where a value is bound, as (first line,
+    last line, what it binds): an assignment, whole; a `for` statement's
+    iterable, which binds its target; a walrus anywhere in a statement."""
+    for node in _run_at_module_level(tree.body):
+        if isinstance(node, ast.Assign):
+            yield (node.lineno, node.end_lineno,
+                   [name for target in node.targets
+                    for name in _bound(target)])
+        elif isinstance(node, (ast.AnnAssign, ast.AugAssign)):
+            yield node.lineno, node.end_lineno, _bound(node.target)
+        elif isinstance(node, (ast.For, ast.AsyncFor)):
+            yield (node.iter.lineno, node.iter.end_lineno,
+                   _bound(node.target))
+        for each in _own_nodes(node):
+            if isinstance(each, ast.NamedExpr):
+                yield each.lineno, each.end_lineno, _bound(each.target)
 
 
 def test_server_assigns_no_text_but_those_no_assistant_receives():
     """Inside an `if` or a `try` block too, and by unpacking (the review
-    of the constants' move, finding 1)."""
-    tree = _tree(SERVER)
-    statements = [(node.lineno, node.end_lineno, node)
-                  for node in _run_at_module_level(tree.body)
-                  if isinstance(node, (ast.Assign, ast.AnnAssign,
-                                       ast.AugAssign))]
+    of the constants' move, finding 1); inside a `match` case, to an item
+    or an attribute, by a walrus and as a `for` statement's target too
+    (the review of the descriptions' move, finding 3)."""
+    holders = list(_holders(_tree(SERVER)))
     holding = set()
     for text in _code_texts().code_texts(REPO):
         if text.module != "src/exegete/server.py" or text.docstring \
                 or text.raw:
             continue
-        holding |= {name for first, last, node in statements
-                    if first <= text.line <= last for name in _bound(node)}
+        holding |= {name for first, last, names in holders
+                    if first <= text.line <= last for name in names}
     assert sorted(holding - set(STAYS)) == [], (
         "a text of four words or more assigned in server.py: write it in "
         "texts.py, which server.py imports it from")

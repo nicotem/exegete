@@ -455,8 +455,6 @@ NOT_TOOLS = {
     "set_at": "a key of the AI coder name's record",
     "update_check": "the check for new versions' state file, "
                     "update_check.json, and the extension's setting",
-    "search_memo": "search_files' argument removed in 0.15.1, which the "
-                   "refusal of a call passing it names (REMOVED_ARGUMENTS)",
     "undo_receipt": "the key of a change's answer, and a line of "
                     "apply_codings' answer, that names the change's record "
                     "(v0.15.2)",
@@ -664,13 +662,21 @@ def _removed_help_topics():
     raise AssertionError("server.py has no REMOVED_HELP_TOPICS")
 
 
-def _create_backup_refusal():
-    """The places, (module, line, text), of create_backup's refusal: the
-    argument removed in 0.15.5 from the 22 tools that took it, which the
-    refusal of a call passing it names (_CREATE_BACKUP_REMOVED, and the
-    rows it gives REMOVED_ARGUMENTS). They are passed over there alone,
-    so that any other text that tells the model to pass it fails (v0.15.5,
-    the second part's review). Both are in texts.py (v0.15.5)."""
+# The removed arguments whose refusals name them: create_backup, removed
+# in 0.15.5 from the 22 tools that took it, and search_memo, removed in
+# 0.15.1 from search_files
+REMOVED_ARGUMENT_NAMES = ("create_backup", "search_memo")
+
+
+def _removed_argument_refusals():
+    """The places, (module, line, text), of the refusals that name an
+    argument of REMOVED_ARGUMENT_NAMES: the refusal of a call passing it
+    (_CREATE_BACKUP_REMOVED, and the rows of REMOVED_ARGUMENTS). They are
+    passed over there alone, so that any other text that tells the model
+    to pass one fails (v0.15.5, the second part's review for
+    create_backup; for search_memo, which every text passed over until
+    then, the deferred table of v0.15.5). Both are in texts.py
+    (v0.15.5)."""
     path = Path(exegete.__file__).parent / "texts.py"
     tree_ = ast.parse(path.read_text(encoding="utf-8"))
     places = set()
@@ -684,8 +690,11 @@ def _create_backup_refusal():
                        for each in ast.walk(node.value)
                        if isinstance(each, ast.Constant)
                        and isinstance(each.value, str)
-                       and "create_backup" in each.value}
-    assert len(places) >= 2, places
+                       and any(name in each.value
+                               for name in REMOVED_ARGUMENT_NAMES)}
+    for name in REMOVED_ARGUMENT_NAMES:
+        assert any(name in text for _, _, text in places), (name, places)
+    assert len(places) >= 3, places
     return places
 
 
@@ -697,7 +706,7 @@ def test_no_answer_text_names_a_tool_that_does_not_exist():
     topics = _removed_help_topics()
     assert ("server.py", "analyze_for_coding") in {
         (module, text) for module, _, text in topics}
-    refusal = _create_backup_refusal()
+    refusal = _removed_argument_refusals()
     found = {}
     for module, line, text in _sendable_literals():
         if (module, line, text) in topics or (module, line, text) in refusal:

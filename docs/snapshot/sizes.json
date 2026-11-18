@@ -116,7 +116,7 @@
     "brief_characters": 14630,
     "opening_text_characters": 2047,
     "tool_count": 78,
-    "tool_definitions_characters": 210424,
+    "tool_definitions_characters": 210033,
     "tools": {
       "add_annotation": {
         "definition_characters": 2177,
@@ -263,8 +263,8 @@
         "description_characters": 1986
       },
       "import_text_file": {
-        "definition_characters": 4847,
-        "description_characters": 4186
+        "definition_characters": 4456,
+        "description_characters": 3802
       },
       "link_file_to_case": {
         "definition_characters": 2168,

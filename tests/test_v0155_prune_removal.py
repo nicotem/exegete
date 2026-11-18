@@ -17,7 +17,8 @@ helper's own level:
 3. a read-only file (Windows): the backup's copy is cleared and removed,
    and the project's stays read-only;
 4. a refused rename is judged by the disk, never by the error's kind,
-   and a folder that cannot be looked at is left whole;
+   and a folder that cannot be looked at is left whole; a hidden name
+   already taken is never renamed onto;
 5. a link, or on Windows a junction, under a backup's name is left as it
    is, and so is anything else but a folder;
 6. the clearing's reach: the backup's own marked entry goes, while
@@ -33,6 +34,7 @@ import os
 import shutil
 import stat
 import sys
+import uuid
 from datetime import datetime, timedelta
 from pathlib import Path
 
@@ -259,6 +261,35 @@ def test_a_refused_rename_is_judged_by_the_disk(tmp_path, monkeypatch,
     assert hidden_folders(tmp_path, STEM) == []
 
 
+def test_a_hidden_name_already_taken_is_never_renamed_onto(tmp_path,
+                                                           monkeypatch):
+    """A folder under the hidden name drawn, such as a backup another
+    copy of Exegete is making, keeps what it holds: the next name is
+    drawn."""
+    fixed = datetime(2026, 11, 18, 12, 30, 0)
+
+    class Clock(datetime):
+        @classmethod
+        def now(cls, tz=None):
+            return fixed
+
+    drawn = iter([uuid.UUID(int=0xAAAAAAAA << 96),
+                  uuid.UUID(int=0xBBBBBBBB << 96)])
+    monkeypatch.setattr(database, "datetime", Clock)
+    monkeypatch.setattr(database.uuid, "uuid4", lambda: next(drawn))
+    theirs = tmp_path / f".{STEM}_backup_20261118_123000_partial_aaaaaaaa.qda"
+    theirs.mkdir()
+    (theirs / "theirs.txt").write_text("keep", encoding="utf-8")
+    backup = small_backup(tmp_path)
+
+    result = remove_backup_folder(backup, STEM)
+
+    assert result.outcome == REMOVAL_REMOVED, result
+    assert not os.path.lexists(backup)
+    assert contents(theirs) == {"theirs.txt": len("keep")}
+    assert hidden_folders(tmp_path, STEM) == [theirs]
+
+
 # ---------------------------------------------------------------------------
 # 5. A link, a junction, or anything but a folder
 # ---------------------------------------------------------------------------
@@ -449,7 +480,8 @@ def test_remains_take_the_hidden_name_the_sweep_knows_and_nothing_is_logged(
      r"\\?\C:\Users\you\Study_backup_20261118_120000.qda"),
     (r"\\?\UNC\server\share\Study_backup_20261118_120000.qda",
      r"\\?\UNC\server\share\Study_backup_20261118_120000.qda"),
-])
+], ids=["a drive", "forward slashes and a step up", "a share",
+        "already long", "a share already long"])
 def test_windows_long_form(given, long_form):
     r"""By ntpath's rules on every system: a drive's path gains `\\?\`, a
     share's `\\server\share` becomes `\\?\UNC\server\share`, and a path

@@ -2653,14 +2653,21 @@ near the top of this document, set them out.
     because QualCoder deletes them past its `backup_num` when a project
     closes. The token that approves the prune signs that set of backups
     holding the only copies, so a prune whose set changed after its
-    preview is refused and removes nothing. A backup the prune could not
-    remove whole, as when another program has one of its files open, is
-    named apart in its answer. If it held the only copy of a
-    `pseudonyms.json`, it may still hold it. It keeps its name, so
-    `list_backups` lists it and `restore_backup` accepts it while its
-    database remains, though it may lack some of its files, which a
-    restore from it would not bring back. You could remove it by hand once
-    nothing holds it open.
+    preview is refused and removes nothing. The prune takes each backup
+    out of the listing before removing it, under the name of a backup
+    being made, and clears inside it alone the read-only marks and locks
+    its files carry from the project. One it cannot rename stays whole,
+    listed and restorable, as when another program has one of its files
+    open, its folder is locked (or, on some versions of macOS, not
+    writable for you), the folder holding it is not writable for you, or
+    the project's name is too long. What is left of one whose removal
+    stops (on Windows a file a program opens at that moment, a file that
+    is not yours, or Exegete's process ending) stays beside the project
+    under that name, which nothing in Exegete lists or restores, until a
+    later backup of the project removes what it can of it after an hour,
+    or you delete it. Either may still hold the only copy of a
+    `pseudonyms.json`. The prune's answer gives each such backup, unless
+    Exegete's process ended first.
 
     A run on a mapping you typed is refused unless the call either asks
     for the mapping to be saved into this file

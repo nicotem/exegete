@@ -528,6 +528,7 @@ from .texts import (
     _FILE_TEXT_WARNING_KINDS_WITHOUT_A_RUN,
     _LEFT_BY_CHOICE_WORDS,
     _SHARED_NAME_IN_NOTES_WARNING,
+    _SHARED_NAME_TYPED_FROM_THE_NAMES_LIST,
     _SHARED_NAME_IN_FILE_NOTES_WARNING,
     _NOTES_LEFT_AFTER_RUN,
     _NOTES_LEFT_NO_RUN,
@@ -18030,9 +18031,15 @@ def _pseudonymise_warnings(preview: Dict[str, Any],
         if memo_block.get("totals", {}).get("rows", 0):
             # v0.14.2: a note that names someone else who shares a name is
             # rewritten as well, and the server cannot tell the two apart.
-            # With memo_scope "file" (v0.15.5), this file's notes alone
-            warnings.append(_SHARED_NAME_IN_FILE_NOTES_WARNING if file_notes
-                            else _SHARED_NAME_IN_NOTES_WARNING)
+            # With memo_scope "file" (v0.15.5), this file's notes alone.
+            # Across the project from the names list (v0.15.5), what the
+            # advice's typed mapping puts in the conversation, in fixed
+            # words after the advice's own
+            warnings.append(
+                _SHARED_NAME_IN_FILE_NOTES_WARNING if file_notes
+                else _SHARED_NAME_IN_NOTES_WARNING + (
+                    _SHARED_NAME_TYPED_FROM_THE_NAMES_LIST if names_list
+                    else ""))
         private = memo_block.get("memos_rewritten_with_private_part", 0)
         if private:
             warnings.append(
@@ -19666,9 +19673,10 @@ def pseudonymise_source(
             state_preview_fn=_signed,
             override_required_fn=_override_required,
             # With the call's phrases (v0.15.4), which a file holding no
-            # name has no block to show
+            # name has no block to show, and the mapping's source (v0.15.5)
             warnings_fn=functools.partial(_pseudonymise_warnings,
-                                          phrases_given=bool(phrases)),
+                                          phrases_given=bool(phrases),
+                                          names_list=not typed),
             execute_guard_fn=_collisions_refusal,
             state_of_fn=_state_on_write_connection,
             check_fn=_save_check,

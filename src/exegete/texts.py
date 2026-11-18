@@ -5634,6 +5634,13 @@ _SHARED_NAME_IN_NOTES_WARNING = (
     "the second person a typed mapping with save_mapping_to_project off "
     "and researcher_keeps_mapping on (pseudonyms.json holds one pseudonym "
     "per name).")
+# After it, on the names list's path alone (v0.15.5): what the advice's
+# typed mapping puts in the conversation, which a run from the names list
+# does not. Fixed words, no name
+_SHARED_NAME_TYPED_FROM_THE_NAMES_LIST = (
+    " This run reads its mapping from the names list; a typed mapping for "
+    "the second person puts the shared name and that person's pseudonym in "
+    "the conversation.")
 # Its place with memo_scope "file" (v0.15.5): which notes this run
 # rewrites, and the same question about anyone named in them, a yes or no
 # being enough

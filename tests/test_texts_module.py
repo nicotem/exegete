@@ -22,7 +22,8 @@ docs/snapshot/, unchanged by either, shows that every byte served stayed
    texts.py, through _with_description, its innermost decorator, with no
    docstring of its own; three give `description=`, which FastMCP takes
    in place of the docstring;
-5. _with_description gives the text as written, on every Python.
+5. _with_description gives the text as written, on every Python;
+6. server.py keeps no import that only a moved text read.
 """
 import ast
 import importlib.util
@@ -276,3 +277,21 @@ def test_each_description_is_given_as_written_on_every_python(
             server._with_description(text)(tool)
             given.append(tool.__doc__)
     assert given == texts_given
+
+
+def test_server_keeps_no_import_the_move_left_behind():
+    """A name texts.py imports for its texts, which server.py imports
+    too, is read in server.py: an import there that only a moved text
+    read went with it (the review of the constants' move, finding 4:
+    SECRET_UNAVAILABLE_MESSAGE, read by TOKEN_ERROR_TEXTS alone)."""
+    def imported(tree):
+        return {(alias.asname or alias.name).split(".")[0]
+                for node in tree.body
+                if isinstance(node, (ast.Import, ast.ImportFrom))
+                for alias in node.names}
+    server_tree = _tree(SERVER)
+    read = {node.id for node in ast.walk(server_tree)
+            if isinstance(node, ast.Name) and isinstance(node.ctx, ast.Load)}
+    both = imported(_tree(TEXTS)) & imported(server_tree)
+    assert both, "texts.py and server.py share no import: read again"
+    assert sorted(both - read) == []

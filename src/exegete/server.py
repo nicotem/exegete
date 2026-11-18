@@ -161,7 +161,6 @@ from .preview_tokens import (
     OK,
     OTHER_OPERATION,
     PROJECT_CHANGED,
-    SECRET_UNAVAILABLE_MESSAGE,
     TOKEN_VALID_FOR_MINUTES,
     PreviewSecretUnavailable,
     bind_id,

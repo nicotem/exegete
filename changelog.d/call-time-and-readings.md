@@ -17,3 +17,6 @@
   INSTALL's "Going back to an earlier version" says that installing
   0.15.3 over 0.15.4 cleared the extension's settings, and so did
   installing 0.15.4 again over a test build of the same version.
+- **PRIVACY's quotes from OpenAI's Europe Terms of Use read again** in
+  the Internet Archive's capture of 16 November 2026: they stand word
+  for word, and the page still shows "Updated: January 16, 2026".

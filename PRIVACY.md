@@ -2583,8 +2583,8 @@ are part of what stays on the computer ("How your data flows").
 
 **The UK, the EEA and Switzerland.** "Europe Terms of Use",
 <https://openai.com/policies/eu-terms-of-use/> (the page shows "Updated:
-January 16, 2026"; Archive capture of 28 October 2026,
-<https://web.archive.org/web/20261028153406/https://openai.com/policies/eu-terms-of-use/>):
+January 16, 2026"; Archive capture of 16 November 2026,
+<https://web.archive.org/web/20261116202559/https://openai.com/policies/eu-terms-of-use/>):
 
 > "These Terms of Use apply if you reside in the European Economic Area
 > (EEA), Switzerland, or UK."

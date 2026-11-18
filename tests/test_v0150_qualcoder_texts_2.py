@@ -184,7 +184,7 @@ CHOOSING_OCCURRENCES = (
         "line number. It gives none", "line number. The preview gives none")
 # v0.15.4, phrases to keep: typed into the call, bound into the token and
 # kept in no file of Exegete's, counted by the preview, the answer, the
-# run record and the journal entry (server.py: _kept_by_phrases,
+# run record and the journal entry (server.py: _kept_by_phrases; texts.py:
 # _KEEP_PHRASES_TO_REPEAT), refused with the names list before it is read
 # (_PHRASES_NEED_A_TYPED_MAPPING); held to the code in
 # tests/test_v0154_privacy_additions.py (its readability reading: the

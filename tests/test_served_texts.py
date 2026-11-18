@@ -443,7 +443,7 @@ def _decorated(tree):
                                       if isinstance(arg, ast.Name)}
 
 
-# The paragraphs written once in server.py, read from its
+# The paragraphs written once in texts.py, read from server.py's
 # _with_paragraphs lines, so that a constant a later change passes there
 # is checked too; and the one place a held text is also typed:
 # apply_codings gives the lock paragraph's words as one of its safety

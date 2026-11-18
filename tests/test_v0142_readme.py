@@ -338,7 +338,7 @@ def test_a_first_session_names_both_coder_names():
     # (the fix round: the clause "QualCoder, if you use it, records your
     # coding under it" goes, since QualCoder records coding under the name
     # in its own settings, and asks to keep or switch when the project
-    # holds another: CODER_NAME_QUALCODER_SWITCH_NOTE in server.py)
+    # holds another: CODER_NAME_QUALCODER_SWITCH_NOTE in texts.py)
     assert ("When it makes the project, the assistant asks for your own "
             "coder name, unless you have filled it in Exegete's settings. "
             "The project keeps it so that your work and the AI's stay "

@@ -39,6 +39,11 @@ of a project from the conversation. It runs as an MCP server.
   and `core` (`EXEGETE_TOOLSET`, or the extension's switch
   (`EXEGETE_SMALL_TOOLSET`)); `lifecycle`, the earlier name of `full`,
   is read as `full`.
+- `texts.py`: the texts Exegete serves that are written once, as
+  constants: the opening text, the brief's words, the paragraphs that
+  several descriptions share, and the notes, warnings and refusals of
+  the answers. `server.py` imports each by its name; a tool's
+  description is its docstring in `server.py`.
 - `database.py`: the project database, in QualCoder's format (schema
   v17, as QualCoder 4.0 writes it). `new_project.py`: creating a project.
 - `preview_tokens.py`: preview before confirm. `memo_privacy.py`: the

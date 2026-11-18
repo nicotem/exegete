@@ -12043,12 +12043,13 @@ def _hidden_name_too_long(stem: str,
     """Whether a backup of the project called `stem` was left whole for
     the length of the name a prune gives it (v0.15.5). That hidden name
     is 45 characters longer than the project's name, so a project's name
-    of more than 210 characters, which a backup made before 0.15.1 can
-    carry, can take it past what a file system allows a name. Every
-    prune then leaves the backup whole, and no backup of the project can
-    be made. Read by the one rule every backup reads
-    (`backup_name_too_long`): the rename's error on every system, and on
-    Windows, which gives another error, the name's length too."""
+    of more than 210 characters, or on Linux, which counts bytes, of more
+    than 210 bytes, which a backup made before 0.15.1 can carry, can take
+    it past what a file system allows a name. Every prune then leaves the
+    backup whole, and no backup of the project can be made. Read by the
+    one rule every backup reads (`backup_name_too_long`): the rename's
+    error on every system, and on Windows, which gives another error, the
+    name's length too."""
     return backup_name_too_long(partial_backup_name(stem, "00000000_000000"),
                                 error)
 

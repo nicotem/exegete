@@ -2655,9 +2655,9 @@ near the top of this document, set them out.
     The token that approves the prune signs that set of backups holding
     the only copies, so a prune whose set changed after its preview is
     refused and removes nothing. The prune takes each backup out of the
-    listing, under a hidden name, before removing it, and clears its
-    files' read-only marks and locks. One it cannot rename stays whole
-    and listed, as when a file in it is open, its folder or the one
+    listing, under a hidden name, before removing it, and clears the
+    read-only marks and locks inside it alone. One it cannot rename stays
+    whole and listed, as when a file in it is open, its folder or the one
     holding it is locked or not writable for you, or the project's name
     is too long. What is left of one whose removal stops stays beside the
     project under that name, which nothing in Exegete lists or restores,

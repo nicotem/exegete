@@ -13,10 +13,12 @@
 - **A project whose name is too long for its backups' names is refused
   in words that say so.** Since 0.15.1 a backup is first made under a
   hidden name 45 characters longer than the project's, which a name
-  longer than about 210 characters takes past what a file system
-  allows. Every change, restore, save of the names list and undo of one
-  was then refused as if the disk were full or not writable. The
-  refusal now says that the project's name is too long for the names
-  Exegete gives its backups, so nothing was changed, that the project
-  can still be read, and that a copy of it under a shorter name can be
-  backed up and changed.
+  longer than about 210 characters takes past what a file system allows.
+  On Linux, which counts bytes, a name with accented letters or in
+  another alphabet gets there sooner: 106 Greek letters, or 71 Chinese
+  characters, are too many. Every change, restore, save of the names
+  list and undo of one was then refused as if the disk were full or not
+  writable. The refusal now says that the project's name is too long for
+  the names Exegete gives its backups, so nothing was changed, that the
+  project can still be read, and that a copy of it under a shorter name
+  can be backed up and changed.

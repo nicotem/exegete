@@ -6,6 +6,7 @@ import bisect
 import errno
 import locale
 import math
+import ntpath
 import os
 import sqlite3
 import stat
@@ -4003,6 +4004,270 @@ def _rename_folder(partial: Path, final: Path) -> None:
             time.sleep(wait)
 
 
+# ----------------------------------------------------------------------------
+# A backup removed in two steps (v0.15.5)
+#
+# A backup removed in place, whose removal stops partway, keeps its
+# name: it is still listed, and still accepted for a restore while its
+# database remains, though it may lack files. remove_backup_folder first
+# gives the folder the hidden name of a backup being made, by one rename
+# within its folder, which takes it out of every listing and out of
+# restore_backup's reach at once, on every system; then it removes it.
+# A rename refused leaves the backup whole, as it was. What a removal
+# stopped after the rename leaves stays under the hidden name, which
+# nothing lists or restores, and a later backup's sweep removes what it
+# can of it once its time is BACKUP_LEFTOVER_SECONDS old.
+#
+# A backup's files are its own copies (copy2), and they carry the
+# project's marks: on Windows the read-only attribute, on macOS a lock,
+# and on macOS and Linux a folder's mode. Such a mark stops a removal, so
+# when the first removal stops, the marks inside the renamed folder alone
+# are cleared and the folder is removed once more. The clearing never
+# goes into, through or onto a link or a junction, and never touches a
+# file with a second hard link, whose marks it shares with a file
+# elsewhere: the project, every other backup and whatever a link reaches
+# keep theirs.
+#
+# The hidden name is up to 18 characters longer than the backup's (a
+# full stop, "_partial_" and eight hex digits, less any counter such as
+# "_2"). On Windows a path past 259 characters is out of reach unless
+# long paths are switched on, so every path is handed to the disk in
+# Windows' long form, which that limit does not hold.
+# ----------------------------------------------------------------------------
+
+# What remove_backup_folder did with a backup
+REMOVAL_REMOVED = "removed"         # renamed, then removed whole
+REMOVAL_GONE = "gone"               # not there to remove
+REMOVAL_LEFT_WHOLE = "left_whole"   # not renamed: as it was, under its name
+REMOVAL_LINK = "link"               # a link or a junction, left as it is
+REMOVAL_REMAINS = "remains"         # renamed, then removed in part
+
+# Windows' tag for a junction (stat's IO_REPARSE_TAG_MOUNT_POINT, which
+# Python defines on Windows alone), as shutil.rmtree tells one. Not every
+# reparse point is a link: a cloud drive's placeholder (OneDrive's) is
+# one too.
+_JUNCTION_TAG = 0xA0000003
+# The user's lock and append-only flags on macOS (uchg and uappnd)
+_USER_LOCK_FLAGS = stat.UF_IMMUTABLE | stat.UF_APPEND
+# A mark is never cleared through a link where the system can say so
+# (macOS; Windows from Python 3.13); elsewhere `os.lstat` alone guards it
+_NO_FOLLOW_CHMOD: Dict[str, Any] = (
+    {"follow_symlinks": False}
+    if os.chmod in os.supports_follow_symlinks else {})
+_NO_FOLLOW_CHFLAGS: Dict[str, Any] = (
+    {"follow_symlinks": False}
+    if getattr(os, "chflags", None) in os.supports_follow_symlinks else {})
+
+
+class BackupRemoval(NamedTuple):
+    """What `remove_backup_folder` did with one backup (v0.15.5).
+
+    `outcome`: REMOVAL_REMOVED, REMOVAL_GONE, REMOVAL_LEFT_WHOLE,
+    REMOVAL_LINK or REMOVAL_REMAINS. `error`: the error met, if any; for
+    remains, the first removal's. `hidden`: for remains, the folder
+    under the hidden name, in the form the backup's path was given."""
+    outcome: str
+    error: Optional[BaseException] = None
+    hidden: Optional[Path] = None
+
+
+def windows_long_form(path: Union[str, Path]) -> str:
+    r"""Windows' long form of an absolute path (v0.15.5), which Windows
+    does not hold to 259 characters: `\\?\` before a drive's path, as in
+    `\\?\C:\Users\you\Study_backup_20261118_120000.qda`, and `\\?\UNC\`
+    in place of a share's two leading backslashes, as in
+    `\\?\UNC\server\share\Study_backup_20261118_120000.qda`. Formed by
+    ntpath's rules on every system, so that its test runs everywhere; a
+    path already in the long form, or in the device form `\\.\`, is left
+    as it is."""
+    text = os.fspath(path)
+    if text.startswith(("\\\\?\\", "\\\\.\\")):
+        return text
+    full = ntpath.abspath(text)
+    if full.startswith(("\\\\?\\", "\\\\.\\")):
+        return full
+    if full.startswith("\\\\"):
+        return "\\\\?\\UNC\\" + full[2:]
+    return "\\\\?\\" + full
+
+
+def disk_path(path: Union[str, Path]) -> str:
+    """A path as it is handed to the disk where its length could pass
+    Windows' limit (v0.15.5): on Windows its long form
+    (`windows_long_form`), elsewhere as it is."""
+    return windows_long_form(path) if os.name == "nt" else os.fspath(path)
+
+
+def _partial_backup_name(stem: str, timestamp: str) -> str:
+    """The hidden name of a backup of the project called `stem` while it
+    is being made, `.<stem>_backup_<timestamp>_partial_<8 hex>.qda`,
+    which `is_partial_backup_name` matches: `start_backup` gives it to
+    the backup it begins (v0.15.1), and `remove_backup_folder` to the
+    backup it takes out of the listing (v0.15.5)."""
+    return f".{stem}_backup_{timestamp}_partial_{uuid.uuid4().hex[:8]}.qda"
+
+
+def _is_link_or_junction(found: os.stat_result) -> bool:
+    """Whether `os.lstat` saw a link, or on Windows a junction, told by
+    its reparse tag as shutil.rmtree tells one."""
+    return (stat.S_ISLNK(found.st_mode)
+            or getattr(found, "st_reparse_tag", 0) == _JUNCTION_TAG)
+
+
+def _still_there(path: str) -> bool:
+    """Whether a path is on the disk: `os.lstat` sees it, or fails for any
+    reason but its absence, so that a path that cannot be looked at is
+    never taken for gone."""
+    try:
+        os.lstat(path)
+    except FileNotFoundError:
+        return False
+    except OSError:
+        return True
+    return True
+
+
+def _clear_marks(path: str, found: os.stat_result) -> None:
+    """Take off a plain file's or folder's marks that stop its removal,
+    each failure passed over: on Windows the read-only attribute; on
+    macOS the user's lock and append-only flags; on macOS and Linux a
+    folder's missing owner read, write or search permission."""
+    if os.name == "nt":
+        if getattr(found, "st_file_attributes", 0) \
+                & stat.FILE_ATTRIBUTE_READONLY:
+            try:
+                os.chmod(path, stat.S_IWRITE, **_NO_FOLLOW_CHMOD)
+            except OSError:
+                pass
+        return
+    flags = getattr(found, "st_flags", 0)
+    if flags & _USER_LOCK_FLAGS and hasattr(os, "chflags"):
+        try:
+            os.chflags(path, flags & ~_USER_LOCK_FLAGS, **_NO_FOLLOW_CHFLAGS)
+        except OSError:
+            pass
+    mode = stat.S_IMODE(found.st_mode)
+    if stat.S_ISDIR(found.st_mode) and (mode & stat.S_IRWXU) != stat.S_IRWXU:
+        try:
+            os.chmod(path, mode | stat.S_IRWXU, **_NO_FOLLOW_CHMOD)
+        except OSError:
+            pass
+
+
+def _clear_backup_marks(top: str) -> None:
+    """Clear the marks that stop a removal inside a folder that
+    `remove_backup_folder` has renamed (v0.15.5): from the folder itself
+    down, each folder's marks before it is read, by `os.scandir` and
+    `os.lstat`. Only what `os.lstat` shows to be a plain file or folder
+    is touched: never a link or a junction, nor anything through one,
+    and never a file with a second hard link (`st_nlink` read by
+    `os.lstat`, for files alone: an `os.scandir` entry gives 0 on
+    Windows, and a folder's is usually 2 or more elsewhere). Every
+    failure is passed over."""
+    try:
+        folders = [(top, os.lstat(top))]
+    except OSError:
+        return
+    while folders:
+        folder, found = folders.pop()
+        if _is_link_or_junction(found) or not stat.S_ISDIR(found.st_mode):
+            continue
+        _clear_marks(folder, found)
+        try:
+            with os.scandir(folder) as entries:
+                paths = [entry.path for entry in entries]
+        except OSError:
+            continue
+        for path in paths:
+            try:
+                found = os.lstat(path)
+            except OSError:
+                continue
+            if _is_link_or_junction(found):
+                continue
+            if stat.S_ISDIR(found.st_mode):
+                folders.append((path, found))
+            elif stat.S_ISREG(found.st_mode) and found.st_nlink <= 1:
+                _clear_marks(path, found)
+
+
+def remove_backup_folder(path: Union[str, Path],
+                         stem: str) -> BackupRemoval:
+    """Remove a backup's folder in two steps, so that a removal that
+    stops partway never leaves it under its name (v0.15.5). `stem` is
+    the project folder's stem, which the hidden name carries.
+
+    1. The path is looked at without following a link: absent, GONE;
+       the look refused, LEFT_WHOLE; a link, or on Windows a junction,
+       LINK, left as it is; anything but a folder, LEFT_WHOLE. A folder
+       is renamed within its folder to the hidden name of a backup being
+       made, with this moment's time, which nothing lists or restores.
+       A refused rename is judged by the disk, never by the error's
+       kind: the old path still there, or not to be looked at,
+       LEFT_WHOLE; gone, with the hidden name there, a rename after all;
+       both gone, GONE.
+    2. The renamed folder is removed; when that stops, the marks inside
+       it are cleared (`_clear_backup_marks`) and it is removed once
+       more, every error passed over. Still there: REMAINS, with the
+       hidden folder's path; else REMOVED.
+
+    On Windows every path goes to the disk in its long form. Nothing is
+    logged here, so the hidden name reaches no log line; the caller logs
+    what it may of the backup's. An OSError is returned, never raised.
+    """
+    given = Path(path)
+    old = disk_path(given)
+    try:
+        found = os.lstat(old)
+    except FileNotFoundError:
+        return BackupRemoval(REMOVAL_GONE)
+    except OSError as e:
+        return BackupRemoval(REMOVAL_LEFT_WHOLE, e)
+    if _is_link_or_junction(found):
+        return BackupRemoval(REMOVAL_LINK)
+    if not stat.S_ISDIR(found.st_mode):
+        return BackupRemoval(REMOVAL_LEFT_WHOLE, NotADirectoryError(
+            errno.ENOTDIR, os.strerror(errno.ENOTDIR)))
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    for _ in range(_BACKUP_NAME_TRIES):
+        hidden = given.parent / _partial_backup_name(stem, timestamp)
+        if not os.path.lexists(disk_path(hidden)):
+            break
+    else:
+        return BackupRemoval(REMOVAL_LEFT_WHOLE, FileExistsError(
+            errno.EEXIST, "No free hidden name for the backup"))
+    error: Optional[BaseException] = None
+    try:
+        _rename_folder(Path(old), Path(disk_path(hidden)))
+    except OSError as e:
+        if _still_there(old):
+            return BackupRemoval(REMOVAL_LEFT_WHOLE, e)
+        if not _still_there(disk_path(hidden)):
+            return BackupRemoval(REMOVAL_GONE, e)
+        error = e       # renamed after all
+    return _remove_renamed(hidden, error)
+
+
+def _remove_renamed(hidden: Path,
+                    error: Optional[BaseException]) -> BackupRemoval:
+    """The second of `remove_backup_folder`'s steps: remove the folder
+    under its hidden name, clearing its marks and trying once more when
+    the first removal stops; the outcome is read from the disk."""
+    target = disk_path(hidden)
+    try:
+        shutil.rmtree(target)
+    except OSError as e:
+        error = e
+        _clear_backup_marks(target)
+        try:
+            shutil.rmtree(target, ignore_errors=True)
+        except OSError:
+            pass
+    if _still_there(target):
+        return BackupRemoval(REMOVAL_REMAINS, error, hidden)
+    return BackupRemoval(REMOVAL_REMOVED, error)
+
+
 def _name_backup(partial: Path, project_path: Path) -> Path:
     """Give a whole backup its name: `<project>_backup_<time>.qda`, the
     time of this moment, `_2`, `_3` and so on when that name is taken.
@@ -4125,9 +4390,8 @@ def start_backup(project_path: Union[str, Path],
     sweep_partial_backups(project_path)
     sweep_names_list_leftovers(project_path)
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    partial = project_path.parent / (
-        f".{project_path.stem}_backup_{timestamp}_partial_"
-        f"{uuid.uuid4().hex[:8]}.qda")
+    partial = project_path.parent / _partial_backup_name(project_path.stem,
+                                                         timestamp)
 
     # The seventh route (re-verification R-5). A backup folder's name is
     # `<project folder stem>_backup_<timestamp>.qda`, so logging it in

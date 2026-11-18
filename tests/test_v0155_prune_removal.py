@@ -888,6 +888,9 @@ def test_a_copy_still_held_is_never_called_gone(
                 else "still holds") in on_b
 
 
+@pytest.mark.skipif(WINDOWS, reason="a project's database whose path "
+                    "passes 259 characters, which this test does not ask of "
+                    "Windows; the length's reading there is the next test's")
 def test_a_backup_whose_name_is_too_long_to_hide_is_left_whole(
         setup_server, qualcoder_db_path):
     """A project's name of 216 characters, which a backup made before
@@ -895,8 +898,6 @@ def test_a_backup_whose_name_is_too_long_to_hide_is_left_whole(
     system allows a name, so the backup is left whole, listed, and its
     note gives the name's length as the cause, not a refused rename to
     try again."""
-    if WINDOWS and not windows_long_paths_enabled():
-        pytest.skip("the project's paths pass 259 characters")
     folder = Path(qualcoder_db_path)
     project = folder.parent / ("p" * 216 + ".qda")
     shutil.copytree(folder, project)

@@ -53,8 +53,9 @@ QUIET = 4
 
 def make(where, texts):
     """A project whose text sources are `texts`, by id: 1, and 5 on.
-    Beside them the flagship fixture's PDF (2), recording (3) and a text
-    with no name (4, QUIET). The AI coder name is set."""
+    Beside them, as test_v012_pseudonymise_tool builds them, a PDF (2), a
+    recording (3) and a text with no name (4, QUIET). The AI coder name
+    is set."""
     folder = build_project(Path(where) / "study.qda", text=texts[1])
     with closing(sqlite3.connect(str(folder / "data.qda"))) as con, con:
         for file_id, text in texts.items():

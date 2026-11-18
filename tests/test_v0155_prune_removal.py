@@ -10,8 +10,8 @@ helper's own level:
 
 1. a folder not writable: a backup's copy of one is cleared and removed
    while the project's keeps its mode; a backup whose own folder is not
-   writable is removed on Linux, and left whole on macOS, which refuses
-   its rename;
+   writable is removed where the system lets it be renamed (Linux, and
+   some macOS systems), and left whole where the rename is refused;
 2. a locked file (macOS): the backup's copy is cleared and removed, and
    the project's stays locked;
 3. a read-only file (Windows): the backup's copy is cleared and removed,
@@ -128,6 +128,27 @@ def give_back(tmp_path):
 # 1 to 3. The marks a backup's copies carry from the project
 # ---------------------------------------------------------------------------
 
+def rename_refused_when_not_writable(parent):
+    """Whether this system refuses to rename, within its folder, a folder
+    not writable for its owner: Linux asks write permission of the folder
+    holding it alone, and renames it; macOS 15 refuses it, and macOS 26,
+    on GitHub's runners, renames it."""
+    probe = Path(parent) / "not_writable"
+    renamed = Path(parent) / "not_writable_renamed"
+    probe.mkdir()
+    os.chmod(probe, 0o555)
+    try:
+        os.rename(probe, renamed)
+    except PermissionError:
+        return True
+    finally:
+        for path in (probe, renamed):
+            if os.path.lexists(path):
+                os.chmod(path, 0o755)
+                path.rmdir()
+    return False
+
+
 @pytest.mark.skipif(not (MACOS or LINUX),
                     reason="a folder's mode, as macOS and Linux keep it")
 @pytest.mark.parametrize("where", ["subfolder", "own folder"])
@@ -136,20 +157,22 @@ def test_a_folder_not_writable_in_a_backup(qualcoder_db_path,
     """The project's subfolder at 0o555 gives the backup a copy at
     0o555, which stops a removal; the clearing gives the copy back its
     owner's permissions and the backup goes whole. A backup whose own
-    folder is at 0o555 is renamed on Linux, which asks write permission
-    of the folder holding it alone, and cleared from the folder itself;
-    macOS refuses the rename, and the backup stays as it was."""
+    folder is at 0o555 is renamed where the system allows it (Linux, and
+    some macOS systems) and cleared from the folder itself; where the
+    system refuses the rename, the backup stays as it was."""
     folder = Path(qualcoder_db_path)
     backup = backup_project(folder)
     copy = backup / protected_entry.relative_to(folder)
     assert stat.S_IMODE(copy.stat().st_mode) == 0o555
+    refused = False
     if where == "own folder":
+        refused = rename_refused_when_not_writable(folder.parent)
         os.chmod(backup, 0o555)
     before = contents(backup)
 
     result = remove_backup_folder(backup, folder.stem)
 
-    if where == "own folder" and MACOS:
+    if refused:
         assert result.outcome == REMOVAL_LEFT_WHOLE, result
         assert isinstance(result.error, PermissionError)
         assert contents(backup) == before

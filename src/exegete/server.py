@@ -11911,12 +11911,8 @@ def prune_backups(keep_last: Optional[int] = None,
     # called gone either (v0.15.5), so "no other lasting copy" holds.
     notes = []
     gone = set(removed)
-    holding = {item["name"] for item in not_removed
-               if item["names_list"] != "gone"}
-    still_held = {fingerprint for name, fingerprint in only_copies["copies"]
-                  if name in holding}
-    copies_gone = [pair for pair in only_copies["copies"]
-                   if pair[0] in gone and pair[1] not in still_held]
+    copies_gone = _prune_copies_gone(only_copies["copies"], gone,
+                                     not_removed)
     if copies_gone:
         held = {fingerprint for _, fingerprint in copies_gone}
         notes.append(_prune_only_copies_note({
@@ -11976,6 +11972,21 @@ def _prune_remove(to_remove: List[Dict[str, Any]], project_folder: Path
                                                      done.error)
         not_removed.append(item)
     return removed, not_removed
+
+
+def _prune_copies_gone(copies: List[List[Any]], gone: Set[str],
+                       not_removed: List[Dict[str, Any]]) -> List[List[Any]]:
+    """The only copies of a pseudonyms.json that the execute's past-tense
+    note may call gone (v0.15.5): those of the backups removed, and of
+    those only where no backup the prune did not remove still holds the
+    same file, or may (`names_list`), so that the note's "Exegete now
+    knows of no other lasting copy" holds."""
+    holding = {item["name"] for item in not_removed
+               if item["names_list"] != "gone"}
+    still_held = {fingerprint for name, fingerprint in copies
+                  if name in holding}
+    return [pair for pair in copies
+            if pair[0] in gone and pair[1] not in still_held]
 
 
 def _names_list_left(done: BackupRemoval) -> str:

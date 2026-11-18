@@ -15,7 +15,8 @@ refused as if the disk were full or not writable. What this file pins:
    removes its own backup alone; its import counts its own backups;
 2. `?` and `*`, on macOS and Linux, which allow them: the same, a
    folder under the project's own hidden name never listed, and `**`
-   never read as a pattern;
+   never read as a pattern; a copy that copy_project_to_workspace was
+   given such a name for, a write in it, and its backup the same;
 3. a name too long for the hidden name (macOS and Linux): a change and
    a restore are refused in the message's words, nothing is changed or
    made, no log line names the project, and the project can still be
@@ -170,6 +171,39 @@ def test_a_star_or_a_question_mark_in_a_projects_name(
     assert done["removed"] == [own.name], done
     assert not os.path.lexists(own)
     assert their_backup.is_dir() and hidden.is_dir()
+
+
+@pytest.mark.skipif(WINDOWS, reason="Windows allows neither ? nor * in a "
+                                    "name")
+def test_a_copy_exegete_names_with_a_star_finds_its_own_backups(
+        setup_server, qualcoder_db_path):
+    """Exegete itself gives a project such a name on macOS and Linux:
+    create_project refuses `?` and `*`, but copy_project_to_workspace
+    holds its `new_name` to no rule on them (fix round 1). The copy
+    "Study*", beside the copy "Study2" with a backup, lists the backup
+    its first change made, and prunes it, alone."""
+    copied = json.loads(server.copy_project_to_workspace(
+        source_path=str(qualcoder_db_path), new_name="Study*"))
+    assert copied.get("success") is True, copied
+    project = Path(copied["workspace_copy"])
+    assert project.name == "Study*.qda"
+    other = json.loads(server.copy_project_to_workspace(
+        source_path=str(qualcoder_db_path), new_name="Study2"))
+    theirs = a_backup(other["workspace_copy"], "_backup_20260102_000000")
+    selected = json.loads(server.select_project(str(project)))
+    assert selected.get("success") is not False, selected
+
+    made = json.loads(server.create_code(name="Belonging"))
+    assert "error" not in made, made
+    own = [name for name in beside(project)
+           if name.startswith("Study*_backup_")]
+    assert len(own) == 1, beside(project)
+    assert listed() == own
+    preview, done = prune_everything()
+    assert [item["name"] for item in preview["would_remove"]] == own
+    assert "never_removed" not in preview
+    assert done["removed"] == own, done
+    assert theirs.is_dir()
 
 
 # ---------------------------------------------------------------------------

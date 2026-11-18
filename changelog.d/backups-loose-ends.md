@@ -6,10 +6,10 @@
   found none of its own backups and found those of "Study a"; its prune
   passed them by and removed none of its own, which it now offers, each
   named in its preview and removed only with its token. A name holding
-  `?` or `*`, which Exegete does not give a project but macOS and Linux
-  allow, also took in another project's backups, or a folder under its
-  own hidden name; there, with Python 3.11 or 3.12, a name holding `**`
-  made those three tools fail.
+  `?` or `*`, which macOS and Linux allow (a copy made by
+  `copy_project_to_workspace` can be given one), also took in another
+  project's backups, or a folder under its own hidden name; there, with
+  Python 3.11 or 3.12, a name holding `**` made those three tools fail.
 - **A project whose name is too long for its backups' names is refused
   in words that say so.** Since 0.15.1 a backup is first made under a
   hidden name 45 characters longer than the project's, which a name

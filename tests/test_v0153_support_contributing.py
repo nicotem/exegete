@@ -32,7 +32,7 @@ import re
 import tomllib
 from pathlib import Path
 
-from exegete import private_files, reading
+from exegete import private_files, reading, texts
 from exegete.database import PSEUDONYMS_JSON_NAME
 
 REPO = Path(__file__).resolve().parents[1]
@@ -236,9 +236,9 @@ def test_the_bug_form_says_what_a_conversation_and_a_copy_carry():
         assert real in text, name
         assert still in text, name
         assert text.index(real) < text.index(still), name
-    source = (REPO / "src/exegete/server.py").read_text(encoding="utf-8")
-    tool = source[source.index("def copy_project_to_workspace("):]
-    tool = " ".join(tool[:tool.index('"""', tool.index('"""') + 3)].split())
+    # (v0.15.5: the tool's description is in texts.py, no longer its
+    # docstring in server.py)
+    tool = " ".join(texts.COPY_PROJECT_TO_WORKSPACE_DESCRIPTION.split())
     assert (f"any names list and names file ({PSEUDONYMS_JSON_NAME}, "
             f"Exegete/{private_files.NAMES_FILE}), with the real names in "
             f"them") in tool

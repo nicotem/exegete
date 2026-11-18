@@ -956,19 +956,21 @@ FACTS: Dict[str, Fact] = {
                    SERVER_SOURCE, TEXTS_SOURCE, "src/exegete/updates.py"),
         patterns=RELEASE_NAMED + (VERSION_NAMED, NAMES_EXEGETE, ADDRESS),
         code_texts=True),
+    # (v0.15.5: pseudonymise_source's description, in texts.py, was its
+    # docstring in server.py; so for the three facts below)
     "the occurrences listed": Fact(
         code="occurrences.py: OCCURRENCES_LISTED",
-        documents=(SERVER_SOURCE,),
+        documents=(TEXTS_SOURCE,),
         patterns=tuple(p for p, _ in OCCURRENCE_PATTERNS),
         code_texts=True),
     "the occurrences left": Fact(
         code="occurrences.py: MAX_OCCURRENCES_LEFT",
-        documents=(SERVER_SOURCE,),
+        documents=(TEXTS_SOURCE,),
         patterns=tuple(p for p, _ in LEFT_PATTERNS),
         code_texts=True),
     "the phrases to keep": Fact(
         code="pseudonymise.py: MAX_PHRASES, MAX_PHRASE_CHARS",
-        documents=(SERVER_SOURCE, "TOOLS.md"),
+        documents=(TEXTS_SOURCE, "TOOLS.md"),
         patterns=tuple(p for p, _ in PHRASE_PATTERNS),
         code_texts=True),
 }

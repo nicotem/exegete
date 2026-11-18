@@ -741,7 +741,8 @@ def _code_texts():
 
 # Calls whose positional arguments go into a tool's description, each
 # with how many of them (None: all)
-SERVING = {"_with_guidance": None, "_with_paragraphs": None}
+SERVING = {"_with_guidance": None, "_with_paragraphs": None,
+           "_with_description": None}
 TOOL_DECORATORS = ("mcp.tool", "mcp.prompt", "mcp.resource")
 SQL = re.compile(r"\s*(?:SELECT|INSERT|UPDATE|DELETE|CREATE|DROP|ALTER"
                  r"|PRAGMA|WITH|REPLACE|BEGIN|ATTACH|DETACH|VACUUM)\b")

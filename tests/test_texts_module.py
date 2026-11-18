@@ -1,23 +1,35 @@
 # SPDX-License-Identifier: LGPL-3.0-or-later
-"""v0.15.5: the texts Exegete serves that are written once, as
-constants, are in src/exegete/texts.py.
+"""v0.15.5: the texts server.py held as constants, and the descriptions
+of its tools, prompts and resources, are in src/exegete/texts.py.
 
-They moved there word for word from server.py, which imports each by its
-name, so every use and every `server.NAME` reads the same object as
-before; docs/snapshot/, unchanged, shows that every byte served stayed
+They moved there word for word: the constants first, which server.py
+imports each by its name, so every use and every `server.NAME` reads the
+same object as before; then the descriptions, which were the functions'
+docstrings, each now `<ITS NAME IN CAPITALS>_DESCRIPTION`, written flush
+and read as `texts.NAME` where the function is registered.
+docs/snapshot/, unchanged by either, shows that every byte served stayed
 (tests/test_served_texts.py). What this file pins:
 
 1. texts.py holds only its docstring, its imports and its assignments,
    and imports nothing of server.py;
-2. every name texts.py assigns is bound in server.py, by its one import
-   from texts.py, to the same object, and server.py assigns it nowhere;
+2. every constant texts.py assigns, the descriptions aside, is bound in
+   server.py, by its one import from texts.py, to the same object, and
+   server.py assigns it nowhere; no description is imported by name;
 3. server.py assigns at module level no text of four words or more, as
-   scripts/code_texts.py reads one, but the five no assistant receives.
+   scripts/code_texts.py reads one, but the five no assistant receives;
+4. every function server.py registers takes its description from
+   texts.py, through _with_description, its innermost decorator, with no
+   docstring of its own; three give `description=`, which FastMCP takes
+   in place of the docstring;
+5. _with_description gives the text as the running Python compiles it
+   written as a docstring, and either form on any Python.
 """
 import ast
 import importlib.util
 import sys
 from pathlib import Path
+
+import pytest
 
 REPO = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO / "src"))
@@ -84,19 +96,34 @@ def test_texts_holds_its_docstring_imports_and_assignments_alone():
     assert len(_assigned(tree)) == len(set(_assigned(tree)))
 
 
+def _read_through_the_module(tree):
+    """The names server.py reads as `texts.NAME`: the descriptions."""
+    return {node.attr for node in ast.walk(tree)
+            if isinstance(node, ast.Attribute)
+            and isinstance(node.value, ast.Name) and node.value.id == "texts"}
+
+
 def test_each_text_is_imported_into_server_and_assigned_there_nowhere():
     names = _assigned(_tree(TEXTS))
-    assert len(names) > 300, len(names)
     tree = _tree(SERVER)
+    described = _read_through_the_module(tree)
+    assert described <= set(names), sorted(described - set(names))
+    assert all(name.endswith("_DESCRIPTION") for name in described)
+    constants = [name for name in names if name not in described]
+    assert len(constants) > 300, len(constants)
     imports = [node for node in ast.walk(tree)
                if isinstance(node, ast.ImportFrom) and node.module == "texts"
                and node.level == 1]
     assert len(imports) == 1, [ast.unparse(node)[:60] for node in imports]
     aliases = imports[0].names
     assert all(alias.asname is None for alias in aliases)
-    assert [alias.name for alias in aliases] == names
-    for name in names:
+    assert [alias.name for alias in aliases] == constants
+    for name in constants:
         assert getattr(server, name) is getattr(texts, name), name
+    # a description imported by name would sit among server.py's names,
+    # where sweeps take constants by their prefix as Exegete's own words
+    assert server.texts is texts
+    assert sorted(described & set(vars(server))) == []
     bound = [node.id for node in ast.walk(tree)
              if isinstance(node, ast.Name)
              and isinstance(node.ctx, (ast.Store, ast.Del))]
@@ -123,3 +150,148 @@ def test_server_assigns_no_text_but_those_no_assistant_receives():
         "texts.py, which server.py imports it from")
     # each of the five is still there, so the list stays true
     assert sorted(set(STAYS) - holding) == []
+
+
+REGISTERING = ("mcp.tool", "mcp.prompt", "mcp.resource")
+# The three whose registration gives `description=`, which FastMCP takes
+# in place of a docstring: each with the description it gives
+DESCRIBED_AT_REGISTRATION = {
+    "read_brief": "READ_BRIEF_DESCRIPTION",
+    "get_methods_guidance": "texts.GET_METHODS_GUIDANCE_DESCRIPTION",
+    "get_brief": "texts.GET_BRIEF_DESCRIPTION"}
+
+
+def _registered(tree):
+    """Each function server.py registers, with its registering call."""
+    for node in tree.body:
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+            for decorator in node.decorator_list:
+                if isinstance(decorator, ast.Call) and \
+                        ast.unparse(decorator.func) in REGISTERING:
+                    yield node, decorator
+
+
+def _given():
+    """Each function given its description by _with_description, with
+    the name of that description in texts.py."""
+    given = {}
+    for node, _ in _registered(_tree(SERVER)):
+        last = node.decorator_list[-1]
+        if isinstance(last, ast.Call) and \
+                ast.unparse(last.func) == "_with_description":
+            given[node.name] = ast.unparse(last.args[0])
+    return given
+
+
+def test_every_description_is_given_from_texts():
+    given = _given()
+    registered = list(_registered(_tree(SERVER)))
+    assert len(registered) == len(given) + len(DESCRIBED_AT_REGISTRATION)
+    for node, registration in registered:
+        keywords = {keyword.arg: ast.unparse(keyword.value)
+                    for keyword in registration.keywords}
+        if node.name in DESCRIBED_AT_REGISTRATION:
+            assert keywords.get("description") == \
+                DESCRIBED_AT_REGISTRATION[node.name], node.name
+            continue
+        assert "description" not in keywords, node.name
+        # no docstring: _with_description refuses a function that has one
+        assert ast.get_docstring(node, clean=False) is None, node.name
+        assert given[node.name] == \
+            f"texts.{node.name.upper()}_DESCRIPTION", node.name
+        assert len(node.decorator_list[-1].args) == 1, node.name
+    # each description given once, and each one texts.py holds
+    names = set(_assigned(_tree(TEXTS)))
+    assert len(set(given.values())) == len(given)
+    assert {value.split(".", 1)[1] for value in given.values()} <= names
+
+
+def test_a_function_with_a_docstring_is_refused():
+    def tool():
+        """A docstring."""
+    with pytest.raises(ValueError):
+        server._with_description("A description.")(tool)
+
+
+def _as_docstring(literal):
+    """A description's literal as texts.py writes it, written instead as
+    the docstring of a function whose body is indented by four spaces:
+    every line after the first indented but the empty ones, the closing
+    quotes too where they stand on a line of their own."""
+    first, *rest = literal.split("\n")
+    return "\n".join([first] + ["    " + line if line else ""
+                                for line in rest])
+
+
+def _function(literal):
+    return "def tool():\n    " + _as_docstring(literal) + "\n"
+
+
+def _compiled(literal):
+    """What the running Python compiles from that docstring."""
+    space = {}
+    exec(compile(_function(literal), "<a docstring>", "exec"), space)
+    return space["tool"].__doc__
+
+
+def _given_literals():
+    """Each description _with_description gives, as texts.py writes it."""
+    source = TEXTS.read_text(encoding="utf-8")
+    wanted = {value.split(".", 1)[1] for value in _given().values()}
+    return {node.targets[0].id: ast.get_source_segment(source, node.value)
+            for node in _tree(TEXTS).body
+            if isinstance(node, ast.Assign)
+            and node.targets[0].id in wanted}
+
+
+# Made-up descriptions, each as texts.py would write it: one line; blank
+# lines; lines indented further, as an argument under "Args:"; and a last
+# line with text on it, the closing quotes after it
+MADE_UP = {
+    "one line": '"""One line."""',
+    "blank lines": '"""First.\n\nThird, after a blank line.\n\nFifth.\n"""',
+    "lines indented further": (
+        '"""Do one thing.\n\nArgs:\n    x: what it is,\n        over two '
+        'lines.\n"""'),
+    "text on the last line": '"""First.\nSecond, the quotes after it."""',
+}
+
+
+@pytest.mark.parametrize("literal", list(MADE_UP.values()), ids=list(MADE_UP))
+def test_a_made_up_description_is_what_python_compiles(literal):
+    def tool():
+        pass
+    server._with_description(ast.literal_eval(literal))(tool)
+    assert tool.__doc__ == _compiled(literal)
+
+
+def test_every_description_is_what_python_compiles():
+    """Each description as the running Python compiles it written as a
+    docstring, which is what Python 3.11 and 3.12 served when the
+    descriptions were docstrings."""
+    literals = _given_literals()
+    assert len(literals) == len(_given())
+    for name, literal in literals.items():
+        def tool():
+            pass
+        server._with_description(getattr(texts, name))(tool)
+        assert tool.__doc__ == _compiled(literal), name
+
+
+# Both forms on any Python: indented, as 3.11 and 3.12 compile a
+# docstring (Python's parser keeps it so on every version), and flush, as
+# 3.13 compiles it
+FORMS = {"indented": "    ", "flush": ""}
+
+
+@pytest.mark.parametrize("margin", list(FORMS.values()), ids=list(FORMS))
+def test_either_form_on_any_python(margin):
+    for literal in list(MADE_UP.values()) + list(_given_literals().values()):
+        value = ast.literal_eval(literal)
+        indented = ast.get_docstring(ast.parse(_function(literal)).body[0],
+                                     clean=False)
+
+        def tool():
+            pass
+        server._with_description(value, margin=margin)(tool)
+        assert tool.__doc__ == (indented if margin else value), literal[:40]

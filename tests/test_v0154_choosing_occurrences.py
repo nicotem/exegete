@@ -594,10 +594,24 @@ FIGURE = re.compile(r"(\d[\d,]*), for example, lets every Exegete "
 
 def _as_311_keeps_it(name):
     """A tool's description as Python 3.11 and 3.12 keep it, rebuilt
-    from the source: the docstring with its indentation, which 3.13
-    strips when it compiles, and the shared paragraphs its
-    _with_paragraphs line places, as that decorator places them
-    (tests/test_served_texts.py reads the same lines)."""
+    from the source: its text in texts.py (v0.15.5; until then the
+    function's docstring) written as the docstring of a function indented
+    by four spaces, with the indentation Python's parser keeps on every
+    version and 3.13 strips when it compiles, never through
+    _with_description; and the shared paragraphs its _with_paragraphs
+    line places, as that decorator places them
+    (tests/test_served_texts.py reads the same lines;
+    tests/test_texts_module.py writes the docstring so too)."""
+    source = (REPO / "src" / "exegete" / "texts.py").read_text(
+        encoding="utf-8")
+    literal = next(
+        ast.get_source_segment(source, item.value)
+        for item in ast.parse(source).body if isinstance(item, ast.Assign)
+        and item.targets[0].id == f"{name.upper()}_DESCRIPTION")
+    first, *rest = literal.split("\n")
+    written = "\n".join([first] + ["    " + line if line else ""
+                                   for line in rest])
+    docstring = ast.parse("def stub():\n    " + written + "\n").body[0]
     tree = ast.parse((REPO / "src" / "exegete" / "server.py").read_text(
         encoding="utf-8"))
     node = next(item for item in ast.walk(tree)
@@ -605,7 +619,7 @@ def _as_311_keeps_it(name):
 
     def stub():
         pass
-    stub.__doc__ = ast.get_docstring(node, clean=False)
+    stub.__doc__ = ast.get_docstring(docstring, clean=False)
     for deco in node.decorator_list:
         if isinstance(deco, ast.Call) and getattr(
                 deco.func, "id", "") == "_with_paragraphs":

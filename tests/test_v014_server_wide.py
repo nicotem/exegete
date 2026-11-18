@@ -2383,9 +2383,25 @@ def _core_reachable_texts():
                "OWN_ROUTES", "FILES_TOOLS", "CODER_NAME_TOOLS",
                "SESSION_MARKS"}
 
+    def a_tools_description(node):
+        """What a tool's _with_description line gives it: its description,
+        in texts.py since v0.15.5 (until then its docstring), which a set
+        marks whole when it is applied, as it marked the docstring. A
+        resource's and a prompt's are read."""
+        if not isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)) \
+                or not any(getattr(getattr(deco, "func", None), "attr", "")
+                           == "tool" for deco in node.decorator_list):
+            return set()
+        return {id(x) for deco in node.decorator_list
+                if getattr(getattr(deco, "func", None), "id", "")
+                == "_with_description"
+                for arg in deco.args for x in ast.walk(arg)}
+
     def refs(node):
-        out = set()
+        out, passed = set(), a_tools_description(node)
         for x in ast.walk(node):
+            if id(x) in passed:
+                continue
             if isinstance(x, ast.Name) and x.id in defs:
                 out.add(x.id)
             if isinstance(x, ast.Attribute) and x.attr in defs:

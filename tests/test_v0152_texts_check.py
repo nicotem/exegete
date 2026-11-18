@@ -376,6 +376,30 @@ def test_served_texts_are_read_from_the_source(tmp_path):
 
 
 @needs_git
+def test_a_description_given_from_texts_is_served(tmp_path):
+    """v0.15.5: a tool's description is a constant of texts.py, given to
+    the function by _with_description, its innermost decorator; its
+    sentences are read as served, as its docstring's were. A text of
+    texts.py no function is given stays on a path."""
+    root = _tree(tmp_path, {
+        "src/exegete/tools.py": (
+            "from . import texts\n\n\n"
+            "@mcp.tool()\n"
+            "@_with_description(texts.A_TOOL_DESCRIPTION)\n"
+            "def a_tool(value):\n"
+            "    return value\n"),
+        "src/exegete/texts.py": (
+            'A_TOOL_DESCRIPTION = """Do one thing to the project and '
+            'report it.\n"""\n'
+            'NOT_GIVEN = "A text that no function is ever given at all."\n')})
+    read = sorted((sentence.file[len("src/exegete/"):], sentence.place,
+                   sentence.text) for sentence in texts.run(root).sentences)
+    assert read == [
+        ("texts.py", "path", "A text that no function is ever given at all."),
+        ("texts.py", "served", "Do one thing to the project and report it.")]
+
+
+@needs_git
 def test_what_is_read_and_on_which_line(tmp_path):
     root = _tree(tmp_path, {
         "CHANGELOG.md": "Open it in QualCoder.\n",

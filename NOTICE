@@ -241,6 +241,7 @@ Values in the package
     Here: src/exegete/server.py, MAX_SEGMENT_CHARS,
     SEGMENT_STRATEGIES, _resolve_exclude_code_ids, get_coded_segments
     and prune_backups.
+    Here: src/exegete/texts.py, GET_CODED_SEGMENTS_DESCRIPTION.
     From: ai_mcp_server.py, lines 69-70, 1693, 3587, 3757 and 5358.
     Why: to align these with QualCoder 4.0's own MCP server. They are
     the ceiling on the segment budget, and QualCoder 4.0's default budget
@@ -269,7 +270,7 @@ Values in the package
 24. QualCoder's cascade-delete warning
     Here: src/exegete/database.py,
     QualcoderDatabase.preview_delete_code and QualcoderDatabase.delete_code.
-    Here: src/exegete/server.py, delete_code.
+    Here: src/exegete/texts.py, DELETE_CODE_DESCRIPTION.
     From: code_tree.py, lines 841-843.
     Why: to warn that sub-codes will also be deleted, in QualCoder's
     words.
@@ -299,8 +300,8 @@ Values in the package
 
 28. The name QualCoder gives a file entry whose name is invalid
     Here: src/exegete/database.py, file_name_problem.
-    Here: src/exegete/server.py, _file_rename_precheck and
-    rename_file.
+    Here: src/exegete/server.py, _file_rename_precheck.
+    Here: src/exegete/texts.py, RENAME_FILE_DESCRIPTION.
     From: manage_files.py, line 1967.
     Why: to say in QualCoder's words what it does with such a name
     (unnamed_file_<id>). Exegete also refuses a new name that would take

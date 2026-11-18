@@ -27,10 +27,11 @@ wrong ones first"; QUALCODER_MENTIONS_AUDIT.md, section 3).
   the researcher saves it.
 
 The guard looks for each old phrase in every string constant of
-src/exegete apart from docstrings (adjacent literals are one constant;
-an f-string's literal parts are read between its interpolations), with
-runs of white space collapsed, and in the served descriptions and
-PRIVACY.md where the phrase stood there.
+src/exegete apart from docstrings and the descriptions texts.py holds,
+which were the functions' docstrings until 0.15.5 (adjacent literals are
+one constant; an f-string's literal parts are read between its
+interpolations), with runs of white space collapsed, and in the served
+descriptions and PRIVACY.md where the phrase stood there.
 """
 
 import ast
@@ -192,22 +193,41 @@ def _docstrings(tree):
     return found
 
 
-def string_constants(source):
-    """Every string constant in `source` but its docstrings, white space
-    collapsed. Python joins adjacent literals into one constant, and an
-    f-string's literal parts are constants of their own between its
-    interpolations, so each is read whole and none across a `{...}`."""
+def string_constants(source, leave_out=frozenset()):
+    """Every string constant in `source` but its docstrings and the values
+    of the module constants named in `leave_out`, white space collapsed.
+    Python joins adjacent literals into one constant, and an f-string's
+    literal parts are constants of their own between its interpolations,
+    so each is read whole and none across a `{...}`."""
     tree = ast.parse(source)
     skip = _docstrings(tree)
+    for node in tree.body:
+        if isinstance(node, ast.Assign) and len(node.targets) == 1 \
+                and isinstance(node.targets[0], ast.Name) \
+                and node.targets[0].id in leave_out:
+            skip |= {id(part) for part in ast.walk(node.value)}
     return [_flat(node.value) for node in ast.walk(tree)
             if isinstance(node, ast.Constant) and isinstance(node.value, str)
             and id(node) not in skip]
 
 
+def descriptions():
+    """The names of the descriptions texts.py holds: each read in
+    server.py as `texts.NAME` where its function is registered (v0.15.5;
+    until then the functions' docstrings)."""
+    tree = ast.parse((SRC / "server.py").read_text(encoding="utf-8"))
+    return frozenset(node.attr for node in ast.walk(tree)
+                     if isinstance(node, ast.Attribute)
+                     and isinstance(node.value, ast.Name)
+                     and node.value.id == "texts")
+
+
 def answer_texts():
-    texts = []
+    texts, described = [], descriptions()
     for path in sorted(SRC.rglob("*.py")):
-        texts.extend(string_constants(path.read_text(encoding="utf-8")))
+        texts.extend(string_constants(
+            path.read_text(encoding="utf-8"),
+            described if path.name == "texts.py" else frozenset()))
     return texts
 
 

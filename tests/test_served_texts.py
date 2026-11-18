@@ -447,11 +447,17 @@ def _decorated(tree):
 # _with_paragraphs lines, so that a constant a later change passes there
 # is checked too; and the one place a held text is also typed:
 # apply_codings gives the lock paragraph's words as one of its safety
-# guarantees, in other line breaks
+# guarantees, in other line breaks, in its description (v0.15.5:
+# APPLY_CODINGS_DESCRIPTION in texts.py, until then its docstring)
 SERVER_TREE = ast.parse((REPO / "src" / "exegete" / "server.py").read_text(
     encoding="utf-8"))
 HELD = sorted(set().union(*(names for _, names in _decorated(SERVER_TREE))))
 ALSO_TYPED = {"LOCK_REFUSED_PARAGRAPH": {"apply_codings"}}
+
+
+def _description_of(tool):
+    """The name of a tool's description in texts.py."""
+    return f"{tool.upper()}_DESCRIPTION"
 
 
 def test_the_held_paragraphs_are_read_from_the_decorator_lines():
@@ -500,7 +506,8 @@ def _typed_in(flat, package):
 def test_each_paragraph_is_typed_once(script, package, name):
     flat = _flat(getattr(server, name))
     also = ALSO_TYPED.get(name, set())
-    assert _typed_in(flat, package) == {name} | also
+    assert _typed_in(flat, package) == {name} | {
+        _description_of(tool) for tool in also}
     given = {tool for tool, names in _decorated(SERVER_TREE)
              if name in names}
     assert given

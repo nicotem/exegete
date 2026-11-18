@@ -127,8 +127,10 @@ def test_readme_reading_in_the_browser_keeps_the_text_out():
                         "## How it works")
     assert ("read a transcript with its codings in the conversation or, "
             "keeping its text out of it, in your browser.") in features
-    # open_file_for_reading answers with the page's place and counts
-    source = _flat(_read("src/exegete/server.py"))
+    # open_file_for_reading answers with the page's place and counts, as
+    # its description says (v0.15.5: in texts.py, no longer its docstring
+    # in server.py)
+    source = _flat(_read("src/exegete/texts.py"))
     assert ("Let the researcher read a whole file on their own computer; "
             "its text does not pass through the conversation.") in source
     assert ("The answer is the page's location and counts, never the "

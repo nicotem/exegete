@@ -37,6 +37,7 @@ REPO = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO / "src"))
 
 import exegete.server as server                   # noqa: E402
+from exegete import texts                         # noqa: E402
 
 
 def _read(name):
@@ -396,8 +397,9 @@ def test_the_approval_steps_are_named_where_the_readme_points():
             "rejected, pending) match what you said, and say so if they do "
             "not."):
         assert words in approval, words
-    status = " ".join(inspect.getsource(server.update_suggestion_status)
-                      .split())
+    # (v0.15.5: the tool's description is in texts.py, no longer its
+    # docstring)
+    status = " ".join(texts.UPDATE_SUGGESTION_STATUS_DESCRIPTION.split())
     assert "the counts this returns are what the researcher checks " \
         "against what they said" in status
     # what the assistant is told to bring, said as an instruction (the

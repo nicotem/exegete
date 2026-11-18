@@ -8,8 +8,8 @@
   hidden name of a backup being made, which nothing in Exegete lists or
   restores, and then removes it. Each backup it chose is then:
   - removed;
-  - left whole under its name, when the rename is refused: listed and
-    restorable, as before;
+  - left whole under its name, when the rename is refused: listed, as
+    before;
   - left as it is, when it is a link to a folder elsewhere, the folder
     it points to included;
   - or, when the removal stops after the rename, left in part under the
@@ -38,12 +38,15 @@
   on Linux that folder not writable for you; and on macOS and Linux, on
   a network drive, a file open on another computer. A removal stopped
   after the rename: on Windows a program that opened one of its files
-  at that moment, elsewhere a file or folder that is not yours or that
-  only an administrator can change. A backup whose project's name is
-  too long for the hidden name, as one made before 0.15.1 can be, is
-  left whole by every prune, and the note says so. The answer's `error`
-  no longer tells you to check permissions, which is no help with an
-  open file: it points to the notes.
+  at that moment; on macOS a file in it that is locked and not yours,
+  or a folder in it that is not yours; on Linux such a folder; and on
+  both a file or folder that only an administrator can change. A
+  backup whose project's name is too long for the hidden name, as one
+  made before 0.15.1 can be, is left whole by every prune; the note
+  says so, and that a restore of it cannot complete either, since a
+  restore first backs the project up under a name as long. The
+  answer's `error` no longer tells you to check permissions, which is
+  no help with an open file: it points to the notes.
 - **The note on the only copy of a `pseudonyms.json` holds when a
   backup was not removed.** A copy that what is left of a backup still
   holds, or may hold, is no longer called gone with another backup the

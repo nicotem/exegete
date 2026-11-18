@@ -2647,27 +2647,23 @@ near the top of this document, set them out.
     two files' bytes, never a name. And
     the file the project had stays in the pre-restore safety backup.
     `prune_backups` lists in its preview any backup it would remove that
-    holds the only copy of a `pseudonyms.json` that Exegete knows of,
-    and says afterwards which of the backups it removed held one.
-    QualCoder's own `_BKUP_` backups do not count as keeping a copy,
-    because QualCoder deletes them past its `backup_num` when a project
-    closes. The token that approves the prune signs that set of backups
-    holding the only copies, so a prune whose set changed after its
-    preview is refused and removes nothing. The prune takes each backup
-    out of the listing before removing it, under the name of a backup
-    being made, and clears inside it alone the read-only marks and locks
-    its files carry from the project. One it cannot rename stays whole,
-    listed and restorable, as when another program has one of its files
-    open, its folder is locked (or, on some versions of macOS, not
-    writable for you), the folder holding it is not writable for you, or
-    the project's name is too long. What is left of one whose removal
-    stops (on Windows a file a program opens at that moment, a file that
-    is not yours, or Exegete's process ending) stays beside the project
-    under that name, which nothing in Exegete lists or restores, until a
-    later backup of the project removes what it can of it after an hour,
-    or you delete it. Either may still hold the only copy of a
-    `pseudonyms.json`. The prune's answer gives each such backup, unless
-    Exegete's process ended first.
+    holds the only copy of a `pseudonyms.json` that Exegete knows of, and
+    says afterwards which of the backups it removed held one, where no
+    backup it could not remove still holds that copy, or may. QualCoder's
+    own `_BKUP_` backups do not count as keeping a copy, because
+    QualCoder deletes them past its `backup_num` when a project closes.
+    The token that approves the prune signs that set of backups holding
+    the only copies, so a prune whose set changed after its preview is
+    refused and removes nothing. The prune takes each backup out of the
+    listing, under a hidden name, before removing it, and clears its
+    files' read-only marks and locks. One it cannot rename stays whole
+    and listed, as when a file in it is open, its folder or the one
+    holding it is locked or not writable for you, or the project's name
+    is too long. What is left of one whose removal stops stays beside the
+    project under that name, which nothing in Exegete lists or restores,
+    until a later backup removes what it can after an hour, or you delete
+    it. Either may hold the only copy of a `pseudonyms.json`, named in
+    the answer unless Exegete's process ended first.
 
     A run on a mapping you typed is refused unless the call either asks
     for the mapping to be saved into this file
@@ -2770,10 +2766,10 @@ near the top of this document, set them out.
     and so with your AI provider unless the model runs on your own
     computer, and in the host's own records. Another is your own record of
     that mapping. The third is every copy from before the second run of the
-    file's text and of any note or journal entry it rewrote, which holds
-    the name that pseudonym replaced: the backup that run took first, every
-    older backup that holds the file or one of those notes, and an imported
-    document's original in the project's folder of originals.
+    file's text and of any note or journal entry it rewrote, which holds the
+    name that pseudonym replaced, among them the backup that run took first,
+    every older backup that holds the file or one of those notes, and an
+    imported document's original in the project's folder of originals.
   - **What the preview counts.** The preview's `residue` block counts
     the names left in those fields, and, as occurrences, in the text of
     every file. In the file this call rewrites, those are names inside a

@@ -875,9 +875,12 @@ class TestPhonesAndTheWeb:
             assert words in section, words
         # The route table says the same in a line
         table = _between(_read("INSTALL.md"), "| **OpenAI's apps**", "\n")
-        assert ("A phone only through OpenAI's Remote, which has the paired "
-                "computer run the work; this project suggests leaving "
-                "Remote off for participants' data.") in table
+        # (v0.15.5, the readability reading: whole sentences where the
+        # row had fragments)
+        assert ("On a phone, ChatGPT can use it only through OpenAI's "
+                "Remote, which has the paired computer run the work; this "
+                "project suggests leaving Remote off for participants' "
+                "data.") in table
 
     def test_privacy_and_the_changelog_say_the_same(self):
         section = _privacy_openai()
@@ -964,12 +967,14 @@ class TestCodexWorksInAFolderOfItsOwn:
                 "(<https://learn.chatgpt.com/docs/projects>",
                 # (the owner, 1 October 2026: warn, don't prescribe)
                 # v0.15.0, fix round 1: both folders, as PRIVACY names them
-                "Given your home folder, Documents, your projects folder "
-                "(`~/Exegete projects`, or `~/QualCoder projects`, the "
-                "earlier default) or a folder with transcripts or "
-                "other study files instead, Codex would work among them: "
-                "what it reads there goes to OpenAI without passing through "
-                "Exegete",
+                # (v0.15.5, the readability reading: "If you give Codex",
+                # where "Given" read twice)
+                "If you give Codex your home folder, Documents, your "
+                "projects folder (`~/Exegete projects`, or `~/QualCoder "
+                "projects`, the earlier default) or a folder with "
+                "transcripts or other study files instead, it would work "
+                "among them: what it reads there goes to OpenAI without "
+                "passing through Exegete",
                 "start a new chat in your `exegete-chats` folder",
                 "With the desktop app alone, make the folder in Finder or "
                 "File Explorer instead (a new folder named `exegete-chats`, "
@@ -1017,10 +1022,12 @@ class TestCodexWorksInAFolderOfItsOwn:
                 "folder, and why, for participants' data, this project "
                 "suggests an assistant with no file access of its own (the "
                 "box at the top of this section).",
+                # (v0.15.5, the readability reading: Full access's reach
+                # is said once in the step, before the suggestion)
+                "**Full access** runs every tool call without asking",
                 "if Codex started in its read-only mode, you may keep it "
-                "there (Exegete's tools work the same). Full access would "
-                "run every tool call without asking you, so this project "
-                "suggests leaving it aside."):
+                "there (Exegete's tools work the same). This project "
+                "suggests leaving Full access aside."):
             assert words in flat, words
         marks = _between(_flat("INSTALL.md"), "**Codex** (the ChatGPT "
                          "desktop app", "So, for work on real data")
@@ -1992,11 +1999,19 @@ class TestClaudeCodesRoutes:
                 "it does not stop its read-only commands reading them, or "
                 "its file tools in auto mode."):
             assert words in routes["INSTALL, Claude Code"], words
-        assert ("Claude Code reads the folder it starts in without asking: "
-                "started there, in Documents, in your projects folder or in "
-                "a folder that holds a study, it would read your studies "
-                "from the start, which is why these steps go to the empty "
-                "folder first.") in routes["INSTALL, the API-key recipe"]
+        # (v0.15.5, the readability reading: what step 2 already says of a
+        # new window and the folder Claude Code reads cut, the places, the
+        # reason and the empty folder's limit kept)
+        for words in (
+                "Started in your home folder, Documents, your projects "
+                "folder or a folder that holds a study, Claude Code would "
+                "read your studies from the start, which is why these steps "
+                "go to the empty folder first.",
+                "The empty folder does not stop its read-only commands "
+                "reading your studies, or its file tools in auto mode.",
+                "A new Terminal window opens in your home folder, which "
+                "Claude Code would read without asking"):
+            assert words in routes["INSTALL, the API-key recipe"], words
         for text in routes.values():
             assert "never start" not in text.lower()
         assert "Never start it in your home folder, your projects folder " \

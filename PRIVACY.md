@@ -311,15 +311,15 @@ protection officer may still want to know of them:
   over the internet as on Linux and macOS, and read the setting. It
   says that its older way of reporting on Windows, through Windows' own
   diagnostic data, does not. Exegete's lock is the list of the exact
-  library releases it installs. The Windows package of that lock was
-  read from its files, at 0.15.1, as one that reports in the older way
-  and holds no part that uploads, and the lock installs the same files
-  now. By that reading, onnxruntime's switch can be reached only once
-  it has loaded, by which time it has made a few reports. So **each
-  time a PDF is read**, a few reports go to Windows' diagnostic data.
-  An import's preview reads each PDF once, in a process of its own. The
-  import reads it again only when the preview's text cannot be used.
-  The reports give:
+  library releases it installs. This project read the files of that
+  lock's Windows package at 0.15.1. They showed a package that reports
+  in the older way and holds no part that uploads, and the lock installs
+  the same files now. By that reading, onnxruntime's switch can be
+  reached only once it has loaded, by which time it has made a few
+  reports. So **each time a PDF is read**, a few reports go to Windows'
+  diagnostic data. An import's preview reads each PDF once, in a process
+  of its own. The import reads it again only when the preview's text
+  cannot be used. The reports give:
   - onnxruntime's release, how it was built, the processor's model, the
     number of processors, the memory, whether a debugger is attached,
     and the names of any Windows services that process runs;
@@ -597,11 +597,11 @@ assistant. These pages change often, and the linked pages govern.
 **While you practise.** Codex and Claude Code can open files on your
 computer by themselves, so a real study kept on the same computer is
 within their reach even while you practise, and Exegete's list of
-projects tells them where it is. If that matters for a study, you
-could keep practice projects in a folder of their own, or work on that
-study with Claude Desktop's chat. A folder of their own keeps practice
-projects apart but does not put the study out of reach, and what they
-open goes to their maker, which may train on it while training is on.
+projects tells them where it is. If that matters for a study, you could
+keep practice projects in a folder of their own, or work on that study
+with Claude Desktop's chat. A folder of their own keeps practice projects
+apart but does not put the study out of reach, and what they open goes
+to their AI provider, which may train on it while training is on.
 
 **For participants' data**, this project suggests an assistant with no
 file access of its own: Claude Desktop's chat with the extension, with
@@ -2326,9 +2326,9 @@ Exegete never opens that link. Each note comes once. It can come again
 when two copies of Exegete run on the same computer, when Exegete cannot
 write its file, or when Exegete stops in the instant after the answer
 has gone out. It can also count as given without being shown, when the
-app cancels the request at the moment the answer is sent. The same can
-happen when the app, while a call runs, sends several other messages and
-then its cancel. Whether a note reaches you depends on the assistant
+app cancels the request as the answer is sent. The same can happen
+when, while a call runs, the app sends several other messages and then
+cancels that call. Whether a note reaches you depends on the assistant
 passing it on, and on the app showing the answer. When you ask, the
 answer gives the installed and newest versions, how Exegete was
 installed, and the steps. In the steps, a folder inside your home folder
@@ -2343,7 +2343,7 @@ says. That is Claude Desktop's work, not Exegete's. Blocking
 nicotem.github.io at your network stops the request reaching GitHub,
 but Exegete still tries, at most once a week, and when you ask, and
 your network still sees the name. Switching it off stops the attempts.
-Blocked, Exegete says nothing about new versions.
+With the address blocked, Exegete says nothing about new versions.
 
 ## OpenAI's apps: the ChatGPT desktop app and Codex (Experimental)
 
@@ -2877,7 +2877,7 @@ near the top of this document, set them out.
     page is in instead.
 - **Consent.** A study's consent may not cover processing by an AI
   provider ("What this means for research data"), and an assistant
-  whose AI runs on its maker's computers sends what it reads there.
+  that runs on its AI provider's computers sends what it reads there.
 - **Which files the assistant reads.** Exegete's tools read only what is
   asked for: a session that never touches file 7 never sends file 7's
   text through them.

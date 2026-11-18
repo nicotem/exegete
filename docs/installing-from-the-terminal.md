@@ -32,8 +32,8 @@ Claude, one fully local route, and OpenAI's apps.
 |---|---|---|
 | **Claude consumer plans** (claude.ai and Claude Desktop on a Free, Pro or Max plan; Claude Code with a Pro or Max login) | The plans most people start with. Switch training off before participants' data: while it is on, Anthropic may use your conversations to train its models. The switch is the setting "Help improve our AI models", at [claude.ai/settings/data-privacy-controls](https://claude.ai/settings/data-privacy-controls), and its default is worth checking yourself. Claude Code opens files by itself, outside Exegete, and Cowork does in the folders you connect to it, so for participants' data this project suggests Claude Desktop's chat with the extension, with computer use off, no folder that holds your projects or transcripts connected to it, and no other extension that reads files ([PRIVACY.md, "Assistants that open files by themselves"](../PRIVACY.md#assistants-that-open-files-by-themselves)). | [PRIVACY.md](../PRIVACY.md), rung 1 |
 | **Anthropic commercial-terms routes** (Claude Code with a Console API key; Team or Enterprise accounts) | The same Claude, under other terms. A personal plan (Free, Pro or Max) comes under Anthropic's consumer terms. An account your university or employer manages comes under the agreement it made with Anthropic. Such agreements differ in what they let Anthropic do with your data. Even so, an institution's account is likely to give participants' data more protection than a personal one, since the institution agreed its terms with its own interests in mind. Whoever manages that account can tell you which terms apply. The terms do not change what Claude Code reads. Claude Code opens files by itself, outside Exegete. So for participants' data, this project suggests Claude Desktop's chat with Exegete on a Team or Enterprise account, set up as in the row above ([PRIVACY.md](../PRIVACY.md), "Assistants that open files by themselves"). | [PRIVACY.md](../PRIVACY.md), rungs 2 and 3; [the API-key recipe](#claude-code-with-an-anthropic-api-key-experimental) below |
-| **Fully local models** (LM Studio and similar hosts) | The model runs on your computer, so participants' data is not sent to an AI provider. LM Studio's LM Link, in preview, can load the model on another machine instead, which then reads the conversation there (<https://lmstudio.ai/link>, read on 10 November 2026). To keep the conversation on this computer, you could check in LM Studio where the model is loaded, or leave LM Link off. We expect a local model to do the analysis less well than the hosted models, and do not know by how much, since we have evaluated neither. It is a route to consider for particular uses, such as a first pass over sensitive material, or work an agreement confines to one computer. Exegete offers its full tool set unless the host's entry asks for the smaller one, `core`. The recipe asks for `core`, which takes less of a local model's room than the full set. | [PRIVACY.md](../PRIVACY.md), rung 4; [the LM Studio recipe](#lm-studio-fully-local-experimental) below |
-| **OpenAI's apps** (the ChatGPT desktop app; Codex's command line and editor extension) | OpenAI's terms apply, and which ones depends on your plan and on how you sign in. Switch training off before participants' data: while it is on, OpenAI may use your conversations to train its models. The settings are "Improve the model for everyone" and Codex's separate "Include environments". Not ChatGPT in a web browser. A phone only through OpenAI's Remote, which has the paired computer run the work; this project suggests leaving Remote off for participants' data. Codex can also read your projects' files by itself, without asking, so for participants' data this project suggests an assistant with no file access of its own, such as Claude Desktop's chat. OpenAI documents a setting, marked Beta, that can keep Codex's own commands from reading outside the folder it works in; it has not been tested with Exegete. Not tried by this project. | [PRIVACY.md](../PRIVACY.md), "OpenAI's apps"; [the recipe](#chatgpts-desktop-app-and-codex-experimental) below |
+| **Fully local models** (LM Studio and similar hosts) | The model runs on your computer, so participants' data is not sent to an AI provider. LM Studio's LM Link, a feature still in preview, can load the model on another computer instead, where the model then reads the conversation (<https://lmstudio.ai/link>, read on 10 November 2026). To keep the conversation on your computer, you could check in LM Studio where the model is loaded, or leave LM Link off. We expect a local model to do the analysis less well than the hosted models, and do not know by how much, since we have evaluated neither. It is a route to consider for particular uses, such as a first pass over sensitive material, or work an agreement confines to one computer. Exegete offers its full tool set unless the host's entry asks for the smaller one, `core`. The recipe asks for `core`, which takes less of a local model's room than the full set. | [PRIVACY.md](../PRIVACY.md), rung 4; [the LM Studio recipe](#lm-studio-fully-local-experimental) below |
+| **OpenAI's apps** (the ChatGPT desktop app; Codex's command line and editor extension) | OpenAI's terms apply, and which ones depends on your plan and on how you sign in. Switch training off before participants' data: while it is on, OpenAI may use your conversations to train its models. The settings are "Improve the model for everyone" and Codex's separate "Include environments". ChatGPT in a web browser cannot use Exegete directly. On a phone, ChatGPT can use it only through OpenAI's Remote, which has the paired computer run the work; this project suggests leaving Remote off for participants' data. Codex can also read your projects' files by itself, without asking, so for participants' data this project suggests an assistant with no file access of its own, such as Claude Desktop's chat. OpenAI documents a setting, marked Beta, that can keep Codex's own commands from reading outside the folder it works in; it has not been tested with Exegete. This project has not run Exegete in any OpenAI app. | [PRIVACY.md](../PRIVACY.md), "OpenAI's apps"; [the recipe](#chatgpts-desktop-app-and-codex-experimental) below |
 
 The `core` tool set and the recipes below are **Experimental**. They
 are written from official documentation and checked by Exegete's own
@@ -71,9 +71,9 @@ The brief is provisional: a later release may change it.
 
 - **Python 3.11 or newer**, on macOS, Windows or Linux. To check, type
   `python3 --version` in the Terminal. If it is missing,
-  https://www.python.org/downloads/ has it. On a Mac with Apple silicon,
-  the optional part for PDF and EPUB brings the same libraries as on
-  Windows x64 and Linux on macOS 14 or later; on macOS 11 to 13 it
+  https://www.python.org/downloads/ has it. On a Mac with Apple silicon
+  and macOS 14 or later, the optional part for PDF and EPUB brings the
+  same libraries as on Windows x64 and Linux. On macOS 11 to 13, it
   brings an older onnxruntime, or stops ("PDF and EPUB: the optional
   part", below, says which).
 - **An MCP host**: Claude Desktop set up by hand, Claude Code, LM
@@ -191,9 +191,9 @@ installing the part makes pip try to build PyMuPDF 2 from its source,
 which needs build tools and usually fails. PyMuPDF 1.x has a
 ready-made package on three of them: Linux with musl (Alpine, for
 instance) on x86-64, 32-bit Python on Windows, and a free-threaded
-Python 3.14 on Linux x86-64. There, Exegete without the optional part
-for PDF and EPUB, then its three libraries with PyMuPDF 1.x, can be
-installed instead:
+Python 3.14 on Linux x86-64. There, you can install Exegete without the
+optional part for PDF and EPUB, and then the part's three libraries
+with PyMuPDF 1.x:
 
 ```bash
 ~/exegete-venv/bin/pip install exegete
@@ -222,11 +222,11 @@ they chose (checked on 3 November 2026):
   is installed or removed; an update with pip or pipx that stops was
   seen to leave the install you had as it was.
 
-An older onnxruntime may treat Exegete's switch for its usage reports
-differently (PRIVACY.md, "A library's usage reports"). If that matters,
-or the install stops, you could update macOS to 14 or later, or install
-Exegete without the part and then its three libraries with PyMuPDF 1.x,
-which needs no onnxruntime, as in the two commands above.
+An older onnxruntime may treat differently the way Exegete switches its
+usage reports off (PRIVACY.md, "A library's usage reports"). If that
+matters, or the install stops, you could update macOS to 14 or later,
+or install Exegete without the part and then its three libraries with
+PyMuPDF 1.x, which needs no onnxruntime, as in the two commands above.
 
 ## Installing from the source
 
@@ -489,14 +489,11 @@ say that the API key takes precedence once approved, and
 `unset ANTHROPIC_API_KEY` (in PowerShell,
 `Remove-Item Env:ANTHROPIC_API_KEY`) switches back to the plan.
 
-A new Terminal window opens in your home folder, which holds your
-projects, and Claude Code reads the folder it starts in without asking:
-started there, in Documents, in your projects folder or in a folder
-that holds a study, it would read your studies from the start, which is
-why these steps go to the empty folder first. The empty folder keeps
-your studies out of the folder it reads without asking; it does not
-stop its read-only commands reading them, or its file tools in auto
-mode.
+Started in your home folder, Documents, your projects folder or a
+folder that holds a study, Claude Code would read your studies from the
+start, which is why these steps go to the empty folder first. The empty
+folder does not stop its read-only commands reading your studies, or
+its file tools in auto mode.
 
 **3. Check the key and Exegete.** Inside the session, `/status` shows
 which credential is active, and `/mcp` lists Exegete. Before starting
@@ -784,13 +781,13 @@ Codex").
 on, OpenAI may use your conversations to train its models. On a personal
 plan (Free, Plus or Pro), turn off "Improve the model for everyone" in
 ChatGPT's Settings, Data controls, or choose "Do not train on my
-content" in OpenAI's Privacy Portal, <https://privacy.openai.com/>
-(either is enough, by OpenAI's Help Center: [PRIVACY.md](../PRIVACY.md),
-"OpenAI's apps", quotes it), and turn off Codex's "Include
-environments", a separate setting that neither changes. On Go, which the
-Help Center does not name for this setting, you could check that the
-setting is there. Rating a reply (thumbs up or down) can still let
-OpenAI train on that conversation.
+content" in OpenAI's Privacy Portal, <https://privacy.openai.com/>,
+and turn off Codex's "Include environments", a separate setting that
+neither changes. Either of the first two is enough, by OpenAI's Help
+Center, which [PRIVACY.md](../PRIVACY.md), "OpenAI's apps", quotes. On
+Go, which the Help Center does not name for this setting, you could
+check that the setting is there. Rating a reply (thumbs up or down) can
+still let OpenAI train on that conversation.
 
 **Step 1. Install Exegete.** It needs Python 3.11 or newer ("What
 you need", above). In the Terminal (macOS or Linux):
@@ -958,13 +955,13 @@ instead (a new folder named `exegete-chats`, in your home folder; on
 Windows, File Explorer opens your home folder when you type
 `%USERPROFILE%` in its address bar): the lines above end by starting
 `codex`, the command line, which the desktop app does not need. You
-open the folder in the app once Codex is chosen, below. Given your home
-folder, Documents, your projects folder (`~/Exegete projects`, or
-`~/QualCoder projects`, the earlier default) or a folder with
-transcripts or other study files instead, Codex would work
-among them: what it reads there goes to OpenAI without passing through
-Exegete, and what it changes there is changed without Exegete's
-approval step, preview or backup.
+open the folder in the app once Codex is chosen, below. If you give
+Codex your home folder, Documents, your projects folder
+(`~/Exegete projects`, or `~/QualCoder projects`, the earlier default)
+or a folder with transcripts or other study files instead, it would
+work among them: what it reads there goes to OpenAI without passing
+through Exegete, and what it changes there is changed without
+Exegete's approval step, preview or backup.
 
 A folder of its own keeps your study's files out of the place Codex
 works in, so it does not change them without asking. It does not keep
@@ -1009,10 +1006,9 @@ and **Full access** runs every tool call without asking (Codex's source
 code). When Codex asks before an Exegete tool, it may offer to remember
 your answer for the session or for good; for the tools that write,
 answer each time, since a remembered answer lets later calls run
-unasked. On the command line, if Codex started in
-its read-only mode, you may keep it there (Exegete's tools work the
-same). Full access would run every tool call without asking you, so
-this project suggests leaving it aside.
+unasked. On the command line, if Codex started in its read-only mode,
+you may keep it there (Exegete's tools work the same). This project
+suggests leaving Full access aside.
 
 "Ask for approval" does not ask before Codex changes a file in its own
 folder, nor before it reads one, wherever the file is. OpenAI's page
@@ -1078,7 +1074,9 @@ the safeguard" says holds in Codex too.
   was measured), so switch it off in chats that do not need it.
 - Problems and results, good or bad, go to
   [GitHub Issues](https://github.com/nicotem/exegete/issues): say which
-  app and which version, and never put participant data in an issue.
+  app and which version. An issue is public, so participants' data put
+  into one is published with it. A fault that could expose that data is
+  best reported privately, as [SECURITY.md](../SECURITY.md) describes.
 
 ## Other MCP hosts
 
@@ -1321,9 +1319,10 @@ the two of the check for new versions (`EXEGETE_UPDATE_CHECK` and
 - `EXEGETE_INSTALLED_AS`: set by the desktop extension (to `extension`),
   so that the update steps Exegete gives fit the way it was installed.
   It also makes checking on by default, and gives an import call 50
-  seconds where every other route has 30. Set on another route, it gives
-  update steps that do not fit there. `EXEGETE_UPDATE_CHECK` and
-  `EXEGETE_CALL_SECONDS`, above, set checking and the call's time alone.
+  seconds where every other route has 30. Set on another route, it makes
+  Exegete give update steps that do not fit that route. To change only
+  the checking or the call's time, you could set `EXEGETE_UPDATE_CHECK`
+  or `EXEGETE_CALL_SECONDS`, above.
 
 ---
 

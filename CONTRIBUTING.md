@@ -69,12 +69,12 @@ it is fixed. Describe it there without copying data, as above.
    Linux and macOS, and read the setting. It also says that
    onnxruntime's older way of reporting on Windows, through Windows' own
    diagnostic data, does not read the setting. The lock, `uv.lock`,
-   installs onnxruntime 1.31.0, whose Windows package was read from its
-   files at 0.15.1 as one that reports in that older way.
-   [PRIVACY.md, "How your data flows"](PRIVACY.md#how-your-data-flows)
-   says what it reports there. A release other than the lock's, which
-   the install above may bring, may treat the setting and onnxruntime's
-   own switch differently.
+   installs onnxruntime 1.31.0. This project read the files of its
+   Windows package at 0.15.1, and found that it reports in that older
+   way. [PRIVACY.md, "How your data flows"](PRIVACY.md#how-your-data-flows)
+   says what it reports there. The install above may bring another
+   release, which may treat the setting and onnxruntime's own switch,
+   `onnxruntime.disable_telemetry_events()`, differently.
 
 4. **Run the test suite** from the repository root:
 

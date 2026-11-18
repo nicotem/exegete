@@ -354,8 +354,8 @@ APART = re.compile(
     r"while training is on\b")
 OWNERS_WORDS_AND_AFTER = OWNERS_WORDS + (
     " A folder of their own keeps practice projects apart but does not put "
-    "the study out of reach, and what they open goes to their maker, which "
-    "may train on it while training is on.")
+    "the study out of reach, and what they open goes to their AI provider, "
+    "which may train on it while training is on.")
 
 
 def test_readme_gives_the_warning_in_short_sentences():

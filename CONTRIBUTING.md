@@ -69,10 +69,12 @@ it is fixed. Describe it there without copying data, as above.
    Linux and macOS, and read the setting. It also says that
    onnxruntime's older way of reporting on Windows, through Windows' own
    diagnostic data, does not read the setting. The lock, `uv.lock`,
-   installs onnxruntime 1.31.0, whose Windows package reports in that
-   older way, as its files show.
+   installs onnxruntime 1.31.0, whose Windows package was read from its
+   files at 0.15.1 as one that reports in that older way.
    [PRIVACY.md, "How your data flows"](PRIVACY.md#how-your-data-flows)
-   says what it reports there.
+   says what it reports there. A release other than the lock's, which
+   the install above may bring, may treat the setting and onnxruntime's
+   own switch differently.
 
 4. **Run the test suite** from the repository root:
 
@@ -635,7 +637,7 @@ exegete/                     # the clone (its folder's name does not matter)
 ├── CLAUDE.md               # For AI coding agents: what they most often get wrong here
 ├── CITATION.cff            # Citation metadata
 ├── .zenodo.json            # How Zenodo describes each release it archives
-├── SUPPORT.md              # Support policy (GitHub Issues only)
+├── SUPPORT.md              # Where to get help, and what a bug report needs
 ├── SECURITY.md             # How to report a security fault privately
 ├── COPYING.LESSER          # The licence: GNU LGPL, version 3
 └── NOTICE                  # Copyright, licence, and the code derived from QualCoder
@@ -796,12 +798,12 @@ that `scripts/extension_libraries.py` writes from the lock's dry run on
 each computer. It is in the summary of the Linux desktop extension job,
 in the CI run of the release's commit.
 
-The site is published by `.github/workflows/pages.yml`,
-deployed from GitHub Actions and never from a branch. A branch would
-let any token that can push rewrite `latest.json` without a release.
-That was the maintainer's decision of 5 October 2026, recorded in
-`docs/update-check/design.md`. Once the release is published, with its
-extension file, and both packages are on PyPI, start the workflow by
+The site is published by `.github/workflows/pages.yml`, deployed from
+GitHub Actions and never from a branch. A branch would let any token
+that can push rewrite `latest.json` without a release. Deploying from
+GitHub Actions was the maintainer's decision of 5 October 2026, recorded
+in `docs/update-check/design.md`. Once the release is published, with
+its extension file, and both packages are on PyPI, start the workflow by
 hand from the release's tag. It checks the site against the release
 (`scripts/check_pages_site.py`) and that the release is out. The deploy
 then waits in the `github-pages` environment for the maintainer's

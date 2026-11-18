@@ -18,13 +18,20 @@ its source.
   exchanges among what Claude Desktop's logs capture). These safety
   sentences are the fact, so their words are held.
 - CONTRIBUTING says that on Windows onnxruntime makes a few reports as
-  it loads, before Exegete's switch can reach them
-  (import_reading._onnxruntime_reports_off; PRIVACY.md, "How your data
-  flows").
+  it loads, before Exegete's switch can reach them, and names the
+  section of PRIVACY.md that says what they hold. The order itself, the
+  switch called before PyMuPDF is imported, is held where the reading
+  runs: tests/test_v0151_pymupdf_two.py,
+  test_a_pdfs_reading_switches_onnxruntimes_reports_off_before_pymupdf.
 - v0.15.4: CONTRIBUTING gives onnxruntime's own note on Windows beside
   what the Windows package the lock installs does, and the Python
   releases with which the optional part brings PyMuPDF 2; the bug report
   form says what a copied conversation and a copy of a project carry.
+- v0.15.5: CONTRIBUTING's account of the note is held by its facts, not
+  its sentences (ruling 85: a contributor's account, not a safety
+  sentence); the form names annotations, journal entries and paths among
+  what the tools' answers hold; SUPPORT's "Before you report", where the
+  form sends the reader, says what the copy it suggests holds.
 """
 
 import inspect
@@ -143,6 +150,12 @@ def test_support_warns_what_an_issue_and_a_log_publish():
 
 
 def test_contributing_says_onnxruntime_reports_on_windows_as_it_loads():
+    """CONTRIBUTING's account, and the section of PRIVACY.md it names.
+    That the switch comes before PyMuPDF's import is held by
+    tests/test_v0151_pymupdf_two.py
+    (test_a_pdfs_reading_switches_onnxruntimes_reports_off_before_pymupdf),
+    which runs import_reading._read on a PDF with a stand-in onnxruntime
+    and watches the order."""
     contributing = _flat("CONTRIBUTING.md")
     sentence = _sentence_with(contributing, "makes a few reports as it "
                               "loads")
@@ -160,29 +173,44 @@ def test_contributing_gives_onnxruntimes_own_note_beside_the_package():
     that its official releases for Windows report as on Linux and macOS
     and read ORT_DISABLE_TELEMETRY, and that its older way of reporting
     on Windows does not read it. The Windows package the lock installs
-    reports that older way (PRIVACY.md, "How your data flows", from its
-    files), so CONTRIBUTING gives both, not a bare "does not read"."""
+    was read from its files at v0.15.1 as one that reports that older way
+    (PRIVACY.md, "How your data flows"), so CONTRIBUTING gives both, not
+    a bare "does not read". v0.15.5: the facts held, not the sentences;
+    the reading given with the release it was made at, and, as PRIVACY.md
+    says, another release, which step 3's install may bring, may treat
+    the setting and the switch differently."""
     contributing = _flat("CONTRIBUTING.md")
-    assert "On Windows, onnxruntime does not read the setting" \
-        not in contributing
-    # (the readability reading: the note named first, then what it says
-    # for Windows, a sentence each, and the release the lock gives)
-    for words in ("onnxruntime's package holds a note, `Privacy.md`. For "
-                  "Windows, the note says that onnxruntime's official "
-                  "releases report as they do on Linux and macOS, and read "
-                  "the setting.",
-                  "It also says that onnxruntime's older way of reporting "
-                  "on Windows, through Windows' own diagnostic data, does "
-                  "not read the setting."):
-        assert words in contributing, words
+    step = contributing[contributing.index("3. **Install for development**"):
+                        contributing.index("4. **Run the test suite**")]
+    assert "On Windows, onnxruntime does not read the setting" not in step
+    # The note, by its name in the package
+    assert "a note, `Privacy.md`" in step
+    # What it says of onnxruntime's official Windows releases, and of the
+    # older way of reporting on Windows
+    official = _sentence_with(step, "official releases")
+    assert "Windows" in official and "read the setting" in official, \
+        official
+    older = _sentence_with(step, "older way of reporting on Windows")
+    assert "does not read the setting" in older, older
+    # The lock's release, the only one the step names, and the release of
+    # Exegete at which its Windows package was read
     lock = tomllib.loads((REPO / "uv.lock").read_text(encoding="utf-8"))
     release = next(package["version"] for package in lock["package"]
                    if package["name"] == "onnxruntime")
-    assert (f"The lock, `uv.lock`, installs onnxruntime {release}, whose "
-            f"Windows package reports in that older way, as its files "
-            f"show.") in contributing
+    assert set(re.findall(r"onnxruntime (\d+(?:\.\d+)+)", step)) == {release}
+    package = _sentence_with(step, "Windows package")
+    assert "`uv.lock`" in package and f"onnxruntime {release}" in package, \
+        package
+    assert re.search(r"\bread from its files at \d+\.\d+\.\d+\b", package), \
+        package
+    # Another release, which the install of step 3 may bring
+    warning = _sentence_with(step, "may treat the setting")
+    assert "install above" in warning and "switch" in warning, warning
+    privacy = _flat("PRIVACY.md")
+    assert ("installed other than through Exegete's lock, may treat the "
+            "setting and the switch differently") in privacy
     assert ("comes from onnxruntime's source code and the Windows package "
-            "Exegete installs") in _flat("PRIVACY.md")
+            "Exegete installs") in privacy
     # PyMuPDF 2, and onnxruntime with it, only with Python 3.11 to 3.14,
     # as pyproject.toml's markers give it
     assert ("On Windows x64, Linux and Macs with Apple silicon, with "
@@ -215,18 +243,28 @@ def test_the_bug_form_says_what_a_conversation_and_a_copy_carry():
     with names and values from the project. An example with names and
     details removed is still a participant's words (the form, SUPPORT
     and INSTALL say so). The copy the form suggests holds any names list
-    and names file, as copy_project_to_workspace's description says."""
+    and names file, as copy_project_to_workspace's description says, and
+    (v0.15.5) as SUPPORT's "Before you report", where the form sends the
+    reader, says too. The tools' answers (v0.15.5) also hold annotations
+    and journal entries (read_file_with_codings; the journal resource),
+    and paths, which carry the account's name (get_current_project)."""
     form = _flat(".github/ISSUE_TEMPLATE/bug_report.yml")
+    # What the tools' answers in a copied conversation can hold, each
+    # kind named
+    steps = form[form.index("label: Steps to reproduce"):
+                 form.index("id: mcp-version")]
+    answers = steps[steps.index("The tools' answers can also hold"):]
+    for kind in ("the names of files and cases", "attribute values",
+                 "codes", "memos", "annotations", "journal entries",
+                 "paths", "your account's name"):
+        assert kind in answers, kind
     # (the readability reading: "a real one" named once, and the warning
     # about it the next sentence, in the form, SUPPORT and INSTALL)
     real = "a real one with names and details removed"
     still = ("The real one is still a participant's words, which a search "
              "can find and someone can recognise. Your ethics approval may "
              "not allow you to publish it.")
-    for words in ("The tools' answers can also hold the names of files and "
-                  "cases, attribute values, codes and memos, which can "
-                  "identify a participant.",
-                  real, still,
+    for words in (real, still,
                   "The copy goes into your folder for projects. It holds the "
                   "whole project, including any names list and names file, "
                   "with the real names in them."):
@@ -236,6 +274,14 @@ def test_the_bug_form_says_what_a_conversation_and_a_copy_carry():
         assert real in text, name
         assert still in text, name
         assert text.index(real) < text.index(still), name
+    # SUPPORT suggests the same copy, and says what it holds before it
+    # says where copies may be kept
+    support = _flat("SUPPORT.md")
+    before = support[support.index("## Before you report"):]
+    copy = before[before.index("`copy_project_to_workspace`"):
+                  before.index("A sync service")]
+    assert "names list and names file" in copy, copy
+    assert "the real names in them" in copy, copy
     # (v0.15.5: the tool's description is in texts.py, no longer its
     # docstring in server.py)
     tool = " ".join(texts.COPY_PROJECT_TO_WORKSPACE_DESCRIPTION.split())

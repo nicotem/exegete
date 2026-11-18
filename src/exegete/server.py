@@ -470,10 +470,13 @@ from .texts import (
     _RETENTION_REQUIRED,
     _RETENTION_ON_THE_SIDECAR_PATH,
     _RETENTION_NOTE_TYPED,
+    _RETENTION_NOTE_TYPED_NO_RUN,
     _RETENTION_NOTE_SIDECAR,
     _RETENTION_ASK,
     _SAVE_INSTEAD,
     _NOT_SAVED_NO_RUN,
+    _HINT_NOTES_ALONE,
+    _HINT_NO_RUN,
     _OCCURRENCES_WITH_NOTE_REWRITE,
     _MEMO_SCOPE_WITHOUT_NOTE_REWRITE,
     _CONTEXT_WITH_OCCURRENCES,
@@ -17810,15 +17813,36 @@ def _file_notes_only(preview: Dict[str, Any]) -> bool:
     return (preview.get("memo_rewrites") or {}).get("memo_scope") == "file"
 
 
+def _would_rewrite(preview: Dict[str, Any]) -> bool:
+    """Whether an execute with a preview's token would rewrite anything
+    (v0.15.5): a replacement in the file's text, or a note to rewrite.
+    The execute answers a run with neither as one with nothing to do,
+    before the retention, save and owner refusals, and a note is among
+    those to rewrite only with a replacement, so this and the execute's
+    own test agree."""
+    rewrites_notes = ((preview.get("memo_rewrites") or {}).get("totals")
+                      or {}).get("rows", 0)
+    return bool((preview.get("totals") or {}).get("replacements")
+                or rewrites_notes)
+
+
 def _pseudonymise_warnings(preview: Dict[str, Any],
-                           phrases_given: bool = False) -> List[str]:
+                           phrases_given: bool = False,
+                           names_list: bool = False) -> List[str]:
     """What the researcher has to be told before approving a run.
 
     Each appears only when it applies, and each says what would make the
     answer different, because the preview exists to be read out loud.
     `phrases_given` says whether the call was given phrases to keep
     (v0.15.4), which a preview shows only where the file or a note holds
-    a name of the mapping.
+    a name of the mapping. `names_list` says whether the mapping is read
+    from the names list (v0.15.5), where the shared-name warning says what
+    its advice's typed mapping puts in the conversation.
+
+    A warning about what a run does is given only where an execute would
+    rewrite something, and one about what it does to the file's text only
+    where it would rewrite the file's text (v0.15.5): an execute with
+    nothing to rewrite answers so, and saves nothing.
     """
     warnings: List[str] = []
     totals = preview.get("totals", {})
@@ -17828,6 +17852,11 @@ def _pseudonymise_warnings(preview: Dict[str, Any],
     memo_block = preview.get("memo_rewrites")
     # And whether that rewrite is limited to this file's notes (v0.15.5)
     file_notes = _file_notes_only(preview)
+    # Whether an execute would rewrite anything (no name in this file, or
+    # every occurrence left by a list or kept by a phrase, and no note to
+    # rewrite, is a run with nothing to do), and whether the file's text
+    run = _would_rewrite(preview)
+    text_rewritten = bool(totals.get("replacements"))
 
     other = sum(entry["codings"] for item in preview.get("files", [])
                 for entry in item["codings"].get("by_owner", []))
@@ -17861,13 +17890,16 @@ def _pseudonymise_warnings(preview: Dict[str, Any],
             f"unique_constraint_collisions.")
     pre_existing = [item for item in preview.get("files", [])
                     if item.get("pre_existing_pseudonym_occurrences")]
-    if pre_existing:
+    # The next two speak of the rewritten text, so only where the file's
+    # text would be rewritten (v0.15.5)
+    if pre_existing and text_rewritten:
         warnings.append(
             "Warning: at least one pseudonym already occurs in the text "
             "(see pre_existing_pseudonym_occurrences). The rewritten text "
             "will not distinguish those occurrences from the ones this run "
             "writes. Choose a different pseudonym if that matters.")
-    if any(item.get("overlap_conflicts") for item in preview.get("files", [])):
+    if text_rewritten and any(item.get("overlap_conflicts")
+                              for item in preview.get("files", [])):
         warnings.append(
             "Warning: two mapping entries compete for the same characters "
             "somewhere (see overlap_conflicts). The match that starts first, "
@@ -17887,14 +17919,16 @@ def _pseudonymise_warnings(preview: Dict[str, Any],
             f"{pseudo.MAX_OVERLAP_CANDIDATES:,}, so a "
             f"conflict past that point is not listed. The rewrite itself is "
             f"not affected.")
-    if preview.get("shared_pseudonyms"):
+    if run and preview.get("shared_pseudonyms"):
         warnings.append(
             "Warning: two or more mapping entries share one pseudonym, so "
             "those people become one identity in the rewritten text. That "
             "is allowed and may be deliberate; confirm it is.")
     unsafe = [item["file_id"] for item in preview.get("files", [])
               if not item.get("position_safe", True)]
-    if unsafe:
+    # Kept to a run that writes the file's text (v0.15.5), as the execute's
+    # own warning reads the files written, so the two agree
+    if unsafe and text_rewritten:
         warnings.append(
             f"Warning: file(s) {unsafe} contain Windows line breaks or "
             f"characters beyond U+FFFF (such as emoji), which QualCoder's "
@@ -17911,15 +17945,12 @@ def _pseudonymise_warnings(preview: Dict[str, Any],
         QualcoderDatabase.PSEUDONYMISE_RESIDUE_LABEL_KEYS if key in residue]
     residue_total = sum(count["wide"] for count in field_counts)
     whole_word_total = sum(count["whole_word"] for count in field_counts)
-    # An execute that would rewrite nothing, as the preview says (no name
-    # in this file, or every occurrence left by a list, and no note to
-    # rewrite), runs nothing, so neither residue warning speaks of a run
-    rewrites_notes = (memo_block or {}).get("totals", {}).get("rows", 0)
-    run = bool(totals.get("replacements") or rewrites_notes)
     # Either reading non-zero is a reason to speak (lead's ruling on
     # QA-1). The wide reading is the union of the two matchers, so it is
     # never below the whole-word one here; the `or` keeps the warning
-    # honest if that ever stops being true.
+    # honest if that ever stops being true. An execute that would rewrite
+    # nothing (`run`, above) runs nothing, so neither residue warning
+    # speaks of a run.
     if residue_total or whole_word_total:
         # What this count MEASURES, rather than what it would be nice to
         # say it measures (re-verification 6.1). The detector reads
@@ -18050,9 +18081,10 @@ def _pseudonymise_warnings(preview: Dict[str, Any],
                 .get("put_back_by_a_pseudonym", 0))
     # The lead's fourth answer to Brief 2's hand-off note: with the notes
     # rewritten, a pseudonym writes a name into them as into file text.
-    # One clause for notes, no new count.
+    # One clause for notes, no new count. Both warnings speak of the
+    # rewrite, so only where an execute would rewrite something (v0.15.5)
     in_notes = ""
-    if containing:
+    if run and containing:
         entries = sorted({item["entry"] for item in containing})
         if memo_block is not None:
             in_notes = (" With rewrite_memos on, the rewritten notes carry "
@@ -18068,7 +18100,7 @@ def _pseudonymise_warnings(preview: Dict[str, Any],
             f"this check and is counted under inside_a_longer_word instead. "
             f"Choose a pseudonym that contains no name from the mapping, or "
             f"run the contained name in a second pass and check the count.")
-    elif put_back:
+    elif run and put_back:
         # No pseudonym contains a name on its own, and yet the rewrite
         # leaves a whole name the rewriter would match: a pseudonym has
         # formed one with the words around it ("Mary" written before an
@@ -18111,7 +18143,8 @@ def _pseudonymise_warnings(preview: Dict[str, Any],
     # asks for them too
     again = _PHRASES_AGAIN if phrases_given else ""
     if retention.get("required") and retention.get("chosen") is None:
-        # Ruling 14a: the preview says which is needed.
+        # Ruling 14a: the preview says which is needed. Not needed where
+        # an execute would rewrite nothing (v0.15.5): `required` says so
         warnings.append(
             "Warning: the run will be refused unless the call says where "
             "the mapping is kept. To save it into the project's own "
@@ -18121,7 +18154,9 @@ def _pseudonymise_warnings(preview: Dict[str, Any],
             "researcher_keeps_mapping=true to the execute call with this "
             "token. Ask the researcher which (see "
             "execute_with.mapping_retention)." + again)
-    if_saved = retention.get("if_saved") or {}
+    # The save's warnings speak of a save, which only a run makes (v0.15.5):
+    # without one, the sentence on nothing rewritten says none happens
+    if_saved = (retention.get("if_saved") or {}) if run else {}
     if if_saved.get("conflicts"):
         # Not to use_project_pseudonyms with phrases (v0.15.4): it
         # refuses keep_phrases before anything is read
@@ -18161,7 +18196,7 @@ def _pseudonymise_warnings(preview: Dict[str, Any],
             f"pseudonyms.json after the save so that the longer name "
             f"comes first (see "
             f"mapping_retention.if_saved.pre_empted_by_existing).")
-    if retention.get("chosen") in ("save_requested", "both") and \
+    if run and retention.get("chosen") in ("save_requested", "both") and \
             preview.get("case_mode") not in (None, "exact"):
         warnings.append(
             f"Warning: this run replaces the names in any letter case "
@@ -18192,12 +18227,16 @@ def _no_replacement_warning(preview: Dict[str, Any]) -> str:
     kept by choice (v0.15.3, v0.15.4) are said as such, never that no
     name occurs; and where the file holds no name and every one the note
     rewrite finds lies inside a phrase (v0.15.4), so are the notes'. With
-    memo_scope "file" (v0.15.5) the notes said are this file's."""
+    memo_scope "file" (v0.15.5) the notes said are this file's. Where a
+    note that holds a name is left for the private part's marker
+    (v0.15.5), the notes are said to be left, whatever the phrases kept."""
     memo_block = preview.get("memo_rewrites")
     retention = preview.get("mapping_retention") or {}
     note_rows = (memo_block or {}).get("totals", {}).get("rows", 0)
-    save_asked = retention.get("required") and retention.get(
-        "chosen") in ("save_requested", "both")
+    # A save asked for on the typed path, read from the choice alone: the
+    # block's `required` is false where nothing would be rewritten
+    # (v0.15.5), and the names list's path never chooses a save
+    save_asked = retention.get("chosen") in ("save_requested", "both")
     no_save = (" The mapping would not be saved either, because no run "
                "would happen. Pick a file that contains one of the names "
                "and preview again. (A researcher who uses QualCoder can "
@@ -18301,6 +18340,30 @@ def _occurrences_left_warning(preview: Dict[str, Any], left: int,
     if alone:
         warning += _OCCURRENCES_LEFT_COUNTED.format(counted=counted)
     return warning
+
+
+def _pseudonymise_hint(preview: Optional[Dict[str, Any]],
+                       phrases_given: bool) -> str:
+    """The preview's hint: what the assistant reads the researcher, what
+    it says plainly, and the execute. What it says plainly follows what
+    an execute would rewrite (v0.15.5): the file's text, which moves its
+    codings; notes alone; or nothing. Without a preview, the file's text,
+    as before. The hint is outside what the token signs."""
+    if preview is None or (preview.get("totals") or {}).get("replacements"):
+        said = ("say plainly that this rewrites the stored text and moves "
+                "every coding in that file.")
+    elif _would_rewrite(preview):
+        said = _HINT_NOTES_ALONE
+    else:
+        said = _HINT_NO_RUN
+    return ("Read the researcher the per-file replacement counts, every "
+            "collision, the residue summary and every warning, and "
+            + said + " Only with an explicit yes, call pseudonymise_source "
+            "again exactly as execute_with says, "
+            # The phrases (v0.15.4) are repeated as the mapping is, never
+            # in execute_with
+            + ("with the same mapping and keep_phrases." if phrases_given
+               else "with the same mapping."))
 
 
 def _pseudonymise_ai_files_note(search_index: bool,
@@ -19246,23 +19309,27 @@ def pseudonymise_source(
             memo_plan=memo_plan, choose_occurrences=choose_occurrences)
         if sidecar_encoding is not None:
             preview["pseudonyms_json_encoding"] = sidecar_encoding
-        preview["mapping_retention"] = _retention_block()
+        preview["mapping_retention"] = _retention_block(preview)
         preview["_effect"] = db_.pseudonymise_effect(plan, memo_plan)
         return preview
 
-    def _retention_block():
+    def _retention_block(preview):
         """What the preview says about keeping the mapping (ruling 14a).
 
         Presentation, not effect: the save is bound through its argument,
         and whether it can happen is decided again on the execute, before
-        the backup, and a third time inside the transaction.
+        the backup, and a third time inside the transaction. On the typed
+        path a choice is required only where an execute would rewrite
+        something (v0.15.5): one with nothing to rewrite answers so
+        before the retention refusal, and saves nothing.
         """
         if not typed:
             return {"required": False, "chosen": "project_pseudonyms_json",
                     "note": _RETENTION_NOTE_SIDECAR}
         chosen = ("both" if save and keeps else "save_requested" if save
                   else "researcher_record" if keeps else None)
-        block: Dict[str, Any] = {"required": True, "chosen": chosen}
+        run = _would_rewrite(preview)
+        block: Dict[str, Any] = {"required": run, "chosen": chosen}
         if save:
             try:
                 merge = _pseudonyms_json_merge(_current_project_folder(),
@@ -19275,9 +19342,11 @@ def pseudonymise_source(
             except _SaveRefused as e:
                 block["if_saved"] = {"error": f"{e.detail}.",
                                      "reason": e.reason}
-        # Its preview again asks for the phrases too (v0.15.4)
-        block["note"] = _RETENTION_NOTE_TYPED + (_PHRASES_AGAIN if phrases
-                                                 else "")
+        # Its preview again asks for the phrases too (v0.15.4); with
+        # nothing to rewrite there is no choice to make (v0.15.5)
+        block["note"] = (
+            _RETENTION_NOTE_TYPED + (_PHRASES_AGAIN if phrases else "")
+            if run else _RETENTION_NOTE_TYPED_NO_RUN)
         return block
 
     def _override_required(preview):
@@ -19571,16 +19640,8 @@ def pseudonymise_source(
             preview_token=preview_token,
             allow_hidden_coder=allow_hidden_coder,
             backup_fail_detail="no text was rewritten",
-            confirm_hint=(
-                "Read the researcher the per-file replacement counts, every "
-                "collision, the residue summary and every warning, and say "
-                "plainly that this rewrites the stored text and moves every "
-                "coding in that file. Only with an explicit yes, call "
-                "pseudonymise_source again exactly as execute_with says, "
-                # The phrases (v0.15.4) are repeated as the mapping is,
-                # never in execute_with
-                + ("with the same mapping and keep_phrases." if phrases
-                   else "with the same mapping.")),
+            # Chosen again from the preview once it is made (v0.15.5)
+            confirm_hint=_pseudonymise_hint(None, bool(phrases)),
             execute_arguments={
                 "case_mode": case_mode,
                 "overlap_policy": overlap_policy,
@@ -19640,7 +19701,15 @@ def pseudonymise_source(
             # The page for choosing (v0.15.3), on a preview alone
             result = _with_occurrences_page(result, read_phase.get("plan"),
                                             typed, compiled)
-        if typed and not save and not keeps and "execute_with" in result:
+        # Whether an execute with this preview's token would rewrite
+        # anything (v0.15.5): it answers a run with nothing to do before
+        # the retention and owner refusals, so the two asks below are for
+        # a run alone, and the hint says what the run would rewrite
+        rewrites = isinstance(preview, dict) and _would_rewrite(preview)
+        if isinstance(preview, dict) and "execute_with" in result:
+            result["hint"] = _pseudonymise_hint(preview, bool(phrases))
+        if typed and not save and not keeps and rewrites and \
+                "execute_with" in result:
             # Ruling 14a: the preview says which is needed, and the model
             # finds the two ways forward where it finds the recipe. Its
             # preview again asks for the phrases too (v0.15.4)
@@ -19660,7 +19729,7 @@ def pseudonymise_source(
             # token's, the save's and the write's: the execute, and any
             # new preview it sends to, needs the same phrases
             result["error"] += _PHRASES_AGAIN
-        if owner_error is not None and "execute_with" in result:
+        if owner_error is not None and rewrites and "execute_with" in result:
             # The preview carries the ask, so the researcher hears it
             # before approving and the model has the arguments to act on
             # it in the same place it finds the execute recipe.

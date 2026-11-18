@@ -5209,6 +5209,12 @@ _RETENTION_NOTE_TYPED = (
     "record that the researcher keeps their own copy, add "
     "researcher_keeps_mapping=true to the execute call with this token. Ask "
     "the researcher which.")
+# Its place where an execute would rewrite nothing (v0.15.5): that execute
+# answers so before any retention refusal, so no choice is needed
+_RETENTION_NOTE_TYPED_NO_RUN = (
+    "This call gives a mapping you typed, and an execute with this token "
+    "would rewrite nothing: it needs neither save_mapping_to_project nor "
+    "researcher_keeps_mapping, and saves nothing.")
 _RETENTION_NOTE_SIDECAR = (
     "The mapping is the project's own pseudonyms.json, which is the "
     "record. Nothing needs choosing.")
@@ -5229,6 +5235,16 @@ _NOT_SAVED_NO_RUN = (
     "contains one of the names and preview again. (A researcher who uses "
     "QualCoder can also enter the mapping in its Pseudonyms dialog, under "
     "Manage Files.)")
+# What the preview's hint has the assistant say at approval (v0.15.5),
+# where an execute would rewrite notes alone, or nothing: never that it
+# rewrites the stored text and moves the file's codings
+_HINT_NOTES_ALONE = (
+    "say plainly that this rewrites only the notes or journal entries that "
+    "memo_rewrites counts, and nothing in the file's text, so no coding "
+    "moves.")
+_HINT_NO_RUN = (
+    "say plainly that an execute with this token would rewrite nothing and "
+    "take no backup.")
 # Choosing occurrences to leave, and leaving them, refused with a note
 # rewrite (v0.15.3): one text for the preview's choice and the run's list.
 # Whatever memo_scope says (v0.15.5): this file's notes about the person

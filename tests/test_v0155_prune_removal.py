@@ -25,8 +25,8 @@ helper's own level:
    nothing reached through a link or a junction, and no file with a
    second hard link, loses a mark or its mode;
 7. the hidden name, which the sweep matches with the project's stem,
-   reaches no log line; Windows' long form, and on Windows every path
-   handed to the disk in it.
+   reaches no log line; Windows' long form, and every path handed to the
+   disk in the form `disk_path` gives it (on Windows the long form).
 
 And at the level of `prune_backups`, which calls the helper:
 
@@ -202,25 +202,28 @@ def test_a_folder_not_writable_in_a_backup(qualcoder_db_path,
 
 
 @pytest.mark.skipif(not MACOS, reason="a lock, as macOS keeps it")
-def test_a_locked_file_in_a_backup(qualcoder_db_path, give_back):
-    """A locked file in the project gives the backup a locked copy, which
-    stops a removal; the clearing unlocks the copy alone."""
+@pytest.mark.parametrize("flag", ["UF_IMMUTABLE", "UF_APPEND"],
+                         ids=["locked", "append-only"])
+def test_a_locked_file_in_a_backup(qualcoder_db_path, give_back, flag):
+    """A locked file in the project, or one that can only be added to
+    (append-only), gives the backup a copy with the same flag, which stops
+    a removal; the clearing takes it off the copy alone."""
+    flag = getattr(stat, flag)
     folder = Path(qualcoder_db_path)
     documents = folder / "documents"
     documents.mkdir(exist_ok=True)
     locked = documents / "locked.txt"
     locked.write_text("kept", encoding="utf-8")
-    os.chflags(locked, stat.UF_IMMUTABLE)
+    os.chflags(locked, flag)
     backup = backup_project(folder)
-    assert os.lstat(backup / "documents" / "locked.txt").st_flags \
-        & stat.UF_IMMUTABLE
+    assert os.lstat(backup / "documents" / "locked.txt").st_flags & flag
 
     result = remove_backup_folder(backup, folder.stem)
 
     assert result.outcome == REMOVAL_REMOVED, result
     assert not os.path.lexists(backup)
     assert hidden_folders(folder.parent, folder.stem) == []
-    assert os.lstat(locked).st_flags & stat.UF_IMMUTABLE
+    assert os.lstat(locked).st_flags & flag
 
 
 @pytest.mark.skipif(not WINDOWS,
@@ -538,35 +541,79 @@ def test_a_path_goes_to_the_disk_in_the_long_form_on_windows_alone(
     assert database.disk_path(path) == expected
 
 
+def record_paths_handed(monkeypatch):
+    """Every path the removal hands the disk, by call: the rename, both
+    removals, the looks (`os.lstat`, `os.path.lexists`) and the
+    clearing's walk and marks. A call by a descriptor, or relative to
+    one (inside shutil.rmtree), hands no path and is passed over."""
+    names = ["rename", "rmtree", "lstat", "lexists", "scandir", "chmod"]
+    if hasattr(os, "chflags"):
+        names.append("chflags")
+    handed = {name: [] for name in names}
+    owner = {name: os for name in names}
+    owner.update(rmtree=shutil, lexists=os.path)
+
+    def recorder(name, real):
+        def record(*args, **kwargs):
+            if kwargs.get("dir_fd") is None:
+                paths = args[:2] if name == "rename" else args[:1]
+                handed[name].extend(
+                    os.fspath(path) for path in paths
+                    if isinstance(path, (str, bytes, os.PathLike)))
+            return real(*args, **kwargs)
+        return record
+
+    for name in names:
+        monkeypatch.setattr(owner[name], name,
+                            recorder(name, getattr(owner[name], name)))
+    return handed
+
+
 @pytest.mark.skipif(not WINDOWS, reason="Windows' long form")
 def test_on_windows_every_path_goes_to_the_disk_in_the_long_form(
         qualcoder_db_path, protected_entry, monkeypatch):
-    """A backup holding a read-only file: the rename, both removals and
-    the clearing are each handed the long form."""
+    """A backup holding a read-only file: the rename, both removals, the
+    clearing and every look are each handed the long form, so that a
+    plain look, which reads a path past 259 characters as absent where
+    long paths are off, fails this test."""
     folder = Path(qualcoder_db_path)
     backup = backup_project(folder)
-    handed = {"rename": [], "rmtree": [], "chmod": [], "scandir": []}
-    real = {"rename": os.rename, "chmod": os.chmod, "scandir": os.scandir,
-            "rmtree": shutil.rmtree}
-
-    def recorder(name):
-        def record(*args, **kwargs):
-            paths = args[:2] if name == "rename" else args[:1]
-            handed[name].extend(os.fspath(path) for path in paths)
-            return real[name](*args, **kwargs)
-        return record
-
-    for name in ("rename", "chmod", "scandir"):
-        monkeypatch.setattr(os, name, recorder(name))
-    monkeypatch.setattr(shutil, "rmtree", recorder("rmtree"))
+    handed = record_paths_handed(monkeypatch)
     result = remove_backup_folder(backup, folder.stem)
     monkeypatch.undo()
 
     assert result.outcome == REMOVAL_REMOVED, result
     assert len(handed["rename"]) == 2 and len(handed["rmtree"]) == 2
     assert handed["chmod"] and handed["scandir"]
+    assert handed["lstat"] and handed["lexists"]
     plain = [path for paths in handed.values() for path in paths
              if not path.startswith("\\\\?\\")]
+    assert plain == []
+
+
+@pytest.mark.skipif(WINDOWS or AS_ROOT,
+                    reason="the long form is Windows' own; root removes "
+                           "anything")
+def test_every_path_goes_to_the_disk_as_disk_path_gives_it(
+        qualcoder_db_path, protected_entry, monkeypatch):
+    """The same record on macOS and Linux, where `disk_path` hands a path
+    as it is: here it marks it with a second leading slash, which the
+    disk reads as one and pathlib keeps, so that a path handed without
+    `disk_path`, a look included, shows as one without the mark."""
+    folder = Path(qualcoder_db_path)
+    backup = backup_project(folder)
+    monkeypatch.setattr(database, "disk_path",
+                        lambda path: "/" + os.fspath(path))
+    handed = record_paths_handed(monkeypatch)
+    result = remove_backup_folder(backup, folder.stem)
+    monkeypatch.undo()
+
+    assert result.outcome == REMOVAL_REMOVED, result
+    assert len(handed["rename"]) == 2 and len(handed["rmtree"]) == 2
+    assert handed["chmod"] and handed["scandir"]
+    assert handed["lstat"] and handed["lexists"]
+    plain = [path for paths in handed.values() for path in paths
+             if not path.startswith("//")]
     assert plain == []
 
 

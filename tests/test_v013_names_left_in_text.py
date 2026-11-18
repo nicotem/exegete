@@ -929,7 +929,15 @@ class TestAPseudonymThatContainsAName:
 
     def test_the_check_needs_no_text_and_no_residue_scan(self, project):
         """Static, before any text is read: it is there with the residue
-        scan off, and its warning with it."""
+        scan off, whether or not the file holds a name of the mapping. Its
+        warning speaks of the rewrite, so since v0.15.5 it is given where
+        an execute would rewrite something, with the residue scan off as
+        well."""
+        out = preview_of(mapping=self.SURNAME, scan_residue=False)
+        assert out["preview"]["pseudonyms_containing_a_name"][0][
+            "contains_entry"] == 0
+        assert self._warning(out) is None
+        _set_text(project, 1, "Thomas Smith met Smith.")
         out = preview_of(mapping=self.SURNAME, scan_residue=False)
         assert out["preview"]["pseudonyms_containing_a_name"][0][
             "contains_entry"] == 0

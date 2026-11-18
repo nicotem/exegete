@@ -996,7 +996,8 @@ the memos, ask for the codings with `get_coded_segments`.
 
 The file was deleted, or the project has changed. Ask for the
 project's list of files (the resource `exegete://files/list`), and use
-the IDs that answer gives.
+the IDs that answer gives. If your assistant cannot read a resource,
+`search_files` with part of the file's name finds the file and its ID.
 
 ### Suggestions seem off-target
 

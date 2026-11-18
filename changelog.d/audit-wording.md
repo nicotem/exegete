@@ -41,7 +41,8 @@
     described as they are. A passage `search_coded_text` finds comes
     without the text around it;
   - `import_text_file`: a byte-order mark at the start is removed, and
-    line endings become LF. With `apply_project_pseudonyms`, a names
+    line endings become LF. With `apply_project_pseudonyms`, each
+    pseudonym is written as it stands, backslashes included. A names
     list is refused, and nothing is imported, when an entry begins or
     ends with a space, a name is shorter than 2 characters or a
     pseudonym shorter than 3, a name is given twice, or a pseudonym is
@@ -60,12 +61,14 @@
   - `set_project_ai_coder_name` and the refusals of a coder name:
     `AI Coding Assistant` is the name on AI codings made before each
     project had an AI coder name of its own, not a default that any
-    write falls back to;
+    write falls back to. `export_refi_qda` now names it as the one it
+    uses when no AI coder name is set;
   - `pseudonymise_source`: with `memo_scope` `"file"`, the segments
-    taken are those of the file's own recording. A run with nothing to
-    rewrite saves no mapping. The warning on the notes a `"file"` run
-    leaves says that its count also takes in the file's rewritten notes
-    where a pseudonym puts a name of the mapping back;
+    taken are those of the file's own recording that its codings are
+    linked to. A run with nothing to rewrite saves no mapping. The
+    warning on the notes a `"file"` run leaves says that its count also
+    takes in the file's rewritten notes where a pseudonym puts a name of
+    the mapping back, and how each kind of note it counts can be changed;
   - the paragraph of the four tools that delete or merge codes and
     categories: a preview writes nothing in the project, and the second
     call is refused when any of the rows the token covers has changed,
@@ -76,16 +79,19 @@
 - **TOOLS.md** says:
   - that the text count of `get_coding_frequencies` leaves out text
     codings left on a deleted file, which `export_codebook` counts;
-  - how `merge_codes` differs from QualCoder 4.0's merge;
+  - which codings `merge_codes` loses, and how it differs from
+    QualCoder 4.0's merge;
   - where `exegete.json` is kept, and the rule for a journal entry's
     name;
   - that an override's answer from `update_annotation` or `set_memo`
     also carries the note the assistant gave;
   - that the preview of a run across the whole project gives the advice
     on a typed mapping for a second person who shares a name.
-- **PRIVACY.md** says that a note rewrite reaches every note of the
-  project by default, and only the file's own notes with `memo_scope`
-  `"file"`.
+- **PRIVACY.md** says that, with `rewrite_memos` on, a run rewrites a
+  name in notes and journal entries across the whole project when
+  `memo_scope` is left at its default, and in the file's own notes
+  alone with `memo_scope` `"file"`. It and TOOLS.md list the file's own
+  notes that such a run can leave holding a name.
 - **The AI coding guide** says which name the assistant's codings carry,
   that a backup comes before every change to the project's database,
-  and where the assistant reads the list of files.
+  and where the assistant finds the list of files.

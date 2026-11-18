@@ -116,7 +116,7 @@
     "brief_characters": 14630,
     "opening_text_characters": 2047,
     "tool_count": 78,
-    "tool_definitions_characters": 210225,
+    "tool_definitions_characters": 210424,
     "tools": {
       "add_annotation": {
         "definition_characters": 2177,
@@ -211,8 +211,8 @@
         "description_characters": 1424
       },
       "export_refi_qda": {
-        "definition_characters": 4261,
-        "description_characters": 3737
+        "definition_characters": 4286,
+        "description_characters": 3760
       },
       "find_cooccurring_codes": {
         "definition_characters": 2977,
@@ -263,8 +263,8 @@
         "description_characters": 1986
       },
       "import_text_file": {
-        "definition_characters": 4679,
-        "description_characters": 4021
+        "definition_characters": 4847,
+        "description_characters": 4186
       },
       "link_file_to_case": {
         "definition_characters": 2168,
@@ -295,8 +295,8 @@
         "description_characters": 2836
       },
       "move_category": {
-        "definition_characters": 1716,
-        "description_characters": 1326
+        "definition_characters": 1722,
+        "description_characters": 1332
       },
       "move_code_to_category": {
         "definition_characters": 2040,

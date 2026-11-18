@@ -52,16 +52,17 @@ capture of" and a date, so that a page read in the Internet Archive ages
 from the day it was captured. "released on" and "merged on" are not
 readings. Each is listed with its age in days, counted from the date it
 gives, never from git. A reading whose date is no day, such as 31
-November, is listed too, with no age. NOT_READINGS holds the words that
-take the form without being a reading, each with its reason.
+November, is listed too, with no age, and one dated after the day of the
+run with a negative one. NOT_READINGS holds the words that take the form
+without being a reading, each with its reason.
 
 Every push prints the report in Markdown, and under GitHub Actions writes
 it to the job's step summary too. The run exits 0, or 2 when git fails or
 a tracked file is missing. With --release it also exits 1, naming each
 promise whose line is older than MAX_AGE_DAYS, whose sentence and block
 name no row of the plan, and that NOT_PROMISES does not hold, and each
-reading that NOT_READINGS does not hold, older than MAX_AGE_DAYS or with
-a date that is no day. In a
+reading that NOT_READINGS does not hold and that is older than
+MAX_AGE_DAYS or whose date is no day or after the day of the run. In a
 shallow clone git gives every older line the day of the clone's oldest
 commit, so --release refuses there and exits 2. No workflow runs
 --release: it is a step of release preparation. Standard library only,
@@ -521,28 +522,72 @@ def age(day: Optional[datetime.date], today: datetime.date) -> int:
     return (today - day).days if day else 0
 
 
+# Why release preparation refuses a reading, when the reason is its date
+NO_DAY = "gives a date that is no day"
+AFTER_THE_RUN = "gives a date after the day of the run"
+
+
+def reading_refusal(reading: Reading, today: datetime.date) -> Optional[str]:
+    """Why release preparation on `today` refuses a reading, or None: a
+    date that is no day, a date after `today`, or an age past
+    MAX_AGE_DAYS; never a form that NOT_READINGS holds."""
+    if reading.not_a_reading:
+        return None
+    if reading.day is None:
+        return NO_DAY
+    if reading.day > today:
+        return AFTER_THE_RUN
+    days = age(reading.day, today)
+    return f"is {days} days old" if days > MAX_AGE_DAYS else None
+
+
 def refused(promises: Sequence[Promise], readings: Sequence[Reading],
             today: datetime.date) -> List[str]:
     """What release preparation refuses on `today`: each promise older
     than MAX_AGE_DAYS by its line that names no row of the plan and is no
-    state, and each reading older than MAX_AGE_DAYS by the day it gives
-    or with a date that is no day."""
+    state, and each reading that reading_refusal refuses."""
     found = [f"{each.file}:{each.line}: the promise \"{each.words}\", on a "
              f"line written on {each.written} ({age(each.written, today)} "
              f"days ago), names no row of the plan"
              for each in promises
              if not each.rows and not each.state
              and age(each.written, today) > MAX_AGE_DAYS]
-    found += [f"{each.file}:{each.line}: the reading \"{each.words}\" "
-              + ("gives a date that is no day" if each.day is None else
-                 f"is {age(each.day, today)} days old")
-              for each in readings if not each.not_a_reading
-              and (each.day is None or age(each.day, today) > MAX_AGE_DAYS)]
+    found += [f"{each.file}:{each.line}: the reading \"{each.words}\" {why}"
+              for each in readings
+              if (why := reading_refusal(each, today))]
     return found
 
 
 def _cell(text: str) -> str:
     return text.replace("|", "\\|")
+
+
+def _readings_refused(readings: Sequence[Reading],
+                      today: datetime.date) -> str:
+    """The report's count of the readings release preparation would
+    refuse, by reason; the reasons other than age only when there are
+    any."""
+    whys = [reading_refusal(each, today) for each in readings]
+    old = sum(bool(why) and why.startswith("is ") for why in whys)
+    no_day, after = whys.count(NO_DAY), whys.count(AFTER_THE_RUN)
+    return (f"{old} readings older than {MAX_AGE_DAYS} days"
+            + (f", and {no_day} readings whose date is no day" if no_day
+               else "")
+            + (f", and {after} readings dated after the day of the run"
+               if after else ""))
+
+
+def _reading_row(reading: Reading, today: datetime.date) -> str:
+    """A reading's row of the report: where, its words, its age in days
+    (none for a date that is no day), and what release preparation does."""
+    why = reading_refusal(reading, today)
+    verdict = (f"not a reading: {reading.not_a_reading}"
+               if reading.not_a_reading else "" if why is None else
+               "refused" if why.startswith("is ") else
+               "refused: " + why.removeprefix("gives "))
+    days = "" if reading.day is None else age(reading.day, today)
+    return (f"| `{reading.file}:{reading.line}` | {_cell(reading.words)} | "
+            f"{days} | {_cell(verdict)} |")
 
 
 def report(promises: Sequence[Promise], readings: Sequence[Reading],
@@ -553,21 +598,14 @@ def report(promises: Sequence[Promise], readings: Sequence[Reading],
     old_promises = sum(not each.rows and not each.state
                        and age(each.written, today) > MAX_AGE_DAYS
                        for each in promises)
-    old_readings = sum(not each.not_a_reading
-                       and age(each.day, today) > MAX_AGE_DAYS
-                       for each in readings)
-    no_day = sum(not each.not_a_reading and each.day is None
-                 for each in readings)
     out = ["### Promises and dated readings", "",
            f"{files} documents read on {today}: {len(promises)} promises "
            f"({sum(bool(each.state) for each in promises)} of them states "
            f"that NOT_PROMISES holds) and {len(readings)} dated readings. "
            f"Release preparation, with --release, would refuse "
            f"{old_promises} promises older than {MAX_AGE_DAYS} days that "
-           f"name no row of the plan, and {old_readings} readings older "
-           f"than {MAX_AGE_DAYS} days"
-           + (f", and {no_day} readings whose date is no day" if no_day
-              else "") + ".", ""]
+           f"name no row of the plan, and "
+           f"{_readings_refused(readings, today)}.", ""]
     if is_shallow:
         out += ["This clone is shallow: a line older than its oldest commit "
                 "is given that commit's day, and --release refuses to run.",
@@ -585,27 +623,21 @@ def report(promises: Sequence[Promise], readings: Sequence[Reading],
                    f"{each.written} | {days} | {_cell(row)} | {verdict} |")
     out += ["", "**Dated readings**", "",
             "| Where | Words | Days | At release |", "|---|---|---:|---|"]
-    for each in readings:
-        days = age(each.day, today)
-        verdict = (f"not a reading: {each.not_a_reading}"
-                   if each.not_a_reading else
-                   "refused: a date that is no day" if each.day is None else
-                   "refused" if days > MAX_AGE_DAYS else "")
-        out.append(f"| `{each.file}:{each.line}` | {_cell(each.words)} | "
-                   f"{'' if each.day is None else days} | "
-                   f"{_cell(verdict)} |")
+    out += [_reading_row(each, today) for each in readings]
     return out
 
 
 def main(argv: Optional[List[str]] = None) -> int:
     parser = argparse.ArgumentParser(
         description="List the documents' promises and dated readings; with "
-                    "--release, refuse the old ones.")
+                    "--release, refuse the old ones, and the readings dated "
+                    "on no day or after the run.")
     parser.add_argument("--root", type=Path, default=REPO,
                         help="the repository to read (default: this one)")
     parser.add_argument("--release", action="store_true",
                         help="release preparation: exit 1 on an old "
-                             "promise off the plan or an old reading")
+                             "promise off the plan, or on a reading that "
+                             "is old, or dated on no day or after the run")
     parser.add_argument("--today", type=datetime.date.fromisoformat,
                         default=None, help="the day to count ages from, "
                                            "as 2026-11-09 (default: today)")

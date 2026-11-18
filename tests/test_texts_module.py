@@ -18,7 +18,8 @@ docs/snapshot/, unchanged by either, shows that every byte served stayed
 3. server.py assigns at module level no text of four words or more, as
    scripts/code_texts.py reads one, but the five no assistant receives:
    inside an `if`, `try`, `with`, `for`, `while` or `match` block too,
-   by unpacking, to an item or an attribute, by a walrus or as a `for`
+   by unpacking, to an item or an attribute, by a walrus (in a
+   decorator, a default or a class's bases too) or as a `for`
    statement's target;
 4. every function server.py registers takes its description from
    texts.py, through _with_description, its innermost decorator, with no
@@ -136,15 +137,17 @@ def test_each_text_is_imported_into_server_and_assigned_there_nowhere():
     assert sorted(set(bound) & set(names)) == []
 
 
-# The definitions whose bodies a module does not run as it is imported
+# The definitions whose bodies the guard leaves out: a function's and a
+# lambda's run only when called; a class's runs as the module is
+# imported, but what it binds belongs to the class
 DEFINITIONS = (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef,
                ast.Lambda)
 
 
 def _run_at_module_level(body):
-    """The statements a module runs as it is imported: those of its body
-    and, at any depth, of the `if`, `try`, `with`, `for`, `while` and
-    `match` blocks there, never those of a function or a class."""
+    """The statements the guard reads: those of a module's body and, at
+    any depth, of the `if`, `try`, `with`, `for`, `while` and `match`
+    blocks there, never those of a function's or a class's body."""
     for node in body:
         yield node
         if isinstance(node, DEFINITIONS):
@@ -167,13 +170,28 @@ def _bound(target):
 
 
 def _own_nodes(statement):
-    """The nodes of one statement the module runs, never those inside a
-    function, a class or a lambda it holds, nor the statements of its
-    blocks, which _run_at_module_level gives on their own."""
-    if isinstance(statement, DEFINITIONS):
-        return
-    stack = [child for child in ast.iter_child_nodes(statement)
-             if not isinstance(child, ast.stmt)]
+    """The nodes of one statement that the module runs as it is
+    imported: of a function's or a class's definition, its decorators,
+    defaults, annotations, bases and keywords; of any other statement,
+    its own expressions. Never a body, nor what is inside a lambda, nor
+    the statements of a block, which _run_at_module_level gives on their
+    own."""
+    if isinstance(statement, (ast.FunctionDef, ast.AsyncFunctionDef)):
+        arguments = statement.args
+        given = [*arguments.posonlyargs, *arguments.args,
+                 *arguments.kwonlyargs, arguments.vararg, arguments.kwarg]
+        start = [*statement.decorator_list, *arguments.defaults,
+                 *[each for each in arguments.kw_defaults if each],
+                 *[each.annotation for each in given
+                   if each is not None and each.annotation is not None],
+                 *([statement.returns] if statement.returns else [])]
+    elif isinstance(statement, ast.ClassDef):
+        start = [*statement.decorator_list, *statement.bases,
+                 *statement.keywords]
+    else:
+        start = list(ast.iter_child_nodes(statement))
+    stack = [each for each in start
+             if not isinstance(each, DEFINITIONS + (ast.stmt,))]
     while stack:
         node = stack.pop()
         yield node
@@ -203,8 +221,9 @@ def _holders(tree):
 def test_server_assigns_no_text_but_those_no_assistant_receives():
     """Inside an `if` or a `try` block too, and by unpacking (the review
     of the constants' move, finding 1); inside a `match` case, to an item
-    or an attribute, by a walrus and as a `for` statement's target too
-    (the review of the descriptions' move, finding 3)."""
+    or an attribute, by a walrus, in a definition's decorators, defaults
+    and bases too, and as a `for` statement's target (the review of the
+    descriptions' move, finding 3, and the review of that change)."""
     holders = list(_holders(_tree(SERVER)))
     holding = set()
     for text in _code_texts().code_texts(REPO):

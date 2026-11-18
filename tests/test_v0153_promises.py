@@ -7,7 +7,8 @@ noon UTC on a day the test chooses, and never pushed: each form of a
 promise is listed once, with the line its own words are on and that
 line's day by git blame; release preparation refuses a promise older
 than MAX_AGE_DAYS that names no row of the plan and is no state, and a
-dated reading older than MAX_AGE_DAYS by the day it gives; the three
+dated reading older than MAX_AGE_DAYS by the day it gives, or whose date
+is no day or after the day of the run (v0.15.5); the three
 forms of a date and the Archive's captures are read, "released on" is
 not; the words that are no promise are left out; a shallow clone refuses
 release preparation, and a folder git cannot read stops the run; the
@@ -26,6 +27,7 @@ import ast
 import datetime
 import importlib.util
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -290,33 +292,45 @@ def test_release_mode_fails_on_an_old_reading(tmp_path, capsys,
     assert (code, _refused(lines)) == (0, [])
 
 
+# A refusal of a reading at release preparation: where, its words, why
+REFUSAL = re.compile(r'refused at release preparation: GUIDE\.md:(\d+): '
+                     r'the reading "([^"]+)" (.+)$')
+
+
 @needs_git
-def test_a_reading_whose_date_is_no_day_is_refused(tmp_path, capsys):
-    """A reading whose date is no day, in either form, is listed with no
-    age and refused at release preparation; until v0.15.5 it was dropped
-    without a word (v0.15.3's deferred table, the dates check's first
-    point)."""
+def test_a_reading_dated_on_no_day_or_after_the_run_is_refused(tmp_path,
+                                                               capsys):
+    """A reading whose date is no day, in any of the three forms, is
+    listed with no age, and one dated after the day of the run with a
+    negative age; release preparation refuses both. Until v0.15.5 the
+    first was dropped without a word and the second never refused
+    (v0.15.3, the dates check's review, finding 1)."""
     root = _commit(tmp_path / "repo", {"GUIDE.md": "\n\n".join((
         "The page says so (read on 31 November 2026).",
         "The terms say so (checked on February 30, 2026).",
+        "The source says so (verified 2026-11-31).",
+        "The page says so (read on 10 November 2026).",
         "The page says so (read on 4 November 2026).")) + "\n"}, TODAY)
     code, lines, _ = _run(capsys, root)
     assert code == 0
+    no_day, after = "refused: a date that is no day", \
+        "refused: a date after the day of the run"
     assert _rows(lines, "Dated readings") == [
-        ["`GUIDE.md:1`", "read on 31 November 2026", "",
-         "refused: a date that is no day"],
-        ["`GUIDE.md:3`", "checked on February 30, 2026", "",
-         "refused: a date that is no day"],
-        ["`GUIDE.md:5`", "read on 4 November 2026", "5", ""]]
-    assert any("and 2 readings whose date is no day." in line
-               for line in lines)
+        ["`GUIDE.md:1`", "read on 31 November 2026", "", no_day],
+        ["`GUIDE.md:3`", "checked on February 30, 2026", "", no_day],
+        ["`GUIDE.md:5`", "verified 2026-11-31", "", no_day],
+        ["`GUIDE.md:7`", "read on 10 November 2026", "-1", after],
+        ["`GUIDE.md:9`", "read on 4 November 2026", "5", ""]]
+    assert any("and 0 readings older than 30 days, and 3 readings whose "
+               "date is no day, and 1 readings dated after the day of the "
+               "run." in line for line in lines)
     code, lines, _ = _run(capsys, root, "--release")
     assert code == 1
-    assert _refused(lines) == [
-        f'refused at release preparation: GUIDE.md:{line}: the reading '
-        f'"{words}" gives a date that is no day'
-        for line, words in ((1, "read on 31 November 2026"),
-                            (3, "checked on February 30, 2026"))]
+    assert [REFUSAL.match(line).groups() for line in _refused(lines)] == [
+        ("1", "read on 31 November 2026", promises.NO_DAY),
+        ("3", "checked on February 30, 2026", promises.NO_DAY),
+        ("5", "verified 2026-11-31", promises.NO_DAY),
+        ("7", "read on 10 November 2026", promises.AFTER_THE_RUN)]
 
 
 @needs_git

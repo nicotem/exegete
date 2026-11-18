@@ -662,39 +662,67 @@ def _removed_help_topics():
     raise AssertionError("server.py has no REMOVED_HELP_TOPICS")
 
 
-# The removed arguments whose refusals name them: create_backup, removed
-# in 0.15.5 from the 22 tools that took it, and search_memo, removed in
-# 0.15.1 from search_files
+# The removed arguments whose names a text could take for a tool's
+# (cascade and owner, the others REMOVED_ARGUMENTS refuses, could not):
+# create_backup, removed in 0.15.5 from the 22 tools that took it, and
+# search_memo, removed in 0.15.1 from search_files
 REMOVED_ARGUMENT_NAMES = ("create_backup", "search_memo")
 
 
+def _strings(path, node):
+    """The places, (module, line, text), of the string literals in
+    `node`."""
+    return {(path.name, each.lineno, each.value) for each in ast.walk(node)
+            if isinstance(each, ast.Constant) and isinstance(each.value, str)}
+
+
+def _removed_argument(key):
+    """The argument of REMOVED_ARGUMENT_NAMES that a row's key of
+    REMOVED_ARGUMENTS, (tool, argument), names, or None."""
+    if isinstance(key, ast.Tuple) and len(key.elts) == 2 \
+            and isinstance(key.elts[1], ast.Constant) \
+            and key.elts[1].value in REMOVED_ARGUMENT_NAMES:
+        return key.elts[1].value
+    return None
+
+
 def _removed_argument_refusals():
-    """The places, (module, line, text), of the refusals that name an
-    argument of REMOVED_ARGUMENT_NAMES: the refusal of a call passing it
-    (_CREATE_BACKUP_REMOVED, and the rows of REMOVED_ARGUMENTS). They are
-    passed over there alone, so that any other text that tells the model
-    to pass one fails (v0.15.5, the second part's review for
-    create_backup; for search_memo, which every text passed over until
-    then, the deferred table of v0.15.5). Both are in texts.py
-    (v0.15.5)."""
+    """The places, (module, line, text), of the refusals of a call that
+    passes an argument of REMOVED_ARGUMENT_NAMES, each with the argument
+    it refuses: _CREATE_BACKUP_REMOVED, and each row of REMOVED_ARGUMENTS
+    whose key is that argument (the key and the refusal). There alone
+    that one word is passed over, and the refusal's other words are read
+    as every text's are, so that any other text that tells the model to
+    pass it fails (v0.15.5: the second part's review for create_backup,
+    and its sweep for search_memo, which the test had passed over in
+    every text). Both are in texts.py (v0.15.5)."""
     path = Path(exegete.__file__).parent / "texts.py"
     tree_ = ast.parse(path.read_text(encoding="utf-8"))
-    places = set()
+    places = {}
     for node in tree_.body:
         targets = (node.targets if isinstance(node, ast.Assign) else
                    [node.target] if isinstance(node, ast.AnnAssign) else [])
-        if any(isinstance(target, ast.Name) and target.id in (
-                "_CREATE_BACKUP_REMOVED", "REMOVED_ARGUMENTS")
-               for target in targets) and node.value is not None:
-            places |= {(path.name, each.lineno, each.value)
-                       for each in ast.walk(node.value)
-                       if isinstance(each, ast.Constant)
-                       and isinstance(each.value, str)
-                       and any(name in each.value
-                               for name in REMOVED_ARGUMENT_NAMES)}
-    for name in REMOVED_ARGUMENT_NAMES:
-        assert any(name in text for _, _, text in places), (name, places)
-    assert len(places) >= 3, places
+        names = {target.id for target in targets
+                 if isinstance(target, ast.Name)}
+        assigned = node.value if targets else None
+        if assigned is None:
+            continue
+        if "_CREATE_BACKUP_REMOVED" in names:
+            places.update(dict.fromkeys(_strings(path, assigned),
+                                        "create_backup"))
+        if "REMOVED_ARGUMENTS" in names and isinstance(assigned, ast.Dict):
+            for key, value in zip(assigned.keys, assigned.values):
+                if key is None and isinstance(value, ast.DictComp):
+                    key, value = value.key, value.value  # a row of **{...}
+                argument = _removed_argument(key)
+                if argument:
+                    for part in (key, value):
+                        places.update(dict.fromkeys(_strings(path, part),
+                                                    argument))
+    for argument in REMOVED_ARGUMENT_NAMES:
+        assert any(each == argument and argument in text
+                   for (_, _, text), each in places.items()), (argument,
+                                                               places)
     return places
 
 
@@ -709,11 +737,13 @@ def test_no_answer_text_names_a_tool_that_does_not_exist():
     refusal = _removed_argument_refusals()
     found = {}
     for module, line, text in _sendable_literals():
-        if (module, line, text) in topics or (module, line, text) in refusal:
+        if (module, line, text) in topics:
             continue
+        refused = refusal.get((module, line, text))
         for match in WORD.finditer(text):
             word = match.group(1)
-            if word in tools or word in arguments or word in NOT_TOOLS:
+            if word == refused or word in tools or word in arguments \
+                    or word in NOT_TOOLS:
                 continue
             if TOOL_SHAPED.match(word):
                 found.setdefault(word, []).append(f"{module}:{line}")

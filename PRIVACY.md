@@ -2734,11 +2734,12 @@ near the top of this document, set them out.
     own pseudonym in the file text. Inside one file, a first run can leave
     the second person's occurrences as they are (`choose_occurrences`,
     then the numbers or ids to leave), and a second run then replaces them
-    with the second person's pseudonym. By default, with `rewrite_memos`
-    on, whichever run carries it rewrites that name in notes across the
-    whole project, the other person's notes included, whatever the order
-    of the runs. So a note about one person can end up carrying the other
-    person's pseudonym. With `memo_scope` set to `"file"`, a run rewrites
+    with the second person's pseudonym. With `rewrite_memos` on and
+    `memo_scope` at its default, `"project"`, whichever run carries it
+    rewrites that name in notes across the whole project, the other
+    person's notes included, whatever the order of the runs. So a note
+    about one person can end up carrying the other person's pseudonym.
+    With `memo_scope` set to `"file"`, a run rewrites
     the notes of its own file alone: those of its codings, annotations and
     case links, the file's own note, and those of its recording's segments
     that its codings are linked to. So where each person has a file of
@@ -2746,7 +2747,9 @@ near the top of this document, set them out.
     `memo_scope` `"file"`, and change by hand the notes the preview counts
     as left: other files' notes (those of PDFs, recordings and images
     included), the notes of cases, codes, categories, attribute types and
-    the project, and journal entries. A note of the file about someone
+    the project, journal entries, and the file's own notes where the
+    rewrite would form a private-part marker or a pseudonym puts a name
+    back. A note of the file about someone
     else with the same name takes the pseudonym too, so the preview asks
     whether anyone named in the file's notes shares a name. Where both are
     in one file, you could keep `rewrite_memos` off on every run of a
@@ -2760,10 +2763,10 @@ near the top of this document, set them out.
     and so with your AI provider unless the model runs on your own
     computer, and in the host's own records. Another is your own record of
     that mapping. The third is every copy of the file's text from before
-    the second run, which holds the name where that pseudonym now stands:
-    every backup taken before that run, the first run's among them, and,
-    for an imported document, its original in the project's folder of
-    originals.
+    the second run, which holds the name where that pseudonym now stands.
+    Those copies include every backup taken before that run, the first
+    run's among them, and, for an imported document, its original in the
+    project's folder of originals.
   - **What the preview counts.** The preview's `residue` block counts
     the names left in those fields, and, as occurrences, in the text of
     every file. In the file this call rewrites, those are names inside a

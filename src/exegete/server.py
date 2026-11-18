@@ -8994,11 +8994,11 @@ def export_refi_qda(
     The project's coder name is the first user, which QualCoder's
     importer takes as its own coder name. The AI coder name is the last,
     named after the project's AI coder name, else the AI coder name in
-    Exegete's settings (EXEGETE_AI_CODER_NAME) or the built-in default;
-    the result says which (ai_user_name_source). Where the project has
-    no coder name set, another coder's name or the AI coder name comes
-    first, so suggest checking QualCoder's coder name after importing
-    the file there.
+    Exegete's settings (EXEGETE_AI_CODER_NAME) or the built-in default,
+    "AI Coding Assistant"; the result says which (ai_user_name_source).
+    Where the project has no coder name set, another coder's name or the
+    AI coder name comes first, so suggest checking QualCoder's coder name
+    after importing the file there.
 
     Position convention (QualCoder's): selections are character offsets
     into the plain text exactly as exported (verbatim, UTF-8, no BOM,
@@ -13123,7 +13123,7 @@ def import_text_file(
                   take for this text's stored copy
         content: The full text content of the file. A byte-order mark at
                  its start is removed, and its line endings are stored as
-                 LF, as QualCoder's import stores a text file
+                 LF, as QualCoder 4.0's import does
         memo: Optional memo/description for the file
         case_name: Optional existing case to link the new file to.
                    The same name, once spaces and Unicode forms are
@@ -13138,16 +13138,19 @@ def import_text_file(
                    text file it imports. Default false, so no name in the
                    text is replaced unless you ask.
                    Case-sensitive and whole-word, like QualCoder. It
-                   differs from QualCoder's import in two ways. First,
+                   differs from QualCoder's import in three ways. First,
                    QualCoder applies the entries one after another, so a
                    later entry can rewrite what an earlier one produced.
                    Exegete applies them all in one pass, longest form
                    first, so nothing it writes is replaced again. Second,
-                   Exegete refuses a list that QualCoder would apply, and
-                   imports nothing, when an entry begins or ends with a
-                   space, a name is shorter than 2 characters or a
-                   pseudonym shorter than 3, a name appears twice, or a
-                   pseudonym is also a name in the list.
+                   Exegete writes each pseudonym as it stands, while
+                   QualCoder's import reads a backslash in a pseudonym as
+                   an instruction. Third, Exegete refuses a list that
+                   QualCoder would apply, and imports nothing, when an
+                   entry begins or ends with a space, a name is shorter
+                   than 2 characters or a pseudonym shorter than 3, a
+                   name appears twice, or a pseudonym is also a name in
+                   the list.
                    The result carries per-pseudonym counts and which
                    encoding pseudonyms.json was read in.
 
@@ -20017,11 +20020,11 @@ def move_category(category_id: int,
     filed under (`new_parent`, null at the top level). Refuses any move that
     would create a cycle, making a category its own ancestor. In QualCoder
     3.8.2, and in QualCoder 4.0's reports, such a cycle would hide the
-    category and all its codes, and QualCoder 4.0's Codebook would never
-    finish. When the category is
-    already under the requested parent (or already at the top level) the
-    result is `changed: false, reason: unchanged` with nothing written and
-    no backup made. Successful moves carry `changed: true`.
+    category and all its codes, and the Codebook of either release would
+    never finish. When the category is already under the requested parent
+    (or already at the top level) the result is `changed: false, reason:
+    unchanged` with nothing written and no backup made. Successful moves
+    carry `changed: true`.
 
     Args:
         category_id: The category to move (its catid)
@@ -22673,8 +22676,11 @@ _SHARED_NAME_IN_FILE_NOTES_WARNING = (
     "that name either person by hand.")
 # The notes a run limited to one file leaves that its rule still matches
 # (v0.15.5), from the residue's whole_word_after_rewrite: their number,
-# what the count takes in, and the two ways to change them, the second
-# only where no one else named shares a name
+# what the count takes in, and the ways to change each kind. A run across
+# the whole project changes the notes the scope leaves, where no one else
+# named shares a name, but not this file's notes left for a marker, which
+# it leaves too, nor those a pseudonym puts a name back into, since it
+# writes the same pseudonym there and wherever else the name was
 _NOTES_LEFT_AFTER_RUN = (
     "Warning: after this run, {count} note(s) or journal entr(ies) would "
     "still match its whole-word rule outside every phrase to keep "
@@ -22687,13 +22693,16 @@ _NOTES_LEFT_HOLD = (
     " That count takes in the notes memo_scope \"file\" leaves as they "
     "are: other files' notes, those of PDFs, recordings and images "
     "included; the notes of cases, codes, categories, attribute types and "
-    "the project; journal entries; and any of this file's notes in which "
-    "the rewrite would form a private-part marker. It also takes in notes "
-    "of this file that the run rewrites, where a pseudonym puts a name of "
-    "this mapping back into them, as \"Ann Smith\" would with Ann in the "
-    "mapping. Change them by hand, or by a run "
+    "the project; and journal entries. Change those by hand, or by a run "
     "across the whole project when no one else named in those notes "
-    "shares a name in this mapping.")
+    "shares a name in this mapping. The count also takes in two kinds of "
+    "this file's notes, which a run across the whole project would not "
+    "clear either. The first are notes in which the rewrite would form a "
+    "private-part marker: change them by hand, or choose a pseudonym "
+    "without hash characters. The second are notes into which the run "
+    "writes a pseudonym that puts a name of this mapping back, as \"Ann "
+    "Smith\" would with Ann in the mapping: choose a different pseudonym, "
+    "or run that name in a second pass and check the count.")
 
 
 def _file_notes_only(preview: Dict[str, Any]) -> bool:

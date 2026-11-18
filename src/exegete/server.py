@@ -7,6 +7,7 @@ import contextvars
 import copy
 import errno
 import fnmatch
+import glob
 import os
 import re
 import sys
@@ -11651,7 +11652,12 @@ def _collect_backups(project_folder: Path) -> List[Dict[str, Any]]:
     now = datetime.now()
     for prefix, kind in ((f"{project_folder.stem}_backup_", OWN_BACKUP_KIND),
                          (f"{project_folder.stem}_BKUP_", "qualcoder")):
-        for entry in project_folder.parent.glob(f"{prefix}*.qda"):
+        # The project's name matched as it is (v0.15.5): unescaped, square
+        # brackets, `?` and `*` in it were read as a pattern, which took
+        # another project's backups, or a folder under the hidden name,
+        # and missed the project's own
+        for entry in project_folder.parent.glob(glob.escape(prefix)
+                                                + "*.qda"):
             if not entry.is_dir():
                 continue
             try:

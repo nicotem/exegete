@@ -340,11 +340,11 @@ it is fixed. Describe it there without copying data, as above.
    `python scripts/check_promises.py --release` is run in a full clone.
    It fails on a promise whose line is older than the script's
    `MAX_AGE_DAYS` and that names no row of the plan. It also fails on a
-   reading older than `MAX_AGE_DAYS`. Write what is missing as what
-   Exegete does not do, or give it a row in the plan. A sentence that uses a
-   promise's words for a state, such as
-   `a change previewed but not yet made`, goes into the script's
-   `NOT_PROMISES`, with its reason.
+   reading older than `MAX_AGE_DAYS`, or dated on no day or after the
+   day of the run. Write what is missing as what Exegete does not do, or
+   give it a row in the plan. A sentence that uses a promise's words for
+   a state, such as `a change previewed but not yet made`, goes into the
+   script's `NOT_PROMISES`, with its reason.
 
 ## Review before merge
 

@@ -260,6 +260,9 @@ def test_the_bug_form_says_what_a_conversation_and_a_copy_carry():
                  "codes", "memos", "annotations", "journal entries",
                  "paths", "your account's name"):
         assert kind in answers, kind
+    # (the privacy reader of v0.15.5: the warning's reason, held beside
+    # the kinds)
+    assert "which can identify a participant" in answers
     # (the readability reading: "a real one" named once, and the warning
     # about it the next sentence, in the form, SUPPORT and INSTALL)
     real = "a real one with names and details removed"

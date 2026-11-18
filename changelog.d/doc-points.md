@@ -26,8 +26,8 @@
     then reads the conversation. To keep the conversation on your
     computer, you could check in LM Studio where the model is loaded, or
     leave LM Link off, as PRIVACY.md says.
-  - `EXEGETE_INSTALLED_AS` says what happens when it is set on another
-    route than the desktop extension. It also gives the settings that
+  - The Terminal guide's item on `EXEGETE_INSTALLED_AS` says what
+    happens when it is set on a route other than the desktop extension. It also gives the settings that
     change only the check for new versions or an import call's time.
   - Four readings that said "the same day" give their date, 4 November
     2026, so that the check of dated readings lists and ages them.

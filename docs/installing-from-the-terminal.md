@@ -32,7 +32,7 @@ Claude, one fully local route, and OpenAI's apps.
 |---|---|---|
 | **Claude consumer plans** (claude.ai and Claude Desktop on a Free, Pro or Max plan; Claude Code with a Pro or Max login) | The plans most people start with. Switch training off before participants' data: while it is on, Anthropic may use your conversations to train its models. The switch is the setting "Help improve our AI models", at [claude.ai/settings/data-privacy-controls](https://claude.ai/settings/data-privacy-controls), and its default is worth checking yourself. Claude Code opens files by itself, outside Exegete, and Cowork does in the folders you connect to it, so for participants' data this project suggests Claude Desktop's chat with the extension, with computer use off, no folder that holds your projects or transcripts connected to it, and no other extension that reads files ([PRIVACY.md, "Assistants that open files by themselves"](../PRIVACY.md#assistants-that-open-files-by-themselves)). | [PRIVACY.md](../PRIVACY.md), rung 1 |
 | **Anthropic commercial-terms routes** (Claude Code with a Console API key; Team or Enterprise accounts) | The same Claude, under other terms. A personal plan (Free, Pro or Max) comes under Anthropic's consumer terms. An account your university or employer manages comes under the agreement it made with Anthropic. Such agreements differ in what they let Anthropic do with your data. Even so, an institution's account is likely to give participants' data more protection than a personal one, since the institution agreed its terms with its own interests in mind. Whoever manages that account can tell you which terms apply. The terms do not change what Claude Code reads. Claude Code opens files by itself, outside Exegete. So for participants' data, this project suggests Claude Desktop's chat with Exegete on a Team or Enterprise account, set up as in the row above ([PRIVACY.md](../PRIVACY.md), "Assistants that open files by themselves"). | [PRIVACY.md](../PRIVACY.md), rungs 2 and 3; [the API-key recipe](#claude-code-with-an-anthropic-api-key-experimental) below |
-| **Fully local models** (LM Studio and similar hosts) | The model runs on your computer, so participants' data is not sent to an AI provider. LM Studio's LM Link, a feature still in preview, can load the model on another computer instead, where the model then reads the conversation (<https://lmstudio.ai/link>, read on 10 November 2026). To keep the conversation on your computer, you could check in LM Studio where the model is loaded, or leave LM Link off. We expect a local model to do the analysis less well than the hosted models, and do not know by how much, since we have evaluated neither. It is a route to consider for particular uses, such as a first pass over sensitive material, or work an agreement confines to one computer. Exegete offers its full tool set unless the host's entry asks for the smaller one, `core`. The recipe asks for `core`, which takes less of a local model's room than the full set. | [PRIVACY.md](../PRIVACY.md), rung 4; [the LM Studio recipe](#lm-studio-fully-local-experimental) below |
+| **Fully local models** (LM Studio and similar hosts) | The model runs on your computer, so participants' data is not sent to an AI provider. LM Studio's LM Link, a feature still in preview, can load the model on another computer instead, where the model then reads the conversation, participants' data included (<https://lmstudio.ai/link>, read on 10 November 2026). To keep the conversation on your computer, you could check in LM Studio where the model is loaded, or leave LM Link off. We expect a local model to do the analysis less well than the hosted models, and do not know by how much, since we have evaluated neither. It is a route to consider for particular uses, such as a first pass over sensitive material, or work an agreement confines to one computer. Exegete offers its full tool set unless the host's entry asks for the smaller one, `core`. The recipe asks for `core`, which takes less of a local model's room than the full set. | [PRIVACY.md](../PRIVACY.md), rung 4; [the LM Studio recipe](#lm-studio-fully-local-experimental) below |
 | **OpenAI's apps** (the ChatGPT desktop app; Codex's command line and editor extension) | OpenAI's terms apply, and which ones depends on your plan and on how you sign in. Switch training off before participants' data: while it is on, OpenAI may use your conversations to train its models. The settings are "Improve the model for everyone" and Codex's separate "Include environments". ChatGPT in a web browser cannot use Exegete directly. On a phone, ChatGPT can use it only through OpenAI's Remote, which has the paired computer run the work; this project suggests leaving Remote off for participants' data. Codex can also read your projects' files by itself, without asking, so for participants' data this project suggests an assistant with no file access of its own, such as Claude Desktop's chat. OpenAI documents a setting, marked Beta, that can keep Codex's own commands from reading outside the folder it works in; it has not been tested with Exegete. This project has not run Exegete in any OpenAI app. | [PRIVACY.md](../PRIVACY.md), "OpenAI's apps"; [the recipe](#chatgpts-desktop-app-and-codex-experimental) below |
 
 The `core` tool set and the recipes below are **Experimental**. They
@@ -222,11 +222,11 @@ they chose (checked on 3 November 2026):
   is installed or removed; an update with pip or pipx that stops was
   seen to leave the install you had as it was.
 
-An older onnxruntime may treat differently the way Exegete switches its
-usage reports off (PRIVACY.md, "A library's usage reports"). If that
-matters, or the install stops, you could update macOS to 14 or later,
-or install Exegete without the part and then its three libraries with
-PyMuPDF 1.x, which needs no onnxruntime, as in the two commands above.
+An older onnxruntime may handle the switch for its own usage reports
+differently (PRIVACY.md, "A library's usage reports"). If that matters,
+or the install stops, you could update macOS to 14 or later, or install
+Exegete without the part and then its three libraries with PyMuPDF 1.x,
+which needs no onnxruntime, as in the two commands above.
 
 ## Installing from the source
 
@@ -1317,12 +1317,12 @@ the two of the check for new versions (`EXEGETE_UPDATE_CHECK` and
   used, and the log says so once at start; it never stops Exegete.
   The desktop extension's settings do not offer it.
 - `EXEGETE_INSTALLED_AS`: set by the desktop extension (to `extension`),
-  so that the update steps Exegete gives fit the way it was installed.
-  It also makes checking on by default, and gives an import call 50
-  seconds where every other route has 30. Set on another route, it makes
-  Exegete give update steps that do not fit that route. To change only
-  the checking or the call's time, you could set `EXEGETE_UPDATE_CHECK`
-  or `EXEGETE_CALL_SECONDS`, above.
+  so that Exegete's update steps fit the way it was installed. It also
+  makes checking on by default, and gives an import call 50 seconds
+  where every other route has 30. Set on another route, Exegete's update
+  steps and its directions to the extension's settings do not fit that
+  route. To change only the checking or the call's time, you could set
+  `EXEGETE_UPDATE_CHECK` or `EXEGETE_CALL_SECONDS`, above.
 
 ---
 

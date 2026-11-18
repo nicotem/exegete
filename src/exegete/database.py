@@ -4473,7 +4473,9 @@ def start_backup(project_path: Union[str, Path],
         # A name too long for the hidden name (v0.15.5): said as such,
         # since no backup of this project can be made until its name is
         # shorter; nothing was made
-        if backup_name_too_long(partial.name, e):
+        # Reds branch, never to merge: the count of UTF-16 units kept
+        # from the claim, as if start_backup read the error alone
+        if backup_name_too_long(partial.name, e, windows=False):
             raise BackupNameTooLongError(
                 BACKUP_NAME_TOO_LONG_MESSAGE) from None
         raise OSError(f"Backup failed: {error_label(e)}") from None

@@ -11985,7 +11985,8 @@ def _prune_remove(to_remove: List[Dict[str, Any]], project_folder: Path
     not_removed: List[Dict[str, Any]] = []
     for backup in to_remove:
         done = remove_backup_folder(backup["path"], project_folder.stem)
-        if done.outcome in (REMOVAL_REMOVED, REMOVAL_GONE):
+        # Reds branch, never to merge: a link counted as removed
+        if done.outcome in (REMOVAL_REMOVED, REMOVAL_GONE, REMOVAL_LINK):
             removed.append(backup["name"])
             continue
         logger.error("Failed to remove backup %s: %s",

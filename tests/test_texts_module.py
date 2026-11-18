@@ -16,7 +16,8 @@ docs/snapshot/, unchanged by either, shows that every byte served stayed
    server.py, by its one import from texts.py, to the same object, and
    server.py assigns it nowhere; no description is imported by name;
 3. server.py assigns at module level no text of four words or more, as
-   scripts/code_texts.py reads one, but the five no assistant receives;
+   scripts/code_texts.py reads one, but the five no assistant receives,
+   inside an `if` or `try` block and by unpacking too;
 4. every function server.py registers takes its description from
    texts.py, through _with_description, its innermost decorator, with no
    docstring of its own; three give `description=`, which FastMCP takes
@@ -132,18 +133,43 @@ def test_each_text_is_imported_into_server_and_assigned_there_nowhere():
     assert sorted(set(bound) & set(names)) == []
 
 
+def _run_at_module_level(body):
+    """The statements a module runs as it is imported: those of its body
+    and, at any depth, of the `if`, `try`, `with`, `for` and `while`
+    blocks there, never those of a function or a class."""
+    for node in body:
+        yield node
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef,
+                             ast.ClassDef)):
+            continue
+        for field in ("body", "orelse", "finalbody"):
+            yield from _run_at_module_level(getattr(node, field, []))
+        for handler in getattr(node, "handlers", []):
+            yield from _run_at_module_level(handler.body)
+
+
+def _bound(node):
+    """The names an assignment binds, each name it unpacks into too."""
+    targets = node.targets if isinstance(node, ast.Assign) else [node.target]
+    return [name.id for target in targets for name in ast.walk(target)
+            if isinstance(name, ast.Name) and isinstance(name.ctx, ast.Store)]
+
+
 def test_server_assigns_no_text_but_those_no_assistant_receives():
+    """Inside an `if` or a `try` block too, and by unpacking (the review
+    of the constants' move, finding 1)."""
     tree = _tree(SERVER)
-    statements = [(node.lineno, node.end_lineno, node) for node in tree.body
-                  if isinstance(node, (ast.Assign, ast.AnnAssign))]
+    statements = [(node.lineno, node.end_lineno, node)
+                  for node in _run_at_module_level(tree.body)
+                  if isinstance(node, (ast.Assign, ast.AnnAssign,
+                                       ast.AugAssign))]
     holding = set()
     for text in _code_texts().code_texts(REPO):
         if text.module != "src/exegete/server.py" or text.docstring \
                 or text.raw:
             continue
         holding |= {name for first, last, node in statements
-                    if first <= text.line <= last
-                    for name in _assigned(ast.Module([node], []))}
+                    if first <= text.line <= last for name in _bound(node)}
     assert sorted(holding - set(STAYS)) == [], (
         "a text of four words or more assigned in server.py: write it in "
         "texts.py, which server.py imports it from")

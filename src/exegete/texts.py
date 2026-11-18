@@ -135,11 +135,15 @@ FREQUENCIES_COUNT_NOTE = (
 # The REFI-QDA export, fixed in v0.15.3 but for media (ruling 85, item 2;
 # ruling 115, item 1): what each mode's file holds, said in its answer,
 # and the refusal of an earlier file it cannot write, which the write in
-# place refused and the replace would not
+# place refused and the replace would not. Since v0.15.5 the project's
+# note also says what the file carries that the conversation does not
+# see: a hidden coder's codings, and each note's private part
 REFI_EXPORT_PROJECT_NOTE = (
     "Export includes every code and category, every text source and the "
     "cases, with their attributes, the journal entries and the "
-    "annotations, with each coding under its own coder. Every category "
+    "annotations, with each coding under its own coder's name, a hidden "
+    "coder's included. Each note and journal entry in the file is whole, "
+    "its private part included. Every category "
     "is included, as a non-codable parent code (QualCoder's own REFI-QDA "
     "convention).")
 REFI_EXPORT_SESSION_NOTE = (

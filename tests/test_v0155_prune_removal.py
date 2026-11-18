@@ -823,8 +823,10 @@ server.prune_backups(keep_last=0, preview_token=preview["preview_token"])
 def test_exegete_ending_in_the_prune_leaves_the_backup_out_of_every_list(
         setup_server, qualcoder_db_path, tmp_path, monkeypatch, when):
     """The backup is under the hidden name, whole, out of every list; a
-    later backup's sweep, an hour and a minute on, removes it, on Windows
-    handing the disk the long form."""
+    later backup's sweep, an hour and a minute on, removes it, handing
+    the disk its path as `disk_path` gives it: on Windows the long form,
+    elsewhere, for this test, the path with a mark (a second leading
+    slash), so that a plain path fails it on every system."""
     folder = Path(qualcoder_db_path)
     backup = own_backup(folder, "20260101_000000", {"extra.txt": b"x"})
     before = contents(backup)
@@ -839,19 +841,16 @@ def test_exegete_ending_in_the_prune_leaves_the_backup_out_of_every_list(
     assert not os.path.lexists(backup)
     out_of_every_list(folder, backup, hidden)
 
-    handed = []
-    real_rmtree = shutil.rmtree
-
-    def rmtree(path, *args, **kwargs):
-        handed.append(os.fspath(path))
-        return real_rmtree(path, *args, **kwargs)
-
-    monkeypatch.setattr(shutil, "rmtree", rmtree)
+    if not WINDOWS:
+        monkeypatch.setattr(database, "disk_path",
+                            lambda path: "/" + os.fspath(path))
+    expected = database.disk_path(str(hidden))
+    handed = record_paths_handed(monkeypatch)
     later = datetime.now() + timedelta(
         seconds=database.BACKUP_LEFTOVER_SECONDS + 60)
     assert sweep_partial_backups(folder, now=later) == 1
     monkeypatch.undo()
-    assert handed == [database.disk_path(str(hidden))]
+    assert handed["rmtree"] == [expected] and handed["lexists"] == [expected]
     assert hidden_folders(folder.parent, folder.stem) == []
 
 

@@ -3321,47 +3321,40 @@ pseudonymisation is for".
 Text containing '#####', QualCoder's private-note marker, is refused before anything is written or backed up: what follows it is the researcher's own, not the assistant's to write.
 
 Args:
-    filename: Name for the new file (must include extension, e.g., "fieldnotes_04.txt").
-              The name rules rename_file applies: at most 200 bytes
-              in UTF-8; no control, line-separator or invisible
-              formatting characters; no '/', '\', '..' or ':'; no
-              name Windows cannot store (< > | ? * ", a trailing dot
-              or space, a device name such as CON or NUL.txt); and
-              not a name already in the project's documents folder
-              (compared ignoring letter case), which QualCoder would
-              take for this text's stored copy
-    content: The full text content of the file. A byte-order mark at
-             its start is removed, and its line endings are stored as
-             LF, as QualCoder 4.0's import does
+    filename: Name for the new file (must include extension, e.g.,
+        "fieldnotes_04.txt"). The name rules rename_file applies: at most
+        200 bytes in UTF-8; no control, line-separator or invisible
+        formatting characters; no '/', '\', '..' or ':'; no name Windows
+        cannot store (< > | ? * ", a trailing dot or space, a device name
+        such as CON or NUL.txt); and not a name already in the project's
+        documents folder (compared ignoring letter case), which QualCoder
+        would take for this text's stored copy
+    content: The file's full text. A byte-order mark at its start is
+        removed, and its line endings are stored as LF, as QualCoder 4.0's
+        import does
     memo: Optional memo/description for the file
-    case_name: Optional existing case to link the new file to.
-               The same name, once spaces and Unicode forms are
-               evened out, is used first; otherwise one that differs
-               only by letter case. When two or more cases match
-               (QualCoder allows "Dana" beside "dana") nothing is
-               imported and the candidates' ids are listed; link by
-               id afterwards with link_file_to_case. The answer's
-               case_match says which rule matched
+    case_name: Optional existing case to link the new file to. The same
+        name, once spaces and Unicode forms are evened out, is used first;
+        otherwise one that differs only by letter case. When two or more
+        cases match (QualCoder allows "Dana" beside "dana") nothing is
+        imported and the candidates' ids are listed; link by id afterwards
+        with link_file_to_case. The answer's case_match says which rule
+        matched
     apply_project_pseudonyms: Apply the project's own pseudonyms.json to
-               the text before storing it, as QualCoder does to every
-               text file it imports. Default false, so no name in the
-               text is replaced unless you ask.
-               Case-sensitive and whole-word, like QualCoder. It
-               differs from QualCoder's import in three ways. First,
-               QualCoder applies the entries one after another, so a
-               later entry can rewrite what an earlier one produced.
-               Exegete applies them all in one pass, longest form
-               first, so nothing it writes is replaced again. Second,
-               Exegete writes each pseudonym as it stands, while
-               QualCoder's import reads a backslash in a pseudonym as
-               an instruction. Third, Exegete refuses a list that
-               QualCoder would apply, and imports nothing, when an
-               entry begins or ends with a space, a name is shorter
-               than 2 characters or a pseudonym shorter than 3, a
-               name appears twice, or a pseudonym is also a name in
-               the list.
-               The result carries per-pseudonym counts and which
-               encoding pseudonyms.json was read in.
+        the text before storing it, as QualCoder does to every text file
+        it imports. Default false, so no name in the text is replaced
+        unless you ask. Case-sensitive and whole-word, like QualCoder. It
+        differs from QualCoder's import in three ways. First, Exegete
+        applies the entries in one pass, longest form first, so nothing it
+        writes is replaced again, while QualCoder applies them one after
+        another. Second, it writes each pseudonym as it stands, where
+        QualCoder's import reads a backslash in one as an instruction.
+        Third, it refuses a list that QualCoder would apply, and imports
+        nothing, when an entry begins or ends with a space, a name is
+        shorter than 2 characters or a pseudonym shorter than 3, a name
+        appears twice, or a pseudonym is also a name in the list. The
+        result carries per-pseudonym counts and which encoding
+        pseudonyms.json was read in.
 
 Returns:
     JSON with the new file's ID, name, and confirmation details

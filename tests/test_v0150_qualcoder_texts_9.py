@@ -421,8 +421,9 @@ class TestARestoreThatBringsBackAList:
 MAPPING_NOTE = (
     "The mapping you gave leads back from each pseudonym of this run to its "
     "name. So does every copy of the file's text from before the run, among "
-    "them the backup Exegete took first, every older backup and, for an "
-    "imported document, its stored copy in the project's documents/ folder. "
+    "them the backup Exegete took first, every older backup that holds the "
+    "file and, for an imported document, its stored copy in the project's "
+    "documents/ folder. "
     "Exegete does not keep the mapping unless asked. On this run it was "
     "saved into "
     "the project's own pseudonyms.json (3 entries added). Later imports "

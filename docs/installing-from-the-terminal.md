@@ -396,23 +396,18 @@ page on MCP in Claude Code, read on 4 November 2026). Before Claude
 Code 2.1.296, it kept 2,048. Exegete puts the rules a model must not miss
 within each description's first 2,048 characters. The few named
 exceptions reach the model through `read_brief` or the tools' answers.
-The descriptions are longer on Python 3.11 and 3.12 than on 3.13, which
-strips the indentation they are written with. On Python 3.13, 4 of
-`full`'s 78 descriptions are longer than 4,096 characters
-(`pseudonymise_source`, about 18,000; `start_coding_session`, about
-6,000; `search_files`, about 4,800; `record_suggestions`, about 4,500).
-On 3.11 and 3.12, the same four are, at about 19,000, 6,300, 5,200 and
-4,700.
+Four of `full`'s 78 descriptions are longer than 4,096 characters
+(`pseudonymise_source`, about 19,000; `start_coding_session`, about
+6,100; `search_files`, about 4,900; `record_suggestions`, about 4,500).
 [docs/snapshot/sizes.json](snapshot/sizes.json) gives each
-description's exact length on Python 3.13.
+description's exact length.
 `pseudonymise_source` is longer than 16,384, so its last part, its
-sentence on the lock file included, is cut even through tool search,
-and a longer part on 3.11 and 3.12.
+sentence on the lock file included, is cut even through tool search.
 Claude Code's own setting `CLAUDE_CODE_MAX_MCP_DESCRIPTION_LENGTH`
 (version 2.1.280 or later) replaces both limits with one figure:
-20000, for example, lets every Exegete description through whole on
-any Python, for every server's tools, at the cost of more of the
-model's context when a long description loads. A figure under 16,384
+20000, for example, lets every Exegete description through whole, for
+every server's tools, at the cost of more of the model's context when
+a long description loads. A figure under 16,384
 lowers the limit for tools found through tool search, so it cuts more,
 not less. It is Claude Code's setting, not Exegete's: set it
 where Claude Code reads its own environment (in the shell before

@@ -41,3 +41,8 @@ Python 3.13 with the libraries in `uv.lock`:
   set_project_ai_coder_name and list_backups. As Python 3.11 and 3.12
   keep it, pseudonymise_source's description is 19,956 characters, 67
   more than before, within the 20,000 the Terminal guide gives.
+- Python 3.11 and 3.12 now send the descriptions as 3.13 does, without
+  the four spaces they kept before every line but the first: there
+  `full` measures 210,033 characters, where it was 221,045, `core`
+  76,476, where it was 80,536, and pseudonymise_source's description
+  18,784, where it was 19,956. Nothing changes on 3.13.

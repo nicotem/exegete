@@ -695,10 +695,11 @@ def _with_paragraphs(*blocks: str, before: str, gap: str = "\n\n"):
     immediately before the first line that starts with `before` once
     its spaces are set aside; a description with no such line raises at
     import. Each of their lines but the empty ones takes that line's
-    indentation: four spaces before Python 3.13, none on 3.13, as
-    _with_description gives the description. No other character of the
-    description changes, so it is byte for byte what it was with the
-    paragraphs typed in (tests/test_served_texts.py). _with_guidance
+    indentation, which is none in the descriptions of texts.py, written
+    flush and set as written on every Python by _with_description. No
+    other character of the description changes, so it is byte for byte
+    what it was with the paragraphs typed in
+    (tests/test_served_texts.py). _with_guidance
     indents nothing and rewrites the description's end, so this
     decorator sits below it, above _with_description, the innermost,
     and _with_guidance reads the description it read before.
@@ -725,7 +726,7 @@ def _with_paragraphs(*blocks: str, before: str, gap: str = "\n\n"):
     return deco
 
 
-def _with_description(text: str, margin: Optional[str] = None):
+def _with_description(text: str):
     """Give a tool, prompt or resource its description, written in
     texts.py as <ITS NAME IN CAPITALS>_DESCRIPTION, before registration.
 
@@ -734,28 +735,18 @@ def _with_description(text: str, margin: Optional[str] = None):
     which read and change what it sets. A function that still has a
     docstring raises at import: it would have two descriptions.
 
-    The descriptions were these functions' docstrings until 0.15.5. Each
-    is written in texts.py flush, as Python 3.13 compiles a docstring,
-    stripping its indentation, and fn.__doc__ is the text as the running
-    Python compiled the docstring: on 3.13 and later the text as written;
-    before 3.13, `margin` (four spaces, a function body's indentation)
-    before every line after the first but the empty ones, and before an
-    empty last line, where the closing quotes stood. A test gives
-    `margin` to check either form on any Python.
+    The text is set as written, flush, on every Python (the owner's
+    ruling of 17 November 2026). Until 0.15.5 the descriptions were these
+    functions' docstrings, which Python 3.11 and 3.12 served with the
+    four spaces of their indentation before every line after the first,
+    and 3.13 without them.
     """
-    if margin is None:
-        margin = "" if sys.version_info >= (3, 13) else "    "
-    first, *rest = text.split("\n")
-    compiled = "\n".join([first] + [
-        margin + line if line or number == len(rest) else line
-        for number, line in enumerate(rest, start=1)])
-
     def deco(fn):
         if fn.__doc__ is not None:
             raise ValueError(
                 f"{fn.__name__}: a docstring and a description in texts.py; "
                 f"give it the description alone")
-        fn.__doc__ = compiled
+        fn.__doc__ = text
         return fn
     return deco
 

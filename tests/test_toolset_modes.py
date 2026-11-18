@@ -367,8 +367,8 @@ class TestThePublishedSchemaBudget:
     tool, serialised together with `json.dumps` defaults), is measured by
     scripts/served_texts.py on Python 3.13 with the libraries of the
     lock, and kept in docs/snapshot/sizes.json, which
-    tests/test_served_texts.py holds to the code: exactly on 3.13, and
-    on 3.10 to 3.12 by the per cent the documents give. The documents
+    tests/test_served_texts.py holds to the code exactly on 3.11 to 3.13,
+    which serve the same descriptions since 0.15.5. The documents
     round the figure, and tests/test_v0151_facts.py holds theirs within
     five per cent. What stays here: each released CHANGELOG entry states
     one measurement of its own, which a later release never rewrites,

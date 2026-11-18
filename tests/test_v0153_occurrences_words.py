@@ -104,8 +104,8 @@ def test_the_paragraph_on_two_people_gives_the_second_run():
     named = [sentence for sentence in re.split(r"(?<=\.) ", paragraph)
              if all(name in sentence for name in ARGUMENTS)]
     assert len(named) == 1 and re.search(r"\bsecond run\b", named[0])
-    # and ends within what Claude Code keeps, indentation and all on
-    # 3.11 and 3.12
+    # and ends within what Claude Code keeps, as served (the same on
+    # every Python since 0.15.5; until then indented on 3.11 and 3.12)
     raw_start = description.index(PARAGRAPH)
     last = max(description.index(name, raw_start) for name in ARGUMENTS)
     end = description.index(".", last) + 1

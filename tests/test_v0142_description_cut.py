@@ -19,8 +19,9 @@ v0.15's. What this file pins:
 - every rule listed below sits wholly within the first 2,048 characters
   of every description that carries it, in every tool set (full and
   core; lifecycle too until 0.15.0), on the interpreter running the
-  suite (3.10 to 3.12 keep a docstring's indentation, so the same rule
-  sits further in there, and CI runs 3.10 and 3.13);
+  suite (until 0.15.5, 3.10 to 3.12 kept a docstring's indentation, so
+  the same rule sat further in there; since then every Python serves
+  the same descriptions);
 - the rules that do not fit are listed, each with its reason, and are
   checked to be past the cut, so the list cannot rot;
 - which tools carry each rule, so a rule dropped from a tool is seen;

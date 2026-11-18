@@ -17,16 +17,16 @@ decorator. They stand in the order they had in server.py, under copies
 of the section headings they stood under there, each constant with the
 comments that stood above it.
 
-A description is written flush, with no indentation, as Python 3.13
-serves it. The texts of Exegete's other modules stay in those modules.
-A text made from values when a tool runs stays in its function in
-server.py, as do the help topics and the prompts' texts, and so do the
-texts no assistant receives, those of the log and of standard error. A
-text here may be built from another, or from a value of another module
-of Exegete (names.SERVER_NAME, a limit of occurrences.py), never from
-one of server.py's, since server.py imports this module. The one value
-here that is not a text, the tools that took create_backup, is here
-because that argument's refusals are built from it.
+A description is written flush, with no indentation, as Exegete serves
+it on every Python. The texts of Exegete's other modules stay in those
+modules. A text made from values when a tool runs stays in its function
+in server.py, as do the help topics and the prompts' texts, and so do
+the texts no assistant receives, those of the log and of standard error.
+A text here may be built from another, or from a value of another
+module of Exegete (names.SERVER_NAME, a limit of occurrences.py), never
+from one of server.py's, since server.py imports this module. The one
+value here that is not a text, the tools that took create_backup, is
+here because that argument's refusals are built from it.
 """
 
 from typing import Dict, Tuple

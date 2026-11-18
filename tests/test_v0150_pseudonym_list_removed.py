@@ -441,9 +441,9 @@ class TestInstall:
         install = _flat(_read(GUIDE))
         # v0.15.1: 79 tools since three were removed, as announced in
         # 0.14; v0.15.2: the counts are the snapshot's
-        # (tests/tool_counts.py), and the sizes any figure
-        assert (f"On Python 3.13, 4 of `full`'s {FULL_TOOLS} descriptions"
-                ) in install
+        # (tests/tool_counts.py), and the sizes any figure; v0.15.5: the
+        # same four on every Python
+        assert f"Four of `full`'s {FULL_TOOLS} descriptions" in install
         assert f"`full` (default) registers {FULL_TOOLS} tools" in install
         assert re.search(re.escape(
             f"Exegete offers {FULL_TOOLS} tools by default, and the "
@@ -454,8 +454,7 @@ class TestInstall:
         server._apply_toolset("full")
         long = [t.name for t in _listed().values()
                 if len(t.description or "") > 4096]
-        if sys.version_info[:2] == (3, 13):
-            assert len(long) == 4
+        assert len(long) == 4
 
 
 class TestToolsReadmePrivacy:

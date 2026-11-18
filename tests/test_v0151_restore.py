@@ -69,8 +69,9 @@ PREVIEW_PARAGRAPH = (
 
 
 def without_the_preview_paragraph(description: str) -> str:
-    """restore_backup's description as served (on 3.10 to 3.12 with its
-    indentation) with this piece's paragraph taken out."""
+    """restore_backup's description as served (indented, as 3.10 to
+    3.12 served it until 0.15.5, or not) with this piece's paragraph
+    taken out."""
     words = [re.escape(word) for word in PREVIEW_PARAGRAPH.split()]
     found = re.search(r"\n[ \t]*\n[ \t]*" + r"\s+".join(words),
                       description)

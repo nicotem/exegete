@@ -240,17 +240,21 @@ class TestClaudeCodesLimits:
                       "settings to Exegete"):
             assert words in long, words
 
-    @pytest.mark.skipif(sys.version_info[:2] != (3, 13),
-                        reason="the figures are Python 3.13's")
     def test_installs_figures_are_measured(self):
+        """On every Python, which serves the same descriptions since
+        0.15.5 (the owner's ruling of 17 November 2026; until then the
+        figures were Python 3.13's, and this test ran there alone)."""
         served = _served("full")
         over = sorted(((len(d), name) for name, d in served.items()
                        if len(d) > 4096), reverse=True)
         assert len(served) == FULL_TOOLS
         install = _flat(_read("docs/installing-from-the-terminal.md"))
-        found = re.search(rf"{len(over)} of `full`'s {len(served)} "
-                          rf"descriptions are longer than 4,096 characters "
-                          rf"\(([^)]*)\)", install)
+        # the count as a figure or a word, "Four" opening the sentence
+        word = ("no", "one", "two", "three", "four", "five", "six", "seven",
+                "eight", "nine")[len(over)]
+        found = re.search(rf"\b(?:{len(over)}|(?i:{word})) of `full`'s "
+                          rf"{len(served)} descriptions are longer than "
+                          rf"4,096 characters \(([^)]*)\)", install)
         assert found, install
         # v0.15.2: each rounded, within five per cent of its length; the
         # exact lengths are in docs/snapshot/sizes.json

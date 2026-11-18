@@ -9,17 +9,16 @@ templates, the guidance texts) and read_brief's answer, with the sizes
 the documents round; docs/snapshot/ holds the render as it was last
 written and reviewed. A change to any of these texts fails here until
 the snapshot is written again (`python scripts/served_texts.py write`,
-on Python 3.13) and its diff read. Python 3.13 strips docstring
-indentation that earlier versions keep, so the comparison is exact on
-3.13 and sets white space aside on any other version, where the
-documents' "about five per cent more" is held instead.
+on Python 3.13) and its diff read. The comparison is exact on Python
+3.11 to 3.13, which serve the same texts (until 0.15.5 the descriptions
+were docstrings, which 3.11 and 3.12 kept indented), and sets white
+space aside on a newer version, where the snapshot is not measured.
 
 Also here: the decorator that puts a paragraph several descriptions
 share back into each of them, and each such paragraph typed once.
 """
 import ast
 import importlib.util
-import json
 import os
 import re
 import shutil
@@ -49,8 +48,14 @@ def script():
     return module
 
 
-def _exact(script):
+def _written_here(script):
+    """Whether the snapshot is written on this Python: on 3.13 alone."""
     return sys.version_info[:2] == script.EXACT_ON
+
+
+def _exact(script):
+    """Whether it is compared exactly on this Python: on 3.11 to 3.13."""
+    return script.exact_on(sys.version_info)
 
 
 def test_the_committed_snapshot_is_what_the_code_serves(script):
@@ -210,7 +215,7 @@ def test_two_runs_write_the_same_files(script, tmp_path):
     outs = [tmp_path / "first", tmp_path / "second"]
     runs = [_write(out, home, seed, tmp_path)
             for out, seed in zip(outs, (1, 2))]
-    if not _exact(script) or script.library_refusal():
+    if not _written_here(script) or script.library_refusal():
         # Another Python, or other releases of mcp or pydantic than the
         # lock's: nothing written
         for run, out in zip(runs, outs):
@@ -255,7 +260,7 @@ def test_write_stops_on_other_libraries(script, monkeypatch, capsys,
     out = tmp_path / "out"
     assert script.main(["write", "--out", str(out)]) == 2
     assert not out.exists()
-    if _exact(script):
+    if _written_here(script):
         assert reason in capsys.readouterr().err
 
 
@@ -353,38 +358,23 @@ def test_where_the_snapshot_is_named_it_is_bounded():
     assert {"README.md", "TOOLS.md"} <= found, found
 
 
-NUMBERS = ("one", "two", "three", "four", "five", "six", "seven", "eight",
-           "nine", "ten")
-# Where the documents give the per cent the earlier versions add (3.10
-# to 3.12, or 3.11 and 3.12 once 3.10 is no longer supported)
-PER_CENT = {"README.md": r"about (\w+) per cent more on 3\.1[01] "
-                         r"(?:to|and) 3\.12",
-            "TOOLS.md": r"definitions measure about (\w+) per cent more"}
+@pytest.mark.parametrize("version, exact", [
+    ((3, 10), False), ((3, 11), True), ((3, 12), True), ((3, 13), True),
+    ((3, 14), False)])
+def test_the_check_is_exact_from_3_11_to_3_13(script, version, exact):
+    """Python 3.11 and 3.12 serve each description as 3.13 does, the
+    owner's ruling of 17 November 2026, so the snapshot is held to them
+    exactly, and so the documents give one size for every Python; the
+    suite's jobs on 3.11 hold it."""
+    assert script.exact_on(version + (0, "final", 0)) is exact
 
 
-@pytest.mark.skipif(sys.version_info[:2] >= (3, 13),
-                    reason="the per cent is Python 3.10 to 3.12's")
-def test_the_per_cent_below_3_13_is_the_documents(script):
-    sizes = json.loads(script.committed()["sizes.json"])
-    stated = set()
-    for name, pattern in PER_CENT.items():
-        text = (REPO / name).read_text(encoding="utf-8")
-        found = re.search(pattern, " ".join(text.replace("\n>", " ").split()))
-        assert found, name
-        stated.add(NUMBERS.index(found.group(1)) + 1)
-    assert len(stated) == 1, stated
-    for mode in script.SETS:
-        now = script.measure(script.served(mode))[
-            "tool_definitions_characters"]
-        then = sizes[mode]["tool_definitions_characters"]
-        assert round(100 * (now / then - 1)) in stated, (mode, now, then)
-
-
-# The decorator that puts shared paragraphs back into docstrings. A
-# docstring as the compiler leaves it: its first line flush, the others
-# indented by four spaces before Python 3.13 and by none on 3.13, which
-# strips the indentation. Both forms are built as strings, so that both
-# are checked on every version.
+# The decorator that puts shared paragraphs back into descriptions,
+# checked on a description in either form: flush, as texts.py writes
+# every one and Exegete serves it on every Python, and indented by four
+# spaces after its first line, as a docstring's lines were before Python
+# 3.13. Both forms are built as strings, so that both are checked on
+# every version.
 FORMS = {"indented": "    ", "flush": ""}
 SHARED = "Words several tools share,\nwritten once."
 OTHER = "A second paragraph\nthey share."

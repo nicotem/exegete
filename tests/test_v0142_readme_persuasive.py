@@ -1047,8 +1047,8 @@ def test_the_assistants_table():
 def _measured():
     """Each set's tool count, as docs/snapshot/sizes.json gives it
     (v0.15.2, the snapshot: the sizes in the table are held by
-    tests/test_v0151_facts.py, and the per cent on Python 3.11 and 3.12
-    by tests/test_served_texts.py)."""
+    tests/test_v0151_facts.py; since 0.15.5 they are the same on Python
+    3.11 and 3.12, which tests/test_served_texts.py holds)."""
     sizes = json.loads(_read("docs/snapshot/sizes.json"))
     return {mode: sizes[mode]["tool_count"] for mode in ("full", "core")}
 
@@ -1091,17 +1091,17 @@ def test_the_tool_set_table():
         rows["core"][4]
     assert "at least 32k for the core toolset" in _flat(_read(
         "docs/installing-from-the-terminal.md"))
-    # the sentence under it, with the interpreters and the per cent
+    # the sentence under it, with the interpreter and the libraries
     # (v0.14.2, the README's second round of checks: shorter, the same
-    # facts; v0.15.2: Python 3.11 or newer)
+    # facts; v0.15.2: Python 3.11 or newer; v0.15.5: no per cent more on
+    # 3.11 and 3.12, which serve the same descriptions)
     flat = _flat(section)
     # (v0.15.2, the opening texts: the host the subject)
     # (the readability reading: what is measured a sentence of its own)
     assert ("A host sends every tool's definition (name, description and "
             "arguments) with each request, using that much of a model's "
             "context. The figures were measured on Python 3.13 with the "
-            "libraries in `uv.lock`, at four characters a token, and are "
-            "about five per cent more on 3.11 and 3.12.") in flat
+            "libraries in `uv.lock`, at four characters a token.") in flat
     # and where the exact figures are (v0.15.2, the snapshot)
     # (its fix round 1: what the folder holds is bounded, and the
     # answers, which carry the project's texts, are said not to be in it)

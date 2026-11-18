@@ -449,8 +449,10 @@ class TestTheChangelog:
             in entry
 
     def test_install_s_figures_for_start_coding_session(self, served):
-        """INSTALL.md gives the descriptions past 4,096 characters, on
-        Python 3.13 and on 3.10 to 3.12; start_coding_session's moved."""
+        """The Terminal guide gives the descriptions past 4,096
+        characters; start_coding_session's moved. (Until 0.15.5 it gave
+        them on Python 3.13 and on 3.10 to 3.12; since then every Python
+        serves the same descriptions.)"""
         # v0.15.2, the snapshot: INSTALL rounds them, each held within
         # five per cent of the length here (the exact lengths are in
         # docs/snapshot/sizes.json)
@@ -462,21 +464,9 @@ class TestTheChangelog:
             length = len(served[name])
             return abs(int(stated.replace(",", "")) - length) \
                 <= SIZE_TOLERANCE * length
-        if sys.version_info >= (3, 13):
-            found = re.search(r"`start_coding_session`, about ([\d,]+);",
-                              install)
-            assert found and near(found.group(1), "start_coding_session")
-        else:
-            # v0.15.1, the removed arguments: import_text_file, without
-            # owner, no longer passes 4,096 there, so the four are all
-            # (tests/test_v0151_removed_arguments.py)
-            found = re.search(r"the same four are, at about ([\d,]+), "
-                              r"([\d,]+), ([\d,]+) and ([\d,]+)\.", install)
-            assert found
-            for stated, name in zip(found.groups(), (
-                    "pseudonymise_source", "start_coding_session",
-                    "search_files", "record_suggestions")):
-                assert near(stated, name), name
+        found = re.search(r"`start_coding_session`, about ([\d,]+);",
+                          install)
+        assert found and near(found.group(1), "start_coding_session")
 
     def test_the_measurement(self):
         measured = _flat(_unreleased()[_unreleased().index("### Measured"):])

@@ -21,7 +21,6 @@ The fixtures and helpers are the flagship's own
 `test_v0153_occurrences_page.py`).
 """
 
-import ast
 import asyncio
 import json
 import re
@@ -586,48 +585,10 @@ class TestTheNamesListsPathWithholdsAlike:
 
 
 # The Terminal guide's figure for Claude Code's setting, which it says
-# lets every Exegete description through whole on any Python
+# lets every Exegete description through whole
 GUIDE = REPO / "docs" / "installing-from-the-terminal.md"
 FIGURE = re.compile(r"(\d[\d,]*), for example, lets every Exegete "
-                    r"description through whole on any Python")
-
-
-def _as_311_keeps_it(name):
-    """A tool's description as Python 3.11 and 3.12 keep it, rebuilt
-    from the source: its text in texts.py (v0.15.5; until then the
-    function's docstring) written as the docstring of a function indented
-    by four spaces, with the indentation Python's parser keeps on every
-    version and 3.13 strips when it compiles, never through
-    _with_description; and the shared paragraphs its _with_paragraphs
-    line places, as that decorator places them
-    (tests/test_served_texts.py reads the same lines;
-    tests/test_texts_module.py writes the docstring so too)."""
-    source = (REPO / "src" / "exegete" / "texts.py").read_text(
-        encoding="utf-8")
-    literal = next(
-        ast.get_source_segment(source, item.value)
-        for item in ast.parse(source).body if isinstance(item, ast.Assign)
-        and item.targets[0].id == f"{name.upper()}_DESCRIPTION")
-    first, *rest = literal.split("\n")
-    written = "\n".join([first] + ["    " + line if line else ""
-                                   for line in rest])
-    docstring = ast.parse("def stub():\n    " + written + "\n").body[0]
-    tree = ast.parse((REPO / "src" / "exegete" / "server.py").read_text(
-        encoding="utf-8"))
-    node = next(item for item in ast.walk(tree)
-                if isinstance(item, ast.FunctionDef) and item.name == name)
-
-    def stub():
-        pass
-    stub.__doc__ = ast.get_docstring(docstring, clean=False)
-    for deco in node.decorator_list:
-        if isinstance(deco, ast.Call) and getattr(
-                deco.func, "id", "") == "_with_paragraphs":
-            blocks = [getattr(server, arg.id) for arg in deco.args]
-            keywords = {item.arg: ast.literal_eval(item.value)
-                        for item in deco.keywords}
-            server._with_paragraphs(*blocks, **keywords)(stub)
-    return stub.__doc__
+                    r"description through whole\b")
 
 
 class TestTheTexts:
@@ -649,27 +610,23 @@ class TestTheTexts:
         assert "page" not in QualcoderDatabase.PSEUDONYMISE_OCCURRENCES_NEXT
 
     def test_the_description_fits_the_guides_figure(self):
-        """pseudonymise_source's description, the longest, as Python 3.11
-        keeps it, and every description as this Python serves it, is no
-        longer than the figure the Terminal guide gives for Claude Code's
-        setting, read from the guide. Rebuilt from the source, so that it
-        holds on every Python the suite runs on."""
+        """Every description as Exegete serves it, the same on every
+        Python since 0.15.5 (the owner's ruling of 17 November 2026: 3.11
+        and 3.12 no longer add the four spaces a line that they kept
+        while the descriptions were docstrings), is no longer than the
+        figure the Terminal guide gives for Claude Code's setting, read
+        from the guide; pseudonymise_source's is the longest."""
         guide = " ".join(GUIDE.read_text(encoding="utf-8").split())
         found = FIGURE.search(guide)
         assert found, (
             "The figure is looked for in docs/installing-from-the-terminal"
             ".md, in its sentence on Claude Code's setting "
             "CLAUDE_CODE_MAX_MCP_DESCRIPTION_LENGTH: \"<figure>, for "
-            "example, lets every Exegete description through whole on any "
-            "Python\". That sentence has changed: give this test its new "
-            "words.")
+            "example, lets every Exegete description through whole\". "
+            "That sentence has changed: give this test its new words.")
         figure = int(found.group(1).replace(",", ""))
-        rebuilt = _as_311_keeps_it("pseudonymise_source")
         served = {tool.name: tool.description or ""
                   for tool in asyncio.run(server.mcp.list_tools())}
-        if sys.version_info < (3, 13):
-            assert rebuilt == served["pseudonymise_source"]
-        assert len(rebuilt) <= figure, len(rebuilt)
         assert all(len(text) <= figure for text in served.values())
         assert max(served, key=lambda name: len(served[name])) == \
             "pseudonymise_source"

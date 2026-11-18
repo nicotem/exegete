@@ -91,8 +91,9 @@ def _read(name):
 
 def without_the_files_paragraph(description):
     """get_current_project's description with this piece's paragraph
-    taken out (on 3.10 to 3.12 the paragraph keeps its indentation), so
-    that a test can see the field is named in that paragraph alone."""
+    taken out (indented, as 3.10 to 3.12 served it until 0.15.5, or
+    not), so that a test can see the field is named in that paragraph
+    alone."""
     return re.sub(r"[ ]*Also lists the files Exegete keeps for this project "
                   r"in its Exegete\n.*?never their\n[ ]*contents\.\n\n", "",
                   description, count=1, flags=re.S)

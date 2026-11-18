@@ -20,12 +20,14 @@ review the diff. Left out: the version in the handshake, so that a new
 release changes nothing here, and the help tool's answers, which are
 answers to a call.
 
-Python 3.13 strips the indentation of docstrings that earlier versions
-keep, and the schemas come from the mcp and pydantic libraries, so
-`write` runs on Python 3.13 alone, with the releases of both that
-uv.lock gives; elsewhere it writes nothing. `check` runs on any version:
-exactly on 3.13, and on any other with white space set aside and the
-tool counts alone of sizes.json.
+The schemas come from the mcp and pydantic libraries, so `write` runs on
+Python 3.13 alone, with the releases of both that uv.lock gives;
+elsewhere it writes nothing. Exegete serves the same texts on Python
+3.11, 3.12 and 3.13: until 0.15.5 the descriptions were docstrings,
+which 3.11 and 3.12 kept indented. `check` runs on any version: exactly
+on 3.11 to 3.13, and on a newer one, where the snapshot is not
+measured, with white space set aside and the tool counts alone of
+sizes.json.
 
 Before importing Exegete, the script points HOME, USERPROFILE, TMPDIR
 and UV_CACHE_DIR at a new temporary folder, removed at exit, and drops
@@ -57,7 +59,10 @@ PINNED = ("HOME", "USERPROFILE", "TMPDIR", "UV_CACHE_DIR")
 DROPPED = ("EXEGETE_", "QUALCODER_")
 # The start of the name of the folder the environment is pinned to
 FOLDER_PREFIX = "exegete-served-texts-"
+# The Python the snapshot is written on, and the oldest Exegete supports:
+# from one to the other the check is exact
 EXACT_ON = (3, 13)
+EXACT_FROM = (3, 11)
 LIBRARIES = ("mcp", "pydantic")
 MEASURED_ON = "Python 3.13, the libraries of uv.lock"
 COUNTED = ("Characters, as Python counts them. tool_definitions_characters: "
@@ -267,6 +272,12 @@ def compare(files, written, exact):
     return found
 
 
+def exact_on(version):
+    """Whether the check is exact on this Python version: from 3.11 to
+    3.13, which serve the same texts."""
+    return EXACT_FROM <= tuple(version[:2]) <= EXACT_ON
+
+
 def refusal(command, version):
     """Why `command` cannot run on this Python version, or None."""
     if command == "write" and tuple(version[:2]) != EXACT_ON:
@@ -343,8 +354,7 @@ def main(argv=None):
                                          newline="\n")
         print(f"Wrote {', '.join(files)} in {args.out}.", file=sys.stderr)
         return 0
-    found = compare(files, committed(),
-                    tuple(sys.version_info[:2]) == EXACT_ON)
+    found = compare(files, committed(), exact_on(sys.version_info))
     print("\n".join(found) or "The snapshot is what Exegete serves.")
     return 1 if found else 0
 

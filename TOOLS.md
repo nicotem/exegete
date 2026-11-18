@@ -1144,11 +1144,9 @@ declares, and each tool's own description says what each one does.
 > Meant for local models, and optional elsewhere. An unknown value
 > stops Exegete at startup, with a message giving the valid values. Measured on Python 3.13 with the libraries in
 > `uv.lock` (the serialised tool definitions: name, description and
-> input schema), the definitions run to about 211,000 characters for
+> input schema), the definitions run to about 210,000 characters for
 > `full`, roughly 53k tokens at four characters per token, and about
-> 76,000 characters for `core`, roughly 19k tokens. On Python 3.11 and
-> 3.12 the same definitions measure about five per cent more, because
-> those interpreters keep the docstring indentation that 3.13 strips.
+> 76,000 characters for `core`, roughly 19k tokens.
 > [docs/snapshot/](docs/snapshot/) gives the exact figures, in
 > `sizes.json`, and what Exegete sends the assistant before a project
 > is open, with the brief, written again by `scripts/served_texts.py`

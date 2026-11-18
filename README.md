@@ -519,10 +519,10 @@ EPUB, with libraries under the AGPL: INSTALL.md says more).
 | `full` | 78: every tool, creating a project included | about 210,000 characters, 53k tokens | hosted models, such as Claude or OpenAI's | every route |
 | `core` | 26: reading, searching, coding with your approval, memos, backups and undoing changes, without creating a project or bringing documents in | about 76,000 characters, 19k tokens | local models (LM Studio, a context of 32k or more) | none: set `EXEGETE_TOOLSET=core`, or the extension's switch "Limit Exegete to its small tool set" |
 
-A host sends every tool's definition (name, description and arguments)
-with each request, using that much of a model's context. The figures
-were measured on Python 3.13 with the libraries in `uv.lock`, at four
-characters a token, and are about five per cent more on 3.11 and 3.12.
+A host sends every tool's definition (name, description and
+arguments) with each request, using that much of a model's context.
+The figures were measured on Python 3.13 with the libraries in
+`uv.lock`, at four characters a token.
 [docs/snapshot/](https://github.com/nicotem/exegete/tree/main/docs/snapshot)
 gives the exact figures, and what Exegete sends the assistant before a
 project is open, the brief included. It leaves out the tools' answers,
@@ -566,8 +566,8 @@ which carry your project's texts. `lifecycle`, the earlier name of
   the rules that matter come within its first 2,048 characters, a few
   named exceptions apart (the Terminal guide gives Claude Code's
   figures). One description is longer than 16,384 characters,
-  `pseudonymise_source`'s (about 18,000 on Python 3.13, about 19,000
-  on 3.11 and 3.12): [the guide's section on Claude Code](https://github.com/nicotem/exegete/blob/main/docs/installing-from-the-terminal.md#claude-code) says how to let it through whole.
+  `pseudonymise_source`'s, at about 19,000:
+  [the guide's section on Claude Code](https://github.com/nicotem/exegete/blob/main/docs/installing-from-the-terminal.md#claude-code) says how to let it through whole.
 - **Resources** (`exegete://...`) and prompts. The command
   `exegete --check-transition` lists what the change of name from
   qualcoder-mcp left behind.

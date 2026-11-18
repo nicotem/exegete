@@ -2,11 +2,14 @@
 """v0.15.0, the whole-branch review, round 2: what its fixes pin that no
 other test file holds.
 
-1. Claude Code's limits on every Python: INSTALL.md gives the figures for
-   Python 3.10 to 3.12 beside 3.13's, a figure for Claude Code's setting
-   that lets the longest description through on the interpreter running
-   the test, and the warning on a figure under 16,384; the README and the
-   CHANGELOG give the one description past 16,384 on both.
+1. Claude Code's limits on every Python: the Terminal guide gives a
+   figure for Claude Code's setting that lets the longest description
+   through on the interpreter running the test, and the warning on a
+   figure under 16,384; the README and the CHANGELOG give the one
+   description past 16,384. (Until 0.15.5 the guide and the README gave
+   figures for Python 3.10 to 3.12 beside 3.13's; since then every
+   Python serves the same descriptions, the owner's ruling of 17
+   November 2026.)
 2. No note Exegete gives sends the researcher to QualCoder as the only
    way: the REFI-QDA export's, the journals' and the rename back's, in
    the descriptions, the answers' constants and the documents; and the
@@ -31,8 +34,6 @@ import json
 import re
 import sys
 from pathlib import Path
-
-import pytest
 
 REPO = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO / "src"))
@@ -121,8 +122,7 @@ class TestClaudeCodesLimitsOnEveryPython:
         long = _long_paragraph()
         found = re.search(
             r"replaces both limits with one figure: (\d+), for example, "
-            r"lets every Exegete description through whole on any Python",
-            long)
+            r"lets every Exegete description through whole\b", long)
         assert found, long
         figure = int(found.group(1))
         for mode in ("full", "core"):
@@ -138,47 +138,13 @@ class TestClaudeCodesLimitsOnEveryPython:
         # v0.15.1: measured again, create_backup's line in 22
         # descriptions and pseudonymise_source's sentence on its backup
         # (v0.15.2: Python 3.11 or newer; rounded, the exact lengths in
-        # docs/snapshot/sizes.json)
-        assert ("The descriptions are longer on Python 3.11 and 3.12 than "
-                "on 3.13, which strips the indentation they are written "
-                "with.") in long
+        # docs/snapshot/sizes.json; v0.15.5: the same on every Python,
+        # so the figures for 3.11 and 3.12 and the sentence on why they
+        # were longer went, tests/test_v0150_wb_fix_r1.py holding the
+        # figures on every Python)
         # (v0.15.2: the link as the Terminal guide, in docs/, writes it)
         assert ("[docs/snapshot/sizes.json](snapshot/sizes.json) gives "
-                "each description's exact length on Python 3.13.") in long
-
-    @pytest.mark.skipif(not (3, 11) <= sys.version_info[:2] < (3, 13),
-                        reason="the figures are Python 3.11 and 3.12's")
-    def test_installs_figures_on_3_10_to_3_12(self):
-        served = _served("full")
-        over = sorted(((len(d), name) for name, d in served.items()
-                       if len(d) > 4096), reverse=True)
-        lengths = {name: length for length, name in over}
-        long = _long_paragraph()
-        said = re.search(r"On Python 3\.13, 4 of `full`'s \d+ descriptions "
-                         r"are longer than 4,096 characters \(([^)]*)\)",
-                         long).group(1)
-        four = re.findall(r"`(\w+)`", said)
-        assert len(four) == 4 and all(name in lengths for name in four)
-        others = [name for length, name in over if name not in four]
-        # v0.15.1, the removed arguments: import_text_file, without owner,
-        # no longer passes 4,096 on 3.10 to 3.12, so the same four are all
-        # (tests/test_v0151_removed_arguments.py)
-        assert others == [], others
-        # v0.15.2: each rounded, within five per cent of the length here;
-        # a sentence of its own in the Terminal guide, so "On" or "on"
-        then = re.search(r"[Oo]n 3\.11 and 3\.12, the same four are, at about "
-                         r"([\d,]+), ([\d,]+), ([\d,]+) and ([\d,]+)\.",
-                         long)
-        assert then, long
-        for name, figure in zip(four, then.groups()):
-            stated = int(figure.replace(",", ""))
-            assert abs(stated - lengths[name]) <= SIZE_TOLERANCE * lengths[
-                name], (name, stated, lengths[name])
-        longest, name = over[0]
-        assert name == "pseudonymise_source" and longest > 16384
-        assert ("so its last part, its sentence on the lock file included, "
-                "is cut even through tool search, and a longer part on 3.11 "
-                "and 3.12") in long
+                "each description's exact length.") in long
 
     def test_the_readme_and_the_changelog_name_the_longest(self):
         served = _served("full")
@@ -186,15 +152,14 @@ class TestClaudeCodesLimitsOnEveryPython:
         length = len(served[name])
         assert name == "pseudonymise_source" and length > 16384
         readme = _flat(_read("README.md"))
-        # v0.15.2: the README rounds its length on each Python, held here
-        # within five per cent of the length on the Python running the
-        # test; the exact one is in docs/snapshot/sizes.json
-        found = re.search(r"`pseudonymise_source`'s \(about ([\d,]+) on "
-                          r"Python 3\.13, about ([\d,]+) on 3\.11 and "
-                          r"3\.12\):", readme)
+        # v0.15.2: the README rounds its length, held here within five
+        # per cent of the length on the Python running the test; the
+        # exact one is in docs/snapshot/sizes.json (v0.15.5: one length,
+        # the same on every Python)
+        found = re.search(r"`pseudonymise_source`'s, at about ([\d,]+):",
+                          readme)
         assert found, readme
-        stated = int(found.group(1 if sys.version_info[:2] >= (3, 13)
-                                 else 2).replace(",", ""))
+        stated = int(found.group(1).replace(",", ""))
         assert abs(stated - length) <= SIZE_TOLERANCE * length, stated
         # 0.15.1's own figures, in its Measured part, as history
         log = _read("CHANGELOG.md")

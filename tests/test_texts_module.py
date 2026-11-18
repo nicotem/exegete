@@ -21,8 +21,7 @@ docs/snapshot/, unchanged by either, shows that every byte served stayed
    texts.py, through _with_description, its innermost decorator, with no
    docstring of its own; three give `description=`, which FastMCP takes
    in place of the docstring;
-5. _with_description gives the text as the running Python compiles it
-   written as a docstring, and either form on any Python.
+5. _with_description gives the text as written, on every Python.
 """
 import ast
 import importlib.util
@@ -213,85 +212,41 @@ def test_a_function_with_a_docstring_is_refused():
         server._with_description("A description.")(tool)
 
 
-def _as_docstring(literal):
-    """A description's literal as texts.py writes it, written instead as
-    the docstring of a function whose body is indented by four spaces:
-    every line after the first indented but the empty ones, the closing
-    quotes too where they stand on a line of their own."""
-    first, *rest = literal.split("\n")
-    return "\n".join([first] + ["    " + line if line else ""
-                                for line in rest])
-
-
-def _function(literal):
-    return "def tool():\n    " + _as_docstring(literal) + "\n"
-
-
-def _compiled(literal):
-    """What the running Python compiles from that docstring."""
-    space = {}
-    exec(compile(_function(literal), "<a docstring>", "exec"), space)
-    return space["tool"].__doc__
-
-
-def _given_literals():
-    """Each description _with_description gives, as texts.py writes it."""
-    source = TEXTS.read_text(encoding="utf-8")
-    wanted = {value.split(".", 1)[1] for value in _given().values()}
-    return {node.targets[0].id: ast.get_source_segment(source, node.value)
-            for node in _tree(TEXTS).body
-            if isinstance(node, ast.Assign)
-            and node.targets[0].id in wanted}
-
-
-# Made-up descriptions, each as texts.py would write it: one line; blank
-# lines; lines indented further, as an argument under "Args:"; and a last
-# line with text on it, the closing quotes after it
+# Python versions as `sys.version_info` gives them, the oldest Exegete
+# supports and the newest the suite runs on among them
+VERSIONS = {"3.11": (3, 11, 13, "final", 0), "3.12": (3, 12, 12, "final", 0),
+            "3.13": (3, 13, 5, "final", 0), "3.14": (3, 14, 0, "final", 0)}
+# Made-up descriptions: one line; blank lines; lines indented further, as
+# an argument under "Args:"; and a last line with text on it
 MADE_UP = {
-    "one line": '"""One line."""',
-    "blank lines": '"""First.\n\nThird, after a blank line.\n\nFifth.\n"""',
+    "one line": "One line.",
+    "blank lines": "First.\n\nThird, after a blank line.\n\nFifth.\n",
     "lines indented further": (
-        '"""Do one thing.\n\nArgs:\n    x: what it is,\n        over two '
-        'lines.\n"""'),
-    "text on the last line": '"""First.\nSecond, the quotes after it."""',
+        "Do one thing.\n\nArgs:\n    x: what it is,\n        over two "
+        "lines.\n"),
+    "text on the last line": "First.\nSecond, after it nothing.",
 }
 
 
-@pytest.mark.parametrize("literal", list(MADE_UP.values()), ids=list(MADE_UP))
-def test_a_made_up_description_is_what_python_compiles(literal):
-    def tool():
-        pass
-    server._with_description(ast.literal_eval(literal))(tool)
-    assert tool.__doc__ == _compiled(literal)
-
-
-def test_every_description_is_what_python_compiles():
-    """Each description as the running Python compiles it written as a
-    docstring, which is what Python 3.11 and 3.12 served when the
-    descriptions were docstrings."""
-    literals = _given_literals()
-    assert len(literals) == len(_given())
-    for name, literal in literals.items():
-        def tool():
-            pass
-        server._with_description(getattr(texts, name))(tool)
-        assert tool.__doc__ == _compiled(literal), name
-
-
-# Both forms on any Python: indented, as 3.11 and 3.12 compile a
-# docstring (Python's parser keeps it so on every version), and flush, as
-# 3.13 compiles it
-FORMS = {"indented": "    ", "flush": ""}
-
-
-@pytest.mark.parametrize("margin", list(FORMS.values()), ids=list(FORMS))
-def test_either_form_on_any_python(margin):
-    for literal in list(MADE_UP.values()) + list(_given_literals().values()):
-        value = ast.literal_eval(literal)
-        indented = ast.get_docstring(ast.parse(_function(literal)).body[0],
-                                     clean=False)
-
-        def tool():
-            pass
-        server._with_description(value, margin=margin)(tool)
-        assert tool.__doc__ == (indented if margin else value), literal[:40]
+@pytest.mark.parametrize("version", list(VERSIONS.values()),
+                         ids=list(VERSIONS))
+def test_each_description_is_given_as_written_on_every_python(
+        monkeypatch, version):
+    """The owner's ruling of 17 November 2026: Python 3.11 and 3.12 send
+    each description as 3.13 does, without the four spaces before every
+    line after the first that they kept while the descriptions were
+    docstrings. Each Python is the one sys.version_info names; the
+    suite's jobs on 3.11 also hold docs/snapshot/ to it exactly
+    (tests/test_served_texts.py)."""
+    names = [value.split(".", 1)[1] for value in _given().values()]
+    texts_given = [getattr(texts, name) for name in names]
+    texts_given += list(MADE_UP.values())
+    given = []
+    with monkeypatch.context() as patch:
+        patch.setattr(sys, "version_info", version)
+        for text in texts_given:
+            def tool():
+                pass
+            server._with_description(text)(tool)
+            given.append(tool.__doc__)
+    assert given == texts_given

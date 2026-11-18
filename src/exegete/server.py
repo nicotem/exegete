@@ -492,6 +492,10 @@ from .texts import (
     _NO_NAME_HERE_FILE_NOTES_WERE_KEPT,
     _NO_NAME_IN_FILE_OR_ITS_NOTES,
     _NO_NAME_WAS_IN_FILE_OR_ITS_NOTES,
+    _NO_NAME_HERE_NOTES_LEFT,
+    _NO_NAME_HERE_NOTES_WERE_LEFT,
+    _NO_NAME_HERE_FILE_NOTES_LEFT,
+    _NO_NAME_HERE_FILE_NOTES_WERE_LEFT,
     _OCCURRENCES_LEFT_WARNING,
     _EVERY_OCCURRENCE_LEFT_WARNING,
     _OCCURRENCES_KEPT_SHARE,
@@ -16948,23 +16952,38 @@ def _kept_in_notes(preview: Dict[str, Any]) -> int:
         "kept_by_phrases", 0)
 
 
+def _left_for_a_marker(preview: Dict[str, Any]) -> int:
+    """How many notes that hold a name the note rewrite leaves as they
+    are, because rewriting them would form the private part's marker
+    (v0.15.5, read from memo_rewrites): where no other note is rewritten,
+    a name does occur in a note, so no answer may say that none does. 0
+    without rewrite_memos."""
+    return (preview.get("memo_rewrites") or {}).get(
+        "memos_not_rewritten_marker_risk", 0)
+
+
 def _nothing_was_rewritten(preview: Dict[str, Any], rewrite_memos: bool,
                            not_saved: bool) -> str:
     """The execute's answer to a run with nothing to do, read from the
     preview its token signed: every occurrence found left by a list
     (v0.15.3) or kept inside a phrase (v0.15.4), never "no name occurs"
-    nor "pick a file"; no name in the file and every one in the notes
-    kept inside a phrase (v0.15.4), never that no name occurs in any
-    note; else no name in the file, nor, with rewrite_memos, in any note
-    or journal entry. `not_saved` where a save was asked for on the
-    typed path (the lead's third ruling for Brief 2): no run, no save.
-    With memo_scope "file" (v0.15.5) the notes said are this file's."""
+    nor "pick a file"; no name in the file and a note that holds one left
+    for the private part's marker (v0.15.5), whatever the phrases kept,
+    or every one in the notes kept inside a phrase (v0.15.4), never that
+    no name occurs in any note; else no name in the file, nor, with
+    rewrite_memos, in any note or journal entry. `not_saved` where a save
+    was asked for on the typed path (the lead's third ruling for Brief
+    2): no run, no save. With memo_scope "file" (v0.15.5) the notes said
+    are this file's."""
     if _left_by_choice(preview):
         return _EVERY_OCCURRENCE_WAS_LEFT + (
             " The mapping was not saved, because no run happened."
             if not_saved else "")
     file_notes = _file_notes_only(preview)
-    if _kept_in_notes(preview):
+    if _left_for_a_marker(preview):
+        said = (_NO_NAME_HERE_FILE_NOTES_WERE_LEFT if file_notes
+                else _NO_NAME_HERE_NOTES_WERE_LEFT)
+    elif _kept_in_notes(preview):
         said = (_NO_NAME_HERE_FILE_NOTES_WERE_KEPT if file_notes
                 else _NO_NAME_HERE_NOTES_WERE_KEPT)
     elif rewrite_memos and file_notes:
@@ -18205,6 +18224,9 @@ def _no_replacement_warning(preview: Dict[str, Any]) -> str:
                 f"{note_rows} note(s) or journal entr(ies) and nothing in "
                 f"the file text.")
     file_notes = _file_notes_only(preview)
+    if _left_for_a_marker(preview):
+        return (_NO_NAME_HERE_FILE_NOTES_LEFT if file_notes
+                else _NO_NAME_HERE_NOTES_LEFT) + no_save
     if _kept_in_notes(preview):
         return (_NO_NAME_HERE_FILE_NOTES_KEPT if file_notes
                 else _NO_NAME_HERE_NOTES_KEPT) + no_save

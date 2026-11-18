@@ -5364,6 +5364,26 @@ _NO_NAME_IN_FILE_OR_ITS_NOTES = (
 _NO_NAME_WAS_IN_FILE_OR_ITS_NOTES = (
     "None of the names in this mapping occurs in this file or in its "
     "notes, so nothing was rewritten and no backup was taken.")
+# No name in the file, and a note that holds one left because the rewrite
+# would form the private part's marker in it (v0.15.5), with or without a
+# note whose name lies inside a phrase to keep: the answers never say that
+# no name occurs there. The warning on those notes gives the reason
+_NO_NAME_HERE_NOTES_LEFT = (
+    "None of the names in this mapping occurs in this file, and every note "
+    "or journal entry that holds one would be left as it is (see "
+    "memo_rewrites), so an execute would rewrite nothing.")
+_NO_NAME_HERE_NOTES_WERE_LEFT = (
+    "None of the names in this mapping occurs in this file, and every note "
+    "or journal entry that holds one was left as it is, so nothing was "
+    "rewritten and no backup was taken.")
+_NO_NAME_HERE_FILE_NOTES_LEFT = (
+    "None of the names in this mapping occurs in this file, and each of its "
+    "notes that holds one would be left as it is (see memo_rewrites), so an "
+    "execute would rewrite nothing.")
+_NO_NAME_HERE_FILE_NOTES_WERE_LEFT = (
+    "None of the names in this mapping occurs in this file, and each of its "
+    "notes that holds one was left as it is, so nothing was rewritten and "
+    "no backup was taken.")
 # The occurrences a list leaves, in the preview's warnings (v0.15.3): real
 # names, said on every path, the file counted or not. Where every
 # occurrence is left, the sentence above has said that it is by choice

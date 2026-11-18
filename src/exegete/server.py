@@ -11957,7 +11957,13 @@ def _prune_remove(to_remove: List[Dict[str, Any]], project_folder: Path
     removed: List[str] = []
     not_removed: List[Dict[str, Any]] = []
     for backup in to_remove:
-        done = remove_backup_folder(backup["path"], project_folder.stem)
+        # Reds only, never to merge: the removal in place, as before
+        # v0.15.5
+        try:
+            shutil.rmtree(backup["path"])
+            done = BackupRemoval(REMOVAL_REMOVED)
+        except OSError as e:
+            done = BackupRemoval(REMOVAL_LEFT_WHOLE, e)
         if done.outcome in (REMOVAL_REMOVED, REMOVAL_GONE):
             removed.append(backup["name"])
             continue

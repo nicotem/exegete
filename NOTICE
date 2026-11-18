@@ -319,14 +319,19 @@ Values in the package
 30. Labels of QualCoder's menus and buttons named in Exegete's answers
     Here: src/exegete/database.py, PDF_PROBLEM_MESSAGES and
     QualcoderDatabase.search_files.
-    Here: src/exegete/server.py, get_project_summary and
-    _opening_in_qualcoder_40.
+    Here: src/exegete/server.py, get_project_summary,
+    _opening_in_qualcoder_40 and set_project_coder_name.
+    Here: src/exegete/texts.py, CODER_NAME_QUALCODER_SWITCH_NOTE,
+    CODER_NAME_ASK and CREATE_PROJECT_DESCRIPTION.
     From: GUI/ui_main.py, lines 368 and 379; code_pdf.py, lines
-    2018-2020 and 5792; __main__.py, lines 2034-2035.
+    2018-2020 and 5792; __main__.py, lines 2482-2483 (3.8.2
+    __main__.py, lines 2723-2724); GUI/ui_dialog_settings.py, line 585
+    (3.8.2 GUI/ui_dialog_settings.py, line 547).
     Why: to point the researcher to QualCoder's own commands by the
     words on its menus and buttons: "Open Project" under Project,
-    "Restructure" in the PDF view, and "Keep" or "Switch" when
-    QualCoder asks about a coder name.
+    "Restructure" in the PDF view, "Keep" or "Switch" when QualCoder
+    asks about a coder name, and "Current coder", the setting that
+    holds that name.
 
 31. QualCoder's colours that take a light text (copied values)
     Here: src/exegete/reading_copy.py, QUALCODER_WHITE_TEXT and

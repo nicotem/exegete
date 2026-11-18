@@ -40,7 +40,7 @@ import exegete.server as server  # noqa: E402
 from exegete.project_settings import SIDECAR_NAME  # noqa: E402
 from track5_helpers import write_fixture_sidecar  # noqa: E402
 from test_v012_pseudonymise_tool import (  # noqa: E402
-    backups, build_project, query)
+    backups, build_project)
 from test_v0155_one_file_notes import (  # noqa: E402
     FILE_1, LEFT_MAPPING, make_project, selected)
 from test_qc40_visibility import (  # noqa: E402

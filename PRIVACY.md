@@ -2323,18 +2323,18 @@ successful answer of 20,000 characters or fewer. The note after an
 update carries a paragraph on what is new, written with the release and
 built into Exegete, and a link to that release's notes on GitHub.
 Exegete never opens that link. Each note comes once. It can come again
-when two
-copies of Exegete run on the same computer, when Exegete cannot write
-its file, or when Exegete stops in the instant after the answer has
-gone out. It can also count as given without being shown, when the app
-cancels the request at the moment the answer is sent. Whether a note
-reaches you depends on the assistant passing it on, and on the app
-showing the answer. When you ask, the answer gives the installed and
-newest versions, how Exegete was installed, and the steps. In the
-steps, a folder inside your home folder begins with `$HOME`, in place
-of the home folder's own path, which holds your account's name. A
-folder outside your home folder is written in full. These go to your
-AI provider like any other tool answer.
+when two copies of Exegete run on the same computer, when Exegete cannot
+write its file, or when Exegete stops in the instant after the answer
+has gone out. It can also count as given without being shown, when the
+app cancels the request at the moment the answer is sent. The same can
+happen when the app, while a call runs, sends several other messages and
+then its cancel. Whether a note reaches you depends on the assistant
+passing it on, and on the app showing the answer. When you ask, the
+answer gives the installed and newest versions, how Exegete was
+installed, and the steps. In the steps, a folder inside your home folder
+begins with `$HOME`, in place of the home folder's own path, which holds
+your account's name. A folder outside your home folder is written in
+full. These go to your AI provider like any other tool answer.
 
 **Switching it off.** When it is off, Exegete itself makes no
 connection, including when you ask whether it is up to date. Installing

@@ -87,6 +87,15 @@ from .database import (
     BACKUP_DATED_BY_NAME,
     unclean_backup_side_files,
     backup_database_is_link,
+    remove_backup_folder,
+    BackupRemoval,
+    disk_path,
+    _partial_backup_name as partial_backup_name,
+    REMOVAL_GONE,
+    REMOVAL_LEFT_WHOLE,
+    REMOVAL_LINK,
+    REMOVAL_REMAINS,
+    REMOVAL_REMOVED,
     BackupWithoutDatabaseError,
     BACKUP_WITHOUT_DATABASE_MESSAGE,
     CATEGORY_CYCLE_REFUSAL,
@@ -11879,18 +11888,8 @@ def prune_backups(keep_last: Optional[int] = None,
     if outcome != OK:
         return json.dumps(_token_error(outcome, "prune_backups"))
 
-    removed, failed = [], []
-    for backup in to_remove:
-        try:
-            shutil.rmtree(backup["path"])
-            removed.append(backup["name"])
-        except OSError as e:
-            # The backup's own name carries the project folder's, as the
-            # lines that take a backup already knew (v0.14)
-            logger.error("Failed to remove backup %s: %s",
-                         _backup_log_name(backup["name"], project_folder),
-                         error_label(e))
-            failed.append(backup["name"])
+    removed, not_removed = _prune_remove(to_remove, project_folder)
+    failed = [item["name"] for item in not_removed]
 
     result: Dict[str, Any] = {
         "success": not failed,
@@ -11902,16 +11901,22 @@ def prune_backups(keep_last: Optional[int] = None,
     }
     if failed:
         result["failed_to_remove"] = failed
-        result["error"] = ("Some backup folders could not be removed; "
-                           "check permissions.")
+        result["error"] = ("Some backup folders could not be removed; the "
+                           "notes say what became of each.")
     # The execute is refused unless the set is the one the preview named,
     # so its notes say what was done, in the past tense, in the preview's
     # order: of the backups removed alone (v0.15.3), since a backup whose
     # removal failed may still hold what the note would call gone. Those
-    # are named apart, last.
+    # are named apart, last. A copy one of them may still hold is not
+    # called gone either (v0.15.5), so "no other lasting copy" holds.
     notes = []
     gone = set(removed)
-    copies_gone = [pair for pair in only_copies["copies"] if pair[0] in gone]
+    holding = {item["name"] for item in not_removed
+               if item["names_list"] != "gone"}
+    still_held = {fingerprint for name, fingerprint in only_copies["copies"]
+                  if name in holding}
+    copies_gone = [pair for pair in only_copies["copies"]
+                   if pair[0] in gone and pair[1] not in still_held]
     if copies_gone:
         held = {fingerprint for _, fingerprint in copies_gone}
         notes.append(_prune_only_copies_note({
@@ -11927,11 +11932,89 @@ def prune_backups(keep_last: Optional[int] = None,
         notes.append(_prune_prerestore_note(done=True))
     if failed:
         notes.append(_prune_not_removed_note(
-            failed, [name for name, _ in only_copies["copies"]],
+            not_removed, [name for name, _ in only_copies["copies"]],
             media_only, removes_newest_prerestore))
     if notes:
         result["notes"] = notes
     return json.dumps(result, indent=2)
+
+
+def _prune_remove(to_remove: List[Dict[str, Any]], project_folder: Path
+                  ) -> Tuple[List[str], List[Dict[str, Any]]]:
+    """Remove each backup a prune chose, in two steps (v0.15.5,
+    `remove_backup_folder`): renamed out of the listing, then removed.
+    Returns the names removed, those already gone among them, and for
+    each backup not removed what its note needs: `name`; `outcome`
+    (REMOVAL_LEFT_WHOLE, REMOVAL_LINK or REMOVAL_REMAINS); for remains,
+    `hidden`, the name of the folder under the hidden name; for one left
+    whole, `too_long` (`_hidden_name_too_long`); and `names_list`,
+    whether it still holds its pseudonyms.json (`_names_list_left`).
+
+    One log line for each backup not removed, as before: its name with
+    the project folder's withheld, and the error's kind ("link" for a
+    link). The hidden name carries the project folder's name too, so it
+    is never logged."""
+    removed: List[str] = []
+    not_removed: List[Dict[str, Any]] = []
+    for backup in to_remove:
+        done = remove_backup_folder(backup["path"], project_folder.stem)
+        if done.outcome in (REMOVAL_REMOVED, REMOVAL_GONE):
+            removed.append(backup["name"])
+            continue
+        logger.error("Failed to remove backup %s: %s",
+                     _backup_log_name(backup["name"], project_folder),
+                     "link" if done.outcome == REMOVAL_LINK
+                     else error_label(done.error) if done.error is not None
+                     else "unknown")
+        item: Dict[str, Any] = {"name": backup["name"],
+                                "outcome": done.outcome,
+                                "names_list": _names_list_left(done)}
+        if done.outcome == REMOVAL_REMAINS and done.hidden is not None:
+            item["hidden"] = done.hidden.name
+        if done.outcome == REMOVAL_LEFT_WHOLE:
+            item["too_long"] = _hidden_name_too_long(project_folder.stem,
+                                                     done.error)
+        not_removed.append(item)
+    return removed, not_removed
+
+
+def _names_list_left(done: BackupRemoval) -> str:
+    """Whether a backup the prune did not remove still holds the
+    pseudonyms.json at its top (v0.15.5): "holds" for one left whole or
+    a link, which are as they were; for remains, read from the disk by
+    `os.lstat` (Windows' long form there): "holds" when it is there,
+    "gone" when it is absent, and "may_hold" when it cannot be looked
+    at, so that a file that cannot be read is never called gone."""
+    if done.outcome != REMOVAL_REMAINS or done.hidden is None:
+        return "holds"
+    try:
+        os.lstat(disk_path(Path(done.hidden) / PSEUDONYMS_JSON_NAME))
+    except FileNotFoundError:
+        return "gone"
+    except (OSError, ValueError):
+        return "may_hold"
+    return "holds"
+
+
+def _hidden_name_too_long(stem: str,
+                          error: Optional[BaseException]) -> bool:
+    """Whether a backup of the project called `stem` was left whole for
+    the length of the name a prune gives it (v0.15.5). That hidden name
+    is 45 characters longer than the project's name, so a project's name
+    of more than 210 bytes, which a backup made before 0.15.1 can carry,
+    takes it past the 255 a file system allows a name: bytes in UTF-8 on
+    macOS and Linux, UTF-16 units on Windows. Every prune then leaves
+    the backup whole. Read from the rename's error (ENAMETOOLONG) and
+    from the name's length, since Windows gives another error."""
+    if isinstance(error, OSError) and error.errno == errno.ENAMETOOLONG:
+        return True
+    name = partial_backup_name(stem, "00000000_000000")
+    try:
+        if os.name == "nt":
+            return len(name.encode("utf-16-le", "surrogatepass")) // 2 > 255
+        return len(os.fsencode(name)) > 255
+    except UnicodeError:
+        return False
 
 
 def _never_removed_block(names: List[str]) -> Dict[str, Any]:
@@ -12116,58 +12199,202 @@ def _prune_prerestore_note(done: bool) -> str:
             f"last restore_backup.")
 
 
-def _prune_not_removed_note(failed: List[str], only_copies: List[str],
+def _prune_not_removed_note(not_removed: List[Dict[str, Any]],
+                            only_copies: List[str],
                             media_only: List[List[Any]],
-                            newest_prerestore: Optional[str]) -> str:
-    """The execute's note on the backups it could not remove whole
-    (v0.15.3): folder names only. The removal is in place, so such a
-    backup keeps its name: list_backups lists it, and restore_backup
-    accepts it while its database remains, though some of its files may
-    have gone. One that held the only copy of a pseudonyms.json, or of a
-    recording, may still hold it, or may not (its file may have gone
-    before the error)."""
-    one = len(failed) == 1
+                            newest_prerestore: Optional[str],
+                            system: Optional[str] = None) -> str:
+    """The execute's note on the backups it did not remove (v0.15.3), by
+    what became of each (v0.15.5): left whole under its name, its rename
+    refused (for the length of its project's name when `too_long`); a
+    link, left as it is; or remains, what is left under the hidden name
+    of a backup renamed out of the listing whose removal then stopped.
+    `not_removed` is `_prune_remove`'s; `only_copies` names the backups
+    that held the only copy of a pseudonyms.json. Folder names only.
+    `system` is a value of sys.platform, this one's by default, so that a
+    test reaches each system's words (`_prune_not_removed_causes`)."""
+    system = sys.platform if system is None else system
 
-    def listed(names: List[str]) -> str:
-        return (names[0] if len(names) == 1
-                else ", ".join(names[:-1]) + " and " + names[-1])
+    def names_of(items: List[Dict[str, Any]]) -> str:
+        return _words_list([item["name"] for item in items])
 
-    if one:
-        note = (f"Exegete could not remove the backup {failed[0]} whole, so "
-                f"it keeps its name: list_backups still lists it and "
-                f"restore_backup accepts it while its database remains, "
-                f"though it may lack some of its files, which a restore "
-                f"from it would not bring back.")
-    else:
-        note = (f"Exegete could not remove the backups {listed(failed)} "
-                f"whole, so they keep their names: list_backups still lists "
-                f"them and restore_backup accepts them while their "
-                f"databases remain, though each may lack some of its files, "
-                f"which a restore from it would not bring back.")
-    copies = [name for name in failed if name in only_copies]
-    if copies:
-        note += (f" {listed(copies)} held a pseudonyms.json that neither the "
-                 f"project nor a backup Exegete keeps holds, and may still "
-                 f"hold it.")
-    media = [[name, count] for name, count in media_only if name in failed]
-    if media:
+    pick = _one_or_many
+
+    def kind(outcome: str, too_long: bool = False) -> List[Dict[str, Any]]:
+        return [item for item in not_removed if item["outcome"] == outcome
+                and bool(item.get("too_long")) == too_long]
+
+    note = []
+    whole, too_long = kind(REMOVAL_LEFT_WHOLE), kind(REMOVAL_LEFT_WHOLE, True)
+    links, remains = kind(REMOVAL_LINK), kind(REMOVAL_REMAINS)
+    if whole:
+        it = pick(whole, "it", "them")
+        note.append(
+            f"Exegete left the backup{pick(whole, '', 's')} "
+            f"{names_of(whole)} as {pick(whole, 'it was', 'they were')}. "
+            f"Before removing a backup, Exegete renames it to take it out "
+            f"of the listing, and this rename was refused, so list_backups "
+            f"still lists {it} and restore_backup accepts {it}, as before. "
+            f"{_prune_not_removed_causes(system, len(whole) == 1)['refused']}"
+            f" The prune can be run again once that has changed.")
+    if too_long:
+        it = pick(too_long, "it", "them")
+        note.append(
+            f"Exegete left the backup{pick(too_long, '', 's')} "
+            f"{names_of(too_long)} as "
+            f"{pick(too_long, 'it was', 'they were')}, and every prune "
+            f"will: this project's name is too long for the name Exegete "
+            f"gives a backup to take it out of the listing before removing "
+            f"it. list_backups still lists {it} and restore_backup accepts "
+            f"{it}. You could delete {it} by hand.")
+    if links:
+        note.append(pick(
+            links,
+            f"The backup {names_of(links)} is a link to a folder elsewhere: "
+            f"the prune leaves the link, and the folder it points to, as "
+            f"they are.",
+            f"The backups {names_of(links)} are links to folders elsewhere: "
+            f"the prune leaves the links, and the folders they point to, as "
+            f"they are."))
+    if remains:
+        hidden = _words_list([item.get("hidden", "") for item in remains])
+        causes = _prune_not_removed_causes(system, len(remains) == 1)
+        note.append(
+            pick(remains,
+                 f"Exegete took the backup {names_of(remains)} out of the "
+                 f"listing by renaming it {hidden}, the name of a backup "
+                 f"being made, and then could not remove all of it: what is "
+                 f"left is in that folder beside the project, which nothing "
+                 f"in Exegete lists or restores.",
+                 f"Exegete took the backups {names_of(remains)} out of the "
+                 f"listing by giving each the name of a backup being made "
+                 f"({hidden}), and then could not remove all of them: what "
+                 f"is left is in those folders beside the project, which "
+                 f"nothing in Exegete lists or restores.")
+            + f" {causes['remains']} Exegete's later backups of this "
+            f"project remove what they can of "
+            f"{pick(remains, 'that folder', 'those folders')} from an hour "
+            f"after this prune; if {pick(remains, 'it', 'one')} is opened "
+            f"as a project meanwhile, in any program, any work done in it "
+            f"goes with it. You could also delete "
+            f"{pick(remains, 'it', 'them')} by hand."
+            + (" " + causes["hidden"] if causes["hidden"] else ""))
+    note += _prune_not_removed_holdings(not_removed, only_copies,
+                                        media_only, newest_prerestore)
+    return " ".join(note)
+
+
+def _prune_not_removed_holdings(not_removed: List[Dict[str, Any]],
+                                only_copies: List[str],
+                                media_only: List[List[Any]],
+                                newest_prerestore: Optional[str]
+                                ) -> List[str]:
+    """The sentences of `_prune_not_removed_note` on what the backups it
+    did not remove hold (v0.15.5): a backup left whole, or a link, holds
+    what it held and is what it was; remains still hold, may still hold
+    or no longer hold the only copy of a pseudonyms.json, as read from
+    the disk (`names_list`), may still hold the recordings, and were the
+    pre-restore safety backup. Folder names only."""
+    listed, pick = _words_list, _one_or_many
+    outcome = {item["name"]: item["outcome"] for item in not_removed}
+    sentences = []
+    copies = [item for item in not_removed if item["name"] in only_copies]
+    as_it_was = [item["name"] for item in copies
+                 if item["outcome"] != REMOVAL_REMAINS]
+    if as_it_was:
+        sentences.append(
+            f"{listed(as_it_was)} {pick(as_it_was, 'holds', 'hold')} a "
+            f"pseudonyms.json that neither the project nor a backup Exegete "
+            f"keeps holds.")
+    for state, words in (("holds", "still holds"),
+                         ("may_hold", "may still hold"),
+                         ("gone", "no longer holds")):
+        left = [item["name"] for item in copies
+                if item["outcome"] == REMOVAL_REMAINS
+                and item["names_list"] == state]
+        if left:
+            sentences.append(
+                f"What is left of {listed(left)} {words} the "
+                f"pseudonyms.json {pick(left, 'it', 'each')} held, which "
+                f"neither the project nor a backup Exegete keeps holds"
+                + (": Exegete could not check." if state == "may_hold"
+                   else "."))
+    for remains in (False, True):
+        media = [[name, count] for name, count in media_only
+                 if name in outcome
+                 and (outcome[name] == REMOVAL_REMAINS) == remains]
+        if not media:
+            continue
         single = sum(count for _, count in media) == 1
-        note += (" " + listed([f"{name} ({count} file"
-                               f"{'' if count == 1 else 's'})"
-                               for name, count in media])
-                 + " held " + ("a file" if single else "files") + " in "
-                 + ("its" if len(media) == 1 else "their")
-                 + " audio or video folders that neither the project nor a "
-                 "backup Exegete keeps holds, and may still hold "
-                 + ("it." if single else "them."))
-    if newest_prerestore in failed:
-        note += (f" {newest_prerestore} is the project's most recent "
-                 f"pre-restore safety backup.")
-    return note + (" You could remove " + ("it" if one else "them")
-                   + " by hand once nothing holds " + ("it" if one else
-                                                       "them")
-                   + " open: another program may have one of "
-                   + ("its" if one else "their") + " files open.")
+        sentences.append(
+            ("What is left of " if remains else "")
+            + listed([f"{name} ({count} file{'' if count == 1 else 's'})"
+                      for name, count in media])
+            + (" may still hold " if remains
+               else " " + pick(media, "holds", "hold") + " ")
+            + ("a file" if single else "files") + " in "
+            + pick(media, "its", "their") + " audio or video folders that "
+            "neither the project nor a backup Exegete keeps holds.")
+    if newest_prerestore in outcome:
+        sentences.append(
+            f"{newest_prerestore} "
+            + ("was" if outcome[newest_prerestore] == REMOVAL_REMAINS
+               else "is")
+            + " the project's most recent pre-restore safety backup.")
+    return sentences
+
+
+def _one_or_many(items: List[Any], one: str, many: str) -> str:
+    """`one` for a list of one item, else `many`: a word in the singular
+    or the plural."""
+    return one if len(items) == 1 else many
+
+
+def _prune_not_removed_causes(system: str, one: bool) -> Dict[str, str]:
+    """The words of the prune's note that differ by system (v0.15.5),
+    for `system`, a value of sys.platform, and one backup or several
+    (`one`): what most often refuses the rename of a backup (`refused`),
+    what most often stops the removal of one renamed (`remains`), and how
+    to show a folder whose name starts with a full stop (`hidden`, empty
+    on Windows, which does not hide such a name). Each cause is said as
+    one that can be, never as the only one: on macOS, for one, a backup's
+    own folder not writable for you refuses its rename on some versions
+    and not on others."""
+    forms = ({"it": "it", "they": "it", "its": "its", "was": "was",
+              "names": "Its name starts"} if one else
+             {"it": "them", "they": "they", "its": "their", "was": "were",
+              "names": "Their names start"})
+    if system == "win32":
+        words = {
+            "refused": "On Windows that is most often another program with "
+                       "one of {its} files open, such as a sync client, an "
+                       "antivirus scan or a program {they} {was} opened in.",
+            "remains": "On Windows that is most often a program that opened "
+                       "one of {its} files as {they} {was} being removed.",
+            "hidden": ""}
+    else:
+        words = {
+            "refused": ("On macOS a rename can be refused when a backup's "
+                        "own folder is locked, or on some versions not "
+                        "writable for you; when the folder holding the "
+                        "project and its backups is locked or not writable "
+                        "for you; or, on a network drive, when a file in "
+                        "{it} is open on another computer."
+                        if system == "darwin" else
+                        ("On Linux a" if system.startswith("linux") else "A")
+                        + " rename can be refused when the folder holding "
+                        "the project and its backups is not writable for "
+                        "you, or, on a network drive, when a file in {it} is "
+                        "open on another computer."),
+            "remains": "That is most often a file or folder in {it} that is "
+                       "not yours, or one that only an administrator can "
+                       "change.",
+            "hidden": "{names} with a full stop, so "
+                      + ("Finder hides {it}: Command, Shift and full stop "
+                         "show {it}." if system == "darwin" else
+                         "most file managers hide {it}: in most, Ctrl+H "
+                         "shows {it}.")}
+    return {key: text.format(**forms) for key, text in words.items()}
 
 
 def _project_is_write_locked(data_qda: Path) -> bool:

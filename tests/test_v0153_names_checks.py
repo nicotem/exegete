@@ -23,7 +23,8 @@ from pathlib import Path
 import pytest
 
 import exegete.server as server
-from exegete.database import (name_character_problem, normalize_name,
+from exegete.database import (is_partial_backup_name,
+                              name_character_problem, normalize_name,
                               visible_name_key)
 
 
@@ -458,11 +459,10 @@ def test_a_batch_holding_two_that_read_alike_is_refused(project):
 
 
 # ---------------------------------------------------------------------------
-# The prune's notes, built from what was removed
+# The prune's notes, built from what was removed. Since v0.15.5 a backup
+# whose removal stops partway is first taken out of the listing, under the
+# hidden name of a backup being made, which its note gives.
 # ---------------------------------------------------------------------------
-
-WARNING = "may lack some of its files"
-
 
 def _backup(project, name, files):
     """A backup beside the project named `name`, a copy of the project
@@ -482,21 +482,24 @@ def _own(project, stamp, files, suffix=""):
                    {"extra.txt": b"x", **files})
 
 
-def _prune_with_one_failing(monkeypatch, failing):
+def _prune_with_one_failing(monkeypatch, failing, below):
     """Every backup pruned (keep_last=0), the removal of `failing` going
-    partway: one of its files goes, then it raises."""
+    partway: its file `below` cannot be removed, so the backup is left
+    under the hidden name, holding that file."""
+    from test_v0155_prune_removal import file_identity, refuse_removal
     preview = json.loads(server.prune_backups(keep_last=0))
-    real = shutil.rmtree
-
-    def rmtree(path, *args, **kwargs):
-        if Path(path) == failing:
-            (failing / "extra.txt").unlink()
-            raise PermissionError("a file in it is open")
-        return real(path, *args, **kwargs)
-
-    monkeypatch.setattr(shutil, "rmtree", rmtree)
-    return json.loads(server.prune_backups(
+    refuse_removal(monkeypatch, {file_identity(failing / below)})
+    done = json.loads(server.prune_backups(
         keep_last=0, preview_token=preview["preview_token"]))
+    monkeypatch.undo()
+    return done
+
+
+def _hidden(project):
+    """The folders beside the project under the hidden name."""
+    project = Path(project)
+    return [p for p in project.parent.iterdir()
+            if is_partial_backup_name(p.name, project.stem)]
 
 
 def _listed():
@@ -510,39 +513,42 @@ def test_the_prune_note_names_what_was_removed(project, monkeypatch):
     second = _own(project, "20260102_000000", {"pseudonyms.json": b"[]"})
     qualcoder = _backup(project, f"{project.stem}_BKUP_2026010300.qda",
                         {"pseudonyms.json": b"{}"})
-    done = _prune_with_one_failing(monkeypatch, first)
+    done = _prune_with_one_failing(monkeypatch, first, "pseudonyms.json")
     assert done["removed"] == [second.name], done
     assert done["failed_to_remove"] == [first.name]
     past = [note for note in done["notes"] if second.name in note]
     assert len(past) == 1
     assert first.name not in past[0] and qualcoder.name not in past[0]
+    [hidden] = _hidden(project)
     apart = [note for note in done["notes"] if first.name in note]
-    assert len(apart) == 1 and WARNING in apart[0]
-    assert first.name in _listed()
+    assert len(apart) == 1 and hidden.name in apart[0]
+    assert first.name not in _listed()
+    assert (hidden / "pseudonyms.json").read_bytes() == b"{}"
 
 
 def test_the_media_note_names_what_was_removed(project, monkeypatch):
     first = _own(project, "20260101_000000", {"audio/one.mp3": b"1"})
     second = _own(project, "20260102_000000", {"audio/two.mp3": b"22"})
-    done = _prune_with_one_failing(monkeypatch, first)
+    done = _prune_with_one_failing(monkeypatch, first, "audio/one.mp3")
     assert done["removed"] == [second.name], done
     past = [note for note in done["notes"] if second.name in note]
     assert len(past) == 1 and first.name not in past[0]
+    [hidden] = _hidden(project)
     apart = [note for note in done["notes"] if first.name in note]
-    assert len(apart) == 1 and WARNING in apart[0]
-    assert first.name in _listed()
+    assert len(apart) == 1 and hidden.name in apart[0]
+    assert first.name not in _listed()
 
 
 def test_the_prerestore_note_only_when_it_went(project, monkeypatch):
     other = _own(project, "20260101_000000", {})
     prerestore = _own(project, "20260102_000000", {}, suffix="_prerestore")
-    done = _prune_with_one_failing(monkeypatch, prerestore)
+    done = _prune_with_one_failing(monkeypatch, prerestore, "extra.txt")
     assert done["removed"] == [other.name], done
-    assert not any("removed your most recent pre-restore" in note
-                   for note in done["notes"])
+    assert server._prune_prerestore_note(done=True) not in done["notes"]
+    [hidden] = _hidden(project)
     apart = [note for note in done["notes"] if prerestore.name in note]
-    assert len(apart) == 1 and WARNING in apart[0]
-    assert prerestore.name in _listed()
+    assert len(apart) == 1 and hidden.name in apart[0]
+    assert prerestore.name not in _listed()
 
 
 # ---------------------------------------------------------------------------

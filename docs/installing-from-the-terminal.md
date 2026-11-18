@@ -32,7 +32,7 @@ Claude, one fully local route, and OpenAI's apps.
 |---|---|---|
 | **Claude consumer plans** (claude.ai and Claude Desktop on a Free, Pro or Max plan; Claude Code with a Pro or Max login) | The plans most people start with. Switch training off before participants' data: while it is on, Anthropic may use your conversations to train its models. The switch is the setting "Help improve our AI models", at [claude.ai/settings/data-privacy-controls](https://claude.ai/settings/data-privacy-controls), and its default is worth checking yourself. Claude Code opens files by itself, outside Exegete, and Cowork does in the folders you connect to it, so for participants' data this project suggests Claude Desktop's chat with the extension, with computer use off, no folder that holds your projects or transcripts connected to it, and no other extension that reads files ([PRIVACY.md, "Assistants that open files by themselves"](../PRIVACY.md#assistants-that-open-files-by-themselves)). | [PRIVACY.md](../PRIVACY.md), rung 1 |
 | **Anthropic commercial-terms routes** (Claude Code with a Console API key; Team or Enterprise accounts) | The same Claude, under other terms. A personal plan (Free, Pro or Max) comes under Anthropic's consumer terms. An account your university or employer manages comes under the agreement it made with Anthropic. Such agreements differ in what they let Anthropic do with your data. Even so, an institution's account is likely to give participants' data more protection than a personal one, since the institution agreed its terms with its own interests in mind. Whoever manages that account can tell you which terms apply. The terms do not change what Claude Code reads. Claude Code opens files by itself, outside Exegete. So for participants' data, this project suggests Claude Desktop's chat with Exegete on a Team or Enterprise account, set up as in the row above ([PRIVACY.md](../PRIVACY.md), "Assistants that open files by themselves"). | [PRIVACY.md](../PRIVACY.md), rungs 2 and 3; [the API-key recipe](#claude-code-with-an-anthropic-api-key-experimental) below |
-| **Fully local models** (LM Studio and similar hosts) | The model runs on your computer, so participants' data is not sent to an AI provider. We expect a local model to do the analysis less well than the hosted models, and do not know by how much, since we have evaluated neither. It is a route to consider for particular uses, such as a first pass over sensitive material, or work an agreement confines to one computer. Exegete offers its full tool set unless the host's entry asks for the smaller one, `core`. The recipe asks for `core`, which takes less of a local model's room than the full set. | [PRIVACY.md](../PRIVACY.md), rung 4; [the LM Studio recipe](#lm-studio-fully-local-experimental) below |
+| **Fully local models** (LM Studio and similar hosts) | The model runs on your computer, so participants' data is not sent to an AI provider. LM Studio's LM Link, in preview, can load the model on another machine instead, which then reads the conversation there (<https://lmstudio.ai/link>, read on 10 November 2026). To keep the conversation on this computer, you could check in LM Studio where the model is loaded, or leave LM Link off. We expect a local model to do the analysis less well than the hosted models, and do not know by how much, since we have evaluated neither. It is a route to consider for particular uses, such as a first pass over sensitive material, or work an agreement confines to one computer. Exegete offers its full tool set unless the host's entry asks for the smaller one, `core`. The recipe asks for `core`, which takes less of a local model's room than the full set. | [PRIVACY.md](../PRIVACY.md), rung 4; [the LM Studio recipe](#lm-studio-fully-local-experimental) below |
 | **OpenAI's apps** (the ChatGPT desktop app; Codex's command line and editor extension) | OpenAI's terms apply, and which ones depends on your plan and on how you sign in. Switch training off before participants' data: while it is on, OpenAI may use your conversations to train its models. The settings are "Improve the model for everyone" and Codex's separate "Include environments". Not ChatGPT in a web browser. A phone only through OpenAI's Remote, which has the paired computer run the work; this project suggests leaving Remote off for participants' data. Codex can also read your projects' files by itself, without asking, so for participants' data this project suggests an assistant with no file access of its own, such as Claude Desktop's chat. OpenAI documents a setting, marked Beta, that can keep Codex's own commands from reading outside the folder it works in; it has not been tested with Exegete. Not tried by this project. | [PRIVACY.md](../PRIVACY.md), "OpenAI's apps"; [the recipe](#chatgpts-desktop-app-and-codex-experimental) below |
 
 The `core` tool set and the recipes below are **Experimental**. They
@@ -690,13 +690,13 @@ every start. LM Studio keeps its log, with Exegete's lines, in
 > **Status: Experimental.** Written from OpenAI's documentation, read
 > again on 4 November 2026. Its pages show no date. Where the
 > documentation is silent, the steps follow Codex's source code at its
-> release 0.166.0, read the same day. This project has not run Exegete
-> in any OpenAI app, so these steps are untried. Codex reads files on
-> your computer by itself, so for participants' data this project
-> suggests an assistant with no file access of its own, such as Claude
-> Desktop's chat. OpenAI documents a setting, marked Beta, that can keep
-> Codex's own commands from reading outside the folder it works in; it
-> has not been tested with Exegete. Step 3 says more.
+> release 0.166.0, read 4 November 2026. This project has not run
+> Exegete in any OpenAI app, so these steps are untried. Codex reads
+> files on your computer by itself, so for participants' data this
+> project suggests an assistant with no file access of its own, such as
+> Claude Desktop's chat. OpenAI documents a setting, marked Beta, that
+> can keep Codex's own commands from reading outside the folder it works
+> in; it has not been tested with Exegete. Step 3 says more.
 
 **Which OpenAI apps can use Exegete.** OpenAI's page on MCP
 (<https://learn.chatgpt.com/docs/extend/mcp>) says: "The ChatGPT desktop
@@ -730,18 +730,18 @@ configuration for the same Codex host."
   conversation can use Exegete on the connected computer is not
   documented, and this project gives no steps for it. OpenAI's page on
   that feature
-  (<https://learn.chatgpt.com/docs/enterprise/cloud-local-access>, the
-  same day) says: "Conversations, tool results, and other task context
-  do not stay exclusively on the connected computer."
+  (<https://learn.chatgpt.com/docs/enterprise/cloud-local-access>, read
+  4 November 2026) says: "Conversations, tool results, and other task
+  context do not stay exclusively on the connected computer."
 - **ChatGPT on a phone**: it cannot start Exegete, but it can use it
   through OpenAI's Remote. OpenAI
   (<https://learn.chatgpt.com/docs/mobile>, read 4 November 2026):
   "Follow progress, approve actions, and send instructions from your
   phone. Codex runs tasks in the cloud or on a connected computer." And
-  (<https://learn.chatgpt.com/docs/remote-connections>, the same day):
-  "MCP servers, skills, browser access, and Computer Use come from that
-  host's configuration." and "The sandboxing settings, security
-  controls, and action approvals still apply to the connected
+  (<https://learn.chatgpt.com/docs/remote-connections>, read 4 November
+  2026): "MCP servers, skills, browser access, and Computer Use come
+  from that host's configuration." and "The sandboxing settings,
+  security controls, and action approvals still apply to the connected
   session." So a phone paired with a computer whose settings file
   holds the entry below can start work that calls Exegete's tools,
   see what they return, participants' words included, and give the
@@ -781,16 +781,16 @@ which of the two decides which of OpenAI's data policies apply
 Codex").
 
 **First, switch training off** before participants' data: while it is
-on, OpenAI may use your conversations to train its models. On a
-personal plan (Free, Go, Plus or Pro), turn off "Improve the model for
-everyone" in ChatGPT's Settings, Data controls, or choose "Do not train
-on my content" in OpenAI's Privacy Portal, <https://privacy.openai.com/>
+on, OpenAI may use your conversations to train its models. On a personal
+plan (Free, Plus or Pro), turn off "Improve the model for everyone" in
+ChatGPT's Settings, Data controls, or choose "Do not train on my
+content" in OpenAI's Privacy Portal, <https://privacy.openai.com/>
 (either is enough, by OpenAI's Help Center: [PRIVACY.md](../PRIVACY.md),
 "OpenAI's apps", quotes it), and turn off Codex's "Include
-environments", a separate setting that neither changes. Rating a reply
-(thumbs up or down) can still let OpenAI train on that conversation.
-Claude's plans take the same advice, in the same words (the README's
-checks before participants' data).
+environments", a separate setting that neither changes. On Go, which the
+Help Center does not name for this setting, you could check that the
+setting is there. Rating a reply (thumbs up or down) can still let
+OpenAI train on that conversation.
 
 **Step 1. Install Exegete.** It needs Python 3.11 or newer ("What
 you need", above). In the Terminal (macOS or Linux):
@@ -939,9 +939,9 @@ project, or open a folder. ChatGPT can use the files and context in
 the location you choose." (<https://learn.chatgpt.com/docs/app>, read
 4 November 2026), and, for the command line: "Codex CLI treats
 the directory where you start it as the project for the chat."
-(<https://learn.chatgpt.com/docs/projects>, the same day). So make an
-empty folder for these chats and work there. In the Terminal (macOS or
-Linux):
+(<https://learn.chatgpt.com/docs/projects>, read 4 November 2026). So
+make an empty folder for these chats and work there. In the Terminal
+(macOS or Linux):
 
 ```bash
 mkdir -p ~/exegete-chats && cd ~/exegete-chats && codex
@@ -1318,12 +1318,12 @@ the two of the check for new versions (`EXEGETE_UPDATE_CHECK` and
   only by a cloud drive is downloaded whole. Any other value is not
   used, and the log says so once at start; it never stops Exegete.
   The desktop extension's settings do not offer it.
-- `EXEGETE_INSTALLED_AS`: set by the desktop extension (to
-  `extension`), so that the update steps Exegete gives fit the way it
-  was installed. It also makes checking on by default, as the
-  extension's setting is, and gives an import call the extension's
-  time, 50 seconds where every other route has 30
-  (`EXEGETE_CALL_SECONDS`, above). Do not set it yourself.
+- `EXEGETE_INSTALLED_AS`: set by the desktop extension (to `extension`),
+  so that the update steps Exegete gives fit the way it was installed.
+  It also makes checking on by default, and gives an import call 50
+  seconds where every other route has 30. Set on another route, it gives
+  update steps that do not fit there. `EXEGETE_UPDATE_CHECK` and
+  `EXEGETE_CALL_SECONDS`, above, set checking and the call's time alone.
 
 ---
 

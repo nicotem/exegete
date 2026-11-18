@@ -392,11 +392,14 @@ def test_install_says_the_figures():
             in install)
     # (the staleness audit of 20 October 2026; since 17 November 2026 the
     # extension's figure differs from every other route's, and the
-    # sentence says so)
-    assert (f"gives an import call the extension's time, "
-            f"{doc_import.EXTENSION_CALL_SECONDS} seconds where every other "
-            f"route has {doc_import.TERMINAL_CALL_SECONDS} (`{SETTING}`, "
-            f"above)") in install
+    # sentence says so; v0.15.5: the mark's item gives the two figures and
+    # names the setting that changes the call's time alone)
+    mark = install[install.index(f"- `{MARK}`:"):]
+    mark = mark[:mark.index("---")]
+    assert f"{doc_import.EXTENSION_CALL_SECONDS} seconds" in mark, mark
+    assert (f"every other route has {doc_import.TERMINAL_CALL_SECONDS}"
+            in mark), mark
+    assert f"`{SETTING}`" in mark, mark
 
 
 def test_the_changelog_says_the_figures():

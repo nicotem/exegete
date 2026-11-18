@@ -78,10 +78,11 @@ reply. Please use
   in another program, or one you want kept as it is, is safest worked on
   as a copy. The assistant can make one with the tool
   `copy_project_to_workspace`, which copies a project into your folder
-  for projects. A copy of important data on another disk also protects
-  it if this computer's disk fails. Your ethics approval may say where
-  copies of participants' data can be kept. A sync service such
-  as iCloud or OneDrive copies a project off this computer when it
+  for projects. The copy holds any names list and names file too, with
+  the real names in them. A copy of important data on another disk also
+  protects it if this computer's disk fails. Your ethics approval may
+  say where copies of participants' data can be kept. A sync service
+  such as iCloud or OneDrive copies a project off this computer when it
   keeps the project's folder. Installs from the Terminal put the folder
   for projects in Documents, which those services may keep, unless you
   choose another folder. The Terminal guide's

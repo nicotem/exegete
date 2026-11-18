@@ -459,9 +459,10 @@ def test_a_batch_holding_two_that_read_alike_is_refused(project):
 
 
 # ---------------------------------------------------------------------------
-# The prune's notes, built from what was removed. Since v0.15.5 a backup
-# whose removal stops partway is first taken out of the listing, under the
-# hidden name of a backup being made, which its note gives.
+# The prune's notes, built from what was removed. Since v0.15.5 the prune
+# takes every backup out of the listing first, under the hidden name of a
+# backup being made, and one whose removal stops partway stays under that
+# name, which its note gives.
 # ---------------------------------------------------------------------------
 
 def _backup(project, name, files):

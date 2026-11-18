@@ -40,7 +40,11 @@ And at the level of `prune_backups`, which calls the helper:
 11. a pseudonyms.json that remains still hold, or may hold, is never
     called gone, and one they no longer hold is;
 12. the note's words for each system and each outcome, the name too long
-    for the hidden name among them.
+    for the hidden name among them;
+13. a link the prune chose is in the answer's `failed_to_remove`, never
+    in `removed`, still listed, its note a link's;
+14. a backup gone before the prune reached it is in `removed`, with no
+    `failed_to_remove` and no note on it.
 """
 
 import errno
@@ -888,6 +892,52 @@ def test_a_copy_still_held_is_never_called_gone(
                 else "still holds") in on_b
 
 
+@pytest.mark.parametrize("kind", ["symlink", "junction"])
+def test_a_link_the_prune_chose_is_not_answered_as_removed(
+        setup_server, qualcoder_db_path, tmp_path, kind):
+    """A link under one of the project's backup names, which the prune
+    chooses with the rest: the answer gives it as not removed, never as
+    removed, list_backups still lists it, its note is a link's, and the
+    folder it points to is as it was."""
+    folder = Path(qualcoder_db_path)
+    elsewhere = small_backup(tmp_path / "elsewhere")
+    before = contents(elsewhere)
+    link = folder.parent / f"{folder.stem}_backup_20260101_000000.qda"
+    make_link(link, elsewhere, kind)
+
+    done = prune_all()
+
+    assert done["removed"] == [], done
+    assert done["failed_to_remove"] == [link.name]
+    assert link.name in listed()
+    assert "link" in note_on(done, link.name)
+    assert still_a_link(link, kind)
+    assert contents(elsewhere) == before
+
+
+def test_a_backup_gone_before_the_prune_reached_it_is_answered_as_removed(
+        setup_server, qualcoder_db_path, monkeypatch):
+    """A backup that another hand removes as the prune renames it: the
+    disk finds it gone under both names, and the answer gives it as
+    removed, with nothing not removed and no note on it."""
+    folder = Path(qualcoder_db_path)
+    backup = own_backup(folder, "20260101_000000")
+    preview = json.loads(server.prune_backups(keep_last=0))
+
+    def removed_first(partial, final):
+        shutil.rmtree(partial)
+        raise FileNotFoundError(errno.ENOENT, "No such file or directory")
+    monkeypatch.setattr(database, "_rename_folder", removed_first)
+    done = json.loads(server.prune_backups(
+        keep_last=0, preview_token=preview["preview_token"]))
+
+    assert done["removed"] == [backup.name], done
+    assert "failed_to_remove" not in done and done["success"] is True
+    assert [n for n in done.get("notes", []) if backup.name in n] == []
+    assert not os.path.lexists(backup)
+    assert hidden_folders(folder.parent, folder.stem) == []
+
+
 @pytest.mark.skipif(WINDOWS, reason="a project's database whose path "
                     "passes 259 characters, which this test does not ask of "
                     "Windows; the length's reading there is the next test's")
@@ -986,6 +1036,19 @@ def test_the_note_for_each_system_and_outcome(system):
     for text in (remains, two):
         assert "later backups" in text and "work done in it" in text
         assert "by hand" in text
+        # What stops their removal: removing a file asks write permission
+        # of its folder, not ownership of the file, and the clearing
+        # undoes a lock of your own, so a file is a cause for not being
+        # yours only when locked, on macOS, and never on Linux
+        if system != "win32":
+            not_yours = [clause for sentence in sentences_with(
+                text, "not yours") for clause in sentence.split(", ")
+                if "not yours" in clause]
+            assert not_yours, text
+            assert all("locked" in clause for clause in not_yours
+                       if "file" in clause), not_yours
+            assert any("file" in clause
+                       for clause in not_yours) is (system == "darwin")
     assert ("Finder" in remains) is (system == "darwin")
     assert ("Ctrl+H" in remains) is (system == "linux")
     assert ("full stop" in remains) is (system != "win32")
@@ -995,8 +1058,9 @@ def test_the_note_for_each_system_and_outcome(system):
 def test_the_note_on_what_backups_not_removed_hold():
     """Left whole or a link: they hold their copy and are what they were;
     remains still hold, may still hold or no longer hold the copy, as
-    read, may still hold the recordings, and were the pre-restore
-    backup."""
+    read, may still hold the recordings, without the preview's count of
+    them, which what is left may no longer hold, and were the
+    pre-restore backup."""
     def holdings(item):
         return server._prune_not_removed_note(
             [item], [item["name"]], [[item["name"], 2]], item["name"],
@@ -1004,11 +1068,12 @@ def test_the_note_on_what_backups_not_removed_hold():
 
     whole = holdings(WHOLE)
     assert "holds a pseudonyms.json" in whole
+    assert "(2 files) holds files" in whole
     assert "is the project's most recent pre-restore" in whole
     for state, words in (("holds", "still holds"),
                          ("may_hold", "may still hold"),
                          ("gone", "no longer holds")):
         text = holdings({**REMAINS, "names_list": state})
         assert f"{words} the pseudonyms.json" in text
-        assert "may still hold files" in text
+        assert "may still hold files" in text and "2 files" not in text
         assert "was the project's most recent pre-restore" in text

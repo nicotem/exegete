@@ -12269,7 +12269,9 @@ def _prune_not_removed_note(not_removed: List[Dict[str, Any]],
             f"Exegete left the backup{pick(whole, '', 's')} "
             f"{names_of(whole)} as {pick(whole, 'it was', 'they were')}. "
             f"Before removing a backup, Exegete renames it to take it out "
-            f"of the listing, and this rename was refused, so list_backups "
+            f"of the listing, and "
+            f"{pick(whole, 'this rename was', 'these renames were')} "
+            f"refused, so list_backups "
             f"still lists {it} and restore_backup accepts {it}, as before. "
             f"{_prune_not_removed_causes(system, len(whole) == 1)['refused']}"
             f" The prune can be run again once that has changed.")
@@ -12344,15 +12346,15 @@ def _prune_not_removed_holdings(not_removed: List[Dict[str, Any]],
             f"{listed(as_it_was)} {pick(as_it_was, 'holds', 'hold')} a "
             f"pseudonyms.json that neither the project nor a backup Exegete "
             f"keeps holds.")
-    for state, words in (("holds", "still holds"),
-                         ("may_hold", "may still hold"),
-                         ("gone", "no longer holds")):
+    for state, one, many in (("holds", "still holds", "still hold"),
+                             ("may_hold", "may still hold", "may still hold"),
+                             ("gone", "no longer holds", "no longer hold")):
         left = [item["name"] for item in copies
                 if item["outcome"] == REMOVAL_REMAINS
                 and item["names_list"] == state]
         if left:
             sentences.append(
-                f"What is left of {listed(left)} {words} the "
+                f"What is left of {listed(left)} {pick(left, one, many)} the "
                 f"pseudonyms.json {pick(left, 'it', 'each')} held, which "
                 f"neither the project nor a backup Exegete keeps holds"
                 + (": Exegete could not check." if state == "may_hold"
@@ -12364,9 +12366,12 @@ def _prune_not_removed_holdings(not_removed: List[Dict[str, Any]],
         if not media:
             continue
         single = sum(count for _, count in media) == 1
+        # Remains are named without the preview's count, since what is
+        # left may hold fewer of those files, or none
         sentences.append(
             ("What is left of " if remains else "")
-            + listed([f"{name} ({count} file{'' if count == 1 else 's'})"
+            + listed([name if remains else
+                      f"{name} ({count} file{'' if count == 1 else 's'})"
                       for name, count in media])
             + (" may still hold " if remains
                else " " + pick(media, "holds", "hold") + " ")
@@ -12424,9 +12429,17 @@ def _prune_not_removed_causes(system: str, one: bool) -> Dict[str, str]:
                         "the project and its backups is not writable for "
                         "you, or, on a network drive, when a file in {it} is "
                         "open on another computer."),
-            "remains": "That is most often a file or folder in {it} that is "
-                       "not yours, or one that only an administrator can "
-                       "change.",
+            # Removing a file asks write permission of its folder, not
+            # ownership of the file, and the clearing undoes a lock of
+            # your own: a file stops it only when locked and not yours
+            "remains": ("That is most often a file in {it} that is locked "
+                        "and not yours, a folder in {it} that is not yours, "
+                        "or a file or folder that only an administrator can "
+                        "change."
+                        if system == "darwin" else
+                        "That is most often a folder in {it} that is not "
+                        "yours, or a file or folder that only an "
+                        "administrator can change."),
             "hidden": "{names} with a full stop, so "
                       + ("Finder hides {it}: Command, Shift and full stop "
                          "show {it}." if system == "darwin" else

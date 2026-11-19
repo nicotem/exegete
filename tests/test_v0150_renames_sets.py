@@ -527,11 +527,16 @@ class TestTheDocuments:
                 f"serialised tool definitions alone measure about FIGURE "
                 f"characters, roughly FIGURE tokens",
                 "(about FIGURE characters with `full`;",
-                # the LM Studio recipe's sentence (the names file's fix
-                # round 1)
-                "or 64k if you must run the full surface (its schema alone "
-                "is about FIGURE tokens)."):
+                # the LM Studio recipe's figure for `full` (the names
+                # file's fix round 1; v0.15.5, the documents' points left
+                # this week: the full tool set by its name, in plain words)
+                "whose schema alone is about FIGURE tokens"):
             assert _with_figures(sentence).search(install), sentence
+        step = install[install.index("**Step 4."):
+                       install.index("**Step 5.")]
+        assert re.search(r"full tool set, `full`[^.]*schema alone[^.]*64k",
+                         step)
+        assert "full surface" not in install
         tools = _flat("TOOLS.md")
         assert f"registers {EXPECTED_FULL} tools" in tools
         assert _with_figures("about FIGURE characters for `full`, roughly "

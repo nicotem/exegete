@@ -627,9 +627,15 @@ class TestTheDocuments:
                 "an AI coder name: a new project is then made without one, "
                 "and its answer says why; nor are they, or your own coder "
                 "name, offered when a project is asked for one.") in text
-        assert ("give the model the host runs, and every project Exegete "
-                "creates from that host takes that name, and any other "
-                "project without one is offered it first") in text
+        # (v0.15.5, the documents' points left this week: the item said
+        # these twice; the facts are held where it says them once)
+        assert ("a project made another way that has no AI coder name yet "
+                "is asked for one at the first write that needs it, with "
+                "this name offered first") in text
+        assert "Give the model this host runs" in text
+        assert ("A local-model host (LM Studio, for example) is the case "
+                "this is for, so that codings by different models can be "
+                "told apart and compared later.") in text
         assert "DECLARATION" not in text
         assert "Left empty, Claude still asks" not in text
 

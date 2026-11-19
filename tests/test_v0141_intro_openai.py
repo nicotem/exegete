@@ -725,8 +725,10 @@ class TestPrivacyQuotesOpenAI:
         # Where it was read from, and the rule
         # (v0.15.3, the readability reading: in the words of the rungs'
         # rule, and the suggestion with its reason)
-        assert ("never described in our own words, and the linked pages "
-                "govern") in section
+        # (v0.15.5, the documents' points left this week: the rule
+        # stated once, at the rungs, and here by "As above")
+        assert ("As above, OpenAI's pages are quoted word for word, and the "
+                "linked pages govern.") in section
         assert ("The live page may have changed since, so you could open it "
                 "before you rely on the quote.") in section
 
@@ -925,10 +927,25 @@ class TestPhonesAndTheWeb:
         # remote-control stop`, which stops the server and leaves the
         # setting on; app-server-daemon/src/lib.rs 676-700, 771-791,
         # 853-854 and 1136 at rust-v0.170.0)
-        assert re.search(r"stay on[^.]*after you quit Codex|"
-                         r"after you quit Codex[^.]*stay on", section)
-        assert re.search(r"`codex remote-control start`[^.]*"
-                         r"`codex remote-control stop`", section)
+        # (v0.15.5, the documents' points left this week: the sense, not
+        # the words, so that the facts reversed fail: remote access "can
+        # stay on"; after `start` it is back even after `stop`, until the
+        # off switch; and the command line starts the background server
+        # when Codex opens, by default, so remote access is back when
+        # Codex opens again (features/src/lib.rs 1140-1145,
+        # daemon_auto_start; tui/src/startup_orchestration.rs 571-575,
+        # 617-647; app-server-daemon/src/lib.rs 446-507 and 1136;
+        # backend/pid.rs 395-402)
+        assert re.search(r"\bcan stay on[^.]*after you quit Codex",
+                         section)
+        assert re.search(r"`codex remote-control start`[^.]*remote access "
+                         r"on, so remote access is back as soon as you open "
+                         r"Codex again, even after `codex remote-control "
+                         r"stop`[^.]*until[^.]*`codex app-server daemon "
+                         r"disable-remote-control`", section)
+        assert re.search(r"By default, opening Codex's command line starts a "
+                         r"background server, which keeps running after you "
+                         r"quit \(\"Updating\", below\)", section)
         # The route table says the same in a line
         table = _between(_read("INSTALL.md"), "| **OpenAI's apps**", "\n")
         # (v0.15.5, the readability reading: whole sentences where the
@@ -1009,14 +1026,17 @@ class TestPhonesAndTheWeb:
         # stay on)
         assert re.search(r"<https://learn\.chatgpt\.com/docs/get-started-"
                          r"with-work>, " + READ_ON, section)
-        assert re.search(r"local computer access[^.]*Work Cloud[^.]*dots",
-                         privacy)
+        # (v0.15.5, the documents' points left this week: Work Cloud and
+        # dots each named, a dot explained, tests/test_v0155_doc_points_2.py)
+        assert re.search(r"Work Cloud, where your workspace gives you local "
+                         r"computer access, can use a computer you connect, "
+                         r"and so can a dot", privacy)
         for words in ("\"provides strict zero data retention\"",
                       "\"deleting a conversation does not remove every "
                       "related copy\""):
             assert words in privacy, words
-        assert re.search(r"stay on[^.]*after you quit Codex|"
-                         r"after you quit Codex[^.]*stay on", privacy)
+        # (v0.15.5: "can stay on", so that the fact reversed fails)
+        assert re.search(r"\bcan stay on[^.]*after you quit Codex", privacy)
         assert "\"on desktop, mobile, or web\"" in section
         assert "eligible ChatGPT Work conversations" not in section
         assert ("Whether such a conversation can use Exegete on the "
@@ -1328,7 +1348,7 @@ class TestWhatCodexKeepsAndTheOptOut:
         # (cli/src/main.rs 697-698)
         assert re.search(r"release 0\.170\.0, " + READ_ON + r", it also "
                          r"keeps the answers you give to Codex's own "
-                         r"questions in Plan mode\.", leaves)
+                         r"questions in Plan mode", leaves)
         for words in ("starts a background server by default",
                       "keeps running after you quit Codex, and writes to "
                       "the same log database.",

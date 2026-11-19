@@ -505,10 +505,12 @@ class TestTheTexts:
                 "writes them, is held back") in privacy
         assert "in capitals (\"MARIA BROWN\")" in privacy
         assert "goes into Apple Books" in privacy
-        assert ("a page left for a file deleted in QualCoder goes when a new "
-                "file that takes its number comes in through Exegete, or "
-                "when Exegete next writes a page or a copy for that file"
-                ) in privacy
+        # (v0.15.5, the documents' points left this week: for a
+        # researcher who uses QualCoder, said so)
+        assert ("if you use QualCoder, a page left for a file you delete "
+                "there goes when a new file that takes its number comes in "
+                "through Exegete, or when Exegete next writes a page or a "
+                "copy for that file") in privacy
 
     def test_the_warnings_warn_and_suggest(self):
         for name in ("INSTALL.md", "PRIVACY.md"):

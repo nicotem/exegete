@@ -31,8 +31,8 @@ Claude, one fully local route, and OpenAI's apps.
 | Route | What it means | Where to read more |
 |---|---|---|
 | **Claude consumer plans** (claude.ai and Claude Desktop on a Free, Pro, Max or Ultra plan; Claude Code with a Pro, Max or Ultra login) | The plans most people start with. While training is on, Anthropic may use your conversations, with the participants' data in them, to train its models. The setting "Help improve our AI models", at [claude.ai/settings/data-privacy-controls](https://claude.ai/settings/data-privacy-controls), switches training off, and its default is worth checking yourself. Claude Code opens files by itself, outside Exegete, and Cowork does so in the folders you connect to it. So for participants' data, this project suggests Claude Desktop's chat with the extension, with computer use off, no folder that holds your projects or transcripts connected to it, and no other extension that reads files ([PRIVACY.md, "Assistants that open files by themselves"](../PRIVACY.md#assistants-that-open-files-by-themselves)). | [PRIVACY.md](../PRIVACY.md), rung 1 |
-| **Anthropic commercial-terms routes** (Claude Code with a Console API key; Team or Enterprise accounts) | The same Claude, under other terms. A personal plan (Free, Pro, Max or Ultra) comes under Anthropic's consumer terms. An account your university or employer manages comes under the agreement it made with Anthropic. Such agreements differ in what they let Anthropic do with your data. Even so, an institution's account is likely to give participants' data more protection than a personal one, since the institution agreed its terms with its own interests in mind. Whoever manages that account can tell you which terms apply, and whether it allows Exegete's extension. By Anthropic's pages, read on 19 November 2026, on a Team or Enterprise account the Primary Owner can request your data through exports, which may contain your conversations and the files you uploaded. On Enterprise, a feature called the Compliance API can pull your chats and files, and the transcripts of Claude Code and Cowork sessions run on your computer while you are signed in with that account, with the text of what Exegete's tools returned, kept six years by default. The extension is not signed, and a university or employer that manages your computer or your Claude account may block unsigned extensions, or extensions altogether ([INSTALL.md](../INSTALL.md#installing-the-extension)). The terms do not change what Claude Code reads. Claude Code opens files by itself, outside Exegete. So for participants' data, this project suggests Claude Desktop's chat with Exegete on a Team or Enterprise account, set up as in the row above ([PRIVACY.md](../PRIVACY.md), "Assistants that open files by themselves"). | [PRIVACY.md](../PRIVACY.md), rungs 2 and 3; [the API-key recipe](#claude-code-with-an-anthropic-api-key-experimental) below |
-| **Fully local models** (LM Studio and similar hosts) | The model runs on your computer, so participants' data is not sent to an AI provider. LM Studio's LM Link, a feature still in preview, can load the model on another computer instead, where the model then reads the conversation, participants' data included (<https://lmstudio.ai/link>, read on 10 November 2026). To keep the conversation on your computer, you could check in LM Studio where the model is loaded, or leave LM Link off. We expect a local model to do the analysis less well than the hosted models, and do not know by how much, since we have evaluated neither. It is a route to consider for particular uses, such as a first pass over sensitive material, or work an agreement confines to one computer. Exegete offers its full tool set unless the host's entry asks for the smaller one, `core`. The recipe asks for `core`, which takes less of a local model's room than the full set. | [PRIVACY.md](../PRIVACY.md), rung 4; [the LM Studio recipe](#lm-studio-fully-local-experimental) below |
+| **Anthropic commercial-terms routes** (Claude Code with a Console API key; Team or Enterprise accounts) | The same Claude, under other terms. A personal plan (Free, Pro, Max or Ultra) comes under Anthropic's consumer terms. An account your university or employer manages comes under the agreement it made with Anthropic. Such agreements differ in what they let Anthropic do with your data. Even so, an institution's account is likely to give participants' data more protection than a personal one, since the institution agreed its terms with its own interests in mind. Whoever manages that account can tell you which terms apply, and whether it allows Exegete's extension. By Anthropic's pages, read on 19 November 2026, on a Team or Enterprise account the Primary Owner can request your data through exports, which may contain your conversations and the files you uploaded. On Enterprise, a feature called the Compliance API can pull your chats and files, kept as long as your organisation's rules say (indefinitely by default), with the results of the tools a chat used. Whether those include what Exegete's tools returned in Claude Desktop's chat is not documented. The API also pulls the transcripts of the Claude Code and Cowork sessions run on your computer while you are signed in with that account, with the text of what Exegete's tools returned, kept six years by default. The extension is not signed, and a university or employer that manages your computer or your Claude account may block unsigned extensions, or extensions altogether ([INSTALL.md](../INSTALL.md#installing-the-extension)). The terms do not change what Claude Code reads. Claude Code opens files by itself, outside Exegete. So for participants' data, this project suggests Claude Desktop's chat with Exegete on a Team or Enterprise account, set up as in the row above ([PRIVACY.md](../PRIVACY.md), "Assistants that open files by themselves"). | [PRIVACY.md](../PRIVACY.md), rungs 2 and 3; [the API-key recipe](#claude-code-with-an-anthropic-api-key-experimental) below |
+| **Fully local models** (LM Studio and similar hosts) | The model runs on your computer, so participants' data is not sent to an AI provider. LM Studio's LM Link, a feature still in preview, can load the model on another computer instead, where the model then reads the conversation, participants' data included (<https://lmstudio.ai/link>, read on 19 November 2026). To keep the conversation on your computer, you could check in LM Studio where the model is loaded, or leave LM Link off. We expect a local model to do the analysis less well than the hosted models, and do not know by how much, since we have evaluated neither. It is a route to consider for particular uses, such as a first pass over sensitive material, or work an agreement confines to one computer. Exegete offers its full tool set unless the host's entry asks for the smaller one, `core`. The recipe asks for `core`, which takes less of a local model's room than the full set. | [PRIVACY.md](../PRIVACY.md), rung 4; [the LM Studio recipe](#lm-studio-fully-local-experimental) below |
 | **OpenAI's apps** (the ChatGPT desktop app; Codex's command line and editor extension) | OpenAI's terms apply, and which ones depends on your plan and on how you sign in. Where your university or employer runs your workspace, OpenAI's page on enterprise privacy (Archive capture of 16 November 2026) says what its admins can do. On ChatGPT Business, they "can view, access, export, and delete end user conversations in the workspace". On ChatGPT Enterprise and Edu, they "can access an audit log of conversations and GPTs". While training is on, OpenAI may use your conversations, with the participants' data in them, to train its models. Turning off "Improve the model for everyone" stops it, and on a personal account that covers Codex too (OpenAI's Help Center, Archive capture of 18 November 2026). ChatGPT in a web browser cannot use Exegete directly. On a phone, ChatGPT can use it only through Codex on mobile, which has a computer paired with the phone run the work. For participants' data, this project suggests leaving that computer's remote access off. Codex can also read your projects' files by itself, without asking, so for participants' data this project suggests an assistant with no file access of its own, such as Claude Desktop's chat. OpenAI documents a setting, marked Beta, that can keep Codex's own commands from reading outside the folder it works in; it has not been tested with Exegete. This project has not run Exegete in any OpenAI app. | [PRIVACY.md](../PRIVACY.md), "OpenAI's apps"; [the recipe](#chatgpts-desktop-app-and-codex-experimental) below |
 
 The `core` tool set and the recipes below are **Experimental**. They
@@ -314,13 +314,11 @@ every start, in an `env` block beside `command`:
 
 The path is the project's folder, ending in `.qda`, or the `data.qda`
 file inside it ("Environment variables Exegete reads", below, says what
-happens when it does not exist). On these routes Exegete makes projects in
-`~/Documents/Exegete projects/` unless `EXEGETE_WORKSPACE` names
-another folder, and the desktop extension in `~/Exegete projects/`. If
-you use QualCoder, its recent projects list shows where yours are,
-often in `~/Documents/QualCoder_projects/` or `~/QualCoder/`. This
-command searches your home folder five levels down, which takes in the
-usual places Exegete's project listing searches:
+happens when it does not exist). If you use QualCoder, its recent
+projects list shows where yours are, often in
+`~/Documents/QualCoder_projects/` or `~/QualCoder/`. This command
+searches your home folder five levels down, which takes in the usual
+places Exegete's project listing searches:
 
 ```bash
 find ~ -maxdepth 5 -name "*.qda" -type d 2>/dev/null
@@ -378,9 +376,9 @@ Code finds commands on your shell's PATH, where pipx and uv tool put
 `exegete`. With the plain virtual environment, give its full path,
 `~/exegete-venv/bin/exegete`, instead; with a copy of the source,
 `~/Documents/exegete/venv/bin/python -m exegete.server`. A `.mcp.json`
-file in the folder, with the same entry as Claude Desktop's, above,
-does the same. A setting goes on the command line with `-e`, before the
-`--`, as in
+file in the folder, with the same entry as Claude Desktop's, above, does
+the same. A setting goes on the command line with `-e`, before the `--`,
+as in
 `claude mcp add exegete -e EXEGETE_PROJECT_PATH=/path/to/MyProject.qda -- exegete`.
 Exegete behaves the same under any host; `EXEGETE_TOOLSET`, not the
 host, decides which tools it offers ("Environment variables Exegete
@@ -426,11 +424,12 @@ asking, and its read-only commands read outside it too, as do its file
 tools in auto mode, the mode it starts in ("Claude Code", above;
 PRIVACY.md, "Assistants that open files by themselves", with Anthropic's
 pages). What it reads that way goes to Anthropic whole, the private part
-of memos included. For participants' data under commercial terms, this
-project suggests Claude Desktop's chat with Exegete on a Team or
-Enterprise account (PRIVACY.md, rung 3), with computer use off, no
-folder that holds your projects or transcripts connected to it, and no
-other extension that reads files.
+of memos included. Exegete's extension is not signed, and an institution
+may block it (the table above). For participants' data under commercial
+terms, this project suggests Claude Desktop's chat with Exegete on a
+Team or Enterprise account (PRIVACY.md, rung 3), with computer use off,
+no folder that holds your projects or transcripts connected to it, and
+no other extension that reads files.
 
 **1. Install Exegete**, as "Installing from PyPI", above, says; after the
 plain virtual environment, step 2 needs its full path in place of
@@ -512,15 +511,13 @@ reads by itself (step 2).
 
 **5. An organisational account.** To be sure that the commercial terms
 cover your use, you could use a Console account that your institution
-manages, rather than a personal one. [PRIVACY.md](../PRIVACY.md)
-quotes the passages of Anthropic's two sets of terms that say whom each
-covers, and does not settle which covers a personal Console account.
-What your institution's account lets Anthropic do with your data
-depends on the agreement your institution made with Anthropic, and such
-agreements differ. The table under "Choosing your AI host", above, says
-why such an account is still likely to give participants' data more
-protection than a personal one. Whoever manages the account can tell
-you which terms apply.
+manages, rather than a personal one. [PRIVACY.md](../PRIVACY.md) quotes
+the passages of Anthropic's two sets of terms that say whom each covers,
+and does not settle which covers a personal Console account. The table
+under "Choosing your AI host", above, says that each institution's
+agreement with Anthropic differs, and why such an account is still
+likely to give participants' data more protection than a personal one.
+Whoever manages the account can tell you which terms apply.
 
 Working in the Terminal is less convenient than Claude Desktop, and
 claude.ai's connectors and the `/schedule` feature are not available
@@ -541,14 +538,18 @@ same.
 
 [LM Studio](https://lmstudio.ai) runs open-weight models on your
 computer and can host MCP servers, so your interview data, your codings
-and the model stay on your computer. LM Studio's documentation says
-that it "can operate entirely offline" and that "Nothing you enter into
-LM Studio when chatting with LLMs leaves your device"
-(<https://lmstudio.ai/docs/app/offline>, quoted on 4 November 2026). That
-is LM Studio's statement, not a certification by this project; step 7
-says how to check it yourself. You need a computer that can run a
-mid-size local model (16 GB of memory is a realistic minimum), LM
-Studio, and Python 3.11 or newer.
+and the model stay on your computer, unless LM Studio's LM Link, a
+feature in preview, loads the model on another computer. The model then
+reads the conversation there, participants' data included
+(<https://lmstudio.ai/link>, read on 19 November 2026). You could check
+in LM Studio where the model is loaded, or leave LM Link off. LM
+Studio's documentation says that it "can operate entirely offline" and
+that "Nothing you enter into LM Studio when chatting with LLMs leaves
+your device" (<https://lmstudio.ai/docs/app/offline>, quoted on 4
+November 2026). That is LM Studio's statement, not a certification by
+this project; step 7 says how to check it yourself. You need a computer
+that can run a mid-size local model (16 GB of memory is a realistic
+minimum), LM Studio, and Python 3.11 or newer.
 
 **Step 1. Install Exegete**, with its optional part for PDF and EPUB:
 
@@ -590,10 +591,10 @@ the smaller set.
 19,000 tokens of schema exceed the default context of 8k. In the model's
 load settings, or its default settings
 (<https://lmstudio.ai/docs/app/advanced/per-model>), set the context
-length to at least 32k for the core toolset (that leaves about 13k
-tokens for your transcript excerpts and conversation; 16k would not even
-hold the schema and is not workable), or 64k if you must run the full
-surface (its schema alone is about 53,000 tokens).
+length to at least 32k for the core toolset: that leaves about 13k
+tokens for your transcript excerpts and conversation. At 16k the schema
+alone would not fit. For the full tool set, `full`, whose schema alone
+is about 53,000 tokens, you could set 64k.
 
 **Step 5. Add Exegete.** Open the Program tab in the right sidebar,
 click Install, then Edit mcp.json, and add these lines (LM Studio
@@ -645,9 +646,10 @@ that do not need it saves context (not part of the check with 0.4.22,
 and not checked since).
 
 **Step 7. Check offline work.** Disconnect from the network and work.
-The model, the chats and all of Exegete's work are local, with
-Exegete's check for new versions off, as step 5's entry sets it and its
-log says at every start. On Windows x64, a library Exegete installs for
+With Exegete's check for new versions off, as step 5's entry sets it
+and its log says at every start, the chats and all of Exegete's work
+are local, and so is the model, unless LM Link has loaded it on another
+computer (above). On Windows x64, a library Exegete installs for
 PDFs reports its use to Windows' diagnostic data, which working offline
 does not stop ([PRIVACY.md](../PRIVACY.md), "How your data flows"). LM
 Studio says it needs the internet only to search for and download
@@ -667,16 +669,14 @@ for PDFs reports its use to Windows, with nothing from your projects:
 
 **If something goes wrong.** A context too small for the tools usually
 shows as the model ignoring tools, writing tool calls that do not work,
-or LM Studio reporting an overflow: the small tool set, a larger
-context or a shorter chat help. After editing mcp.json or updating
-Exegete, switch Exegete off and on in LM Studio, or restart LM Studio.
-LM Studio may also restart Exegete between turns (seen with LM Studio
-0.4.12; the check of 7 September 2026 was with 0.4.22), which loses the
-project selected. The "no project selected" error then gives the last
-project used on this computer, so one `select_project` call gets you
-back, and `EXEGETE_PROJECT_PATH`, as in step 5, selects a project at
-every start. LM Studio keeps its log, with Exegete's lines, in
-`~/Library/Logs/LM Studio/main.log` on a Mac.
+or LM Studio reporting an overflow: the small tool set, a larger context
+or a shorter chat help. After editing mcp.json or updating Exegete,
+switch Exegete off and on in LM Studio, or restart LM Studio. LM Studio
+may also restart Exegete between turns (seen with LM Studio 0.4.12; the
+check of 7 September 2026 was with 0.4.22), which loses the project
+selected. The "no project selected" error then gives the last project
+used on this computer, so one `select_project` call gets you back, and
+`EXEGETE_PROJECT_PATH`, as in step 5, selects a project at every start.
 
 ## ChatGPT's desktop app and Codex (Experimental)
 
@@ -728,6 +728,7 @@ configuration for the same Codex host."
   (<https://learn.chatgpt.com/docs/enterprise/cloud-local-access>, read
   on 19 November 2026) says: "Conversations, tool results, and other
   task context do not stay exclusively on the connected computer."
+  PRIVACY.md, "OpenAI's apps", quotes it on retention and deletion.
 - **ChatGPT on a phone**: it cannot start Exegete, but it can use it
   through Codex on mobile. The ChatGPT app for iOS shows it as **Codex**,
   and an app that still uses the earlier label shows it as **Remote**.
@@ -753,9 +754,12 @@ configuration for the same Codex host."
   - and "Availability depends on rollout and your workspace settings."
 
   Codex's command line can switch remote access on as well, with its
-  experimental `codex remote-control`. It can stay on after you quit
-  Codex; after `codex remote-control start` it comes back with the
-  background server, even after `codex remote-control stop`, until
+  experimental `codex remote-control`, and remote access can stay on
+  after you quit Codex. By default, opening Codex's command line starts
+  a background server, which keeps running after you quit ("Updating",
+  below). After `codex remote-control start`, that server starts with
+  remote access on, so remote access is back as soon as you open Codex
+  again, even after `codex remote-control stop`, until
   `codex app-server daemon disable-remote-control` switches it off
   (Codex's source at release 0.170.0, read on 19 November 2026). This
   project has not tried Codex on mobile, and suggests leaving remote
@@ -775,10 +779,10 @@ configuration for the same Codex host."
 (<https://learn.chatgpt.com/docs/pricing>, read on 19 November 2026)
 lists "ChatGPT desktop app for local chats", "Codex CLI" and "IDE
 extension" for the Plus, Pro, Business, Enterprise / Education and API
-Key plans, and "Mobile remote control" for the same plans except API Key.
-For Free and Go it mentions only the desktop app, "subject to rollout".
-You sign in to Codex with a ChatGPT account or with an API key. How
-you sign in decides which of OpenAI's data policies apply
+Key plans. It lists "Mobile remote control" for the same plans except
+API Key. For Free and Go it mentions only the desktop app, "subject to
+rollout". You sign in to Codex with a ChatGPT account or with an API
+key. How you sign in decides which of OpenAI's data policies apply
 ([PRIVACY.md](../PRIVACY.md), "OpenAI's apps").
 
 **First, switch training off.** While training is on, OpenAI may use
@@ -811,11 +815,9 @@ $HOME\exegete-venv\Scripts\pip install "exegete[pdf-epub]"
 
 (`pipx install "exegete[pdf-epub]"` or
 `uv tool install "exegete[pdf-epub]"` also work.) The part in brackets
-reads PDF and EPUB, with libraries under the AGPL; without it, Exegete
-cannot read either ("PDF and EPUB: the optional part", above). The
-settings in step 2 need the full path of the `exegete` program, because
-an app started from the Dock or the Start menu may not look in the
-folders your Terminal does. After the lines above it is
+reads PDF and EPUB ("PDF and EPUB: the optional part", above). The
+settings in step 2 need the full path of the `exegete` program, as
+"Installing from PyPI", above, says. After the lines above it is
 `/Users/YOUR_USERNAME/exegete-venv/bin/exegete` on a Mac,
 `/home/YOUR_USERNAME/exegete-venv/bin/exegete` on Linux and
 `C:\Users\YOUR_USERNAME\exegete-venv\Scripts\exegete.exe` on Windows,
@@ -889,14 +891,19 @@ What the lines do:
   take more than a minute. These two values are suggestions, which this
   project has not measured with Codex.
 
-Codex keeps 48,000 bytes of a tool's answer for the models it lists and 12,000
-bytes for others, such as a local model, cutting a longer answer's middle and
-leaving a marker (Codex 0.167.0's source, read on 10 November 2026). A part of
-a file is at most 40,000 bytes unless long memos, or many codings, annotations
-or a case's excerpts, come with it. A smaller `limit` shortens other long
-answers. Untried here: `tool_output_token_limit` sets the budget of every tool
-and resource (10,000 tokens for listed models), and `output_token_limit` under
-`[mcp_servers.exegete.tools.read_file_with_codings]` that tool's alone.
+Codex passes on at most 48,000 bytes of a tool's answer to the models it
+lists, and 12,000 bytes to others, such as a local model, leaving out
+the middle of a longer answer, with a marker in its place (Codex
+0.167.0's source, read on 10 November 2026). A byte holds a letter of
+plain English, and other letters take more. Exegete gives a file in
+parts of at most 40,000 bytes, unless long memos, or many codings,
+annotations or a case's excerpts, come with a part, so with a model
+Codex does not list a part loses its middle. A smaller `limit` shortens
+other long answers. Two settings of Codex, untried here, change these
+budgets: `tool_output_token_limit` for every tool and resource (10,000
+tokens, pieces of words, for the models it lists), and
+`output_token_limit` under
+`[mcp_servers.exegete.tools.read_file_with_codings]` for that tool alone.
 
 If the file already has an entry named `exegete` (because you added it
 in the app's settings screen or with `codex mcp add`, below), do not
@@ -1042,9 +1049,7 @@ too.
 
 **If Exegete does not start, or its tools are missing:**
 
-- Check the full path: in a Terminal, the path from step 1 followed by
-  `--version` answers `exegete <version>`. If it does not, install again
-  (step 1).
+- Check the full path with `--version`, as "Troubleshooting" says below.
 - Codex cannot read a settings file with a mistake in it, such as a
   missing quote mark, a curly quote mark (“ or ” instead of ") typed in
   TextEdit, or a second `[mcp_servers.exegete]` line; compare yours with
@@ -1235,11 +1240,9 @@ the two of the check for new versions (`EXEGETE_UPDATE_CHECK` and
   }
   ```
 
-  A local-model host (LM Studio, for example) is the case this is for:
-  give the model the host runs, and every project Exegete creates from
-  that host takes that name, and any other project without one is
-  offered it first, so codings by different models can be told apart
-  and compared later.
+  A local-model host (LM Studio, for example) is the case this is for,
+  so that codings by different models can be told apart and compared
+  later.
 
 - `EXEGETE_USES_QUALCODER` (0.15.0): your answer to "Do you also use
   QualCoder on this computer?": `yes`, `no` or `not sure`, in any letter
@@ -1436,10 +1439,9 @@ cleared. To update, quit the host, change `exegete` (or the earlier
 name, qualcoder-mcp) in that entry to `exegete@` and the newest version
 as PyPI spells it, for example `exegete@0.15.4a0`, and open the host
 again: it fetches that version when it next starts, which needs the
-internet that once. With the check for new versions on, "How do I update
-Exegete?" gives this step with the version filled in. An entry that runs
-`uvx exegete` has no optional part for PDF and EPUB unless the entry
-gives it, as `uvx --from "exegete[pdf-epub]" exegete` does.
+internet that once. An entry that runs `uvx exegete` has no optional
+part for PDF and EPUB unless the entry gives it, as
+`uvx --from "exegete[pdf-epub]" exegete` does.
 
 **A copy of the source**, with your host quit, in the copy's folder (a
 copy made before 0.14.1 may be called qualcoder_mcp), with the new
@@ -1455,9 +1457,7 @@ pip install -e ".[pdf-epub]"
 
 Without the optional part for PDF and EPUB, the last line is
 `pip install -e .`. `git merge --ff-only` stays on the copy's branch,
-and refuses if the copy has changes of its own. With the check for new
-versions on, "How do I update Exegete?" gives these steps with the
-version filled in.
+and refuses if the copy has changes of its own.
 
 "Testing the install", above, shows the version. Exegete also reports
 it to the host when it connects (`serverInfo.version`), but whether the
@@ -1592,13 +1592,11 @@ that last release will say plainly that it is the last.
 
 This part is for a copy of the source made before 0.9, whose host starts
 `venv/bin/python` with `"args": ["-m", "qualcoder_mcp.server"]`; the
-program was then called qualcoder-mcp. Updating never touches your
-projects, or the files in Exegete's own folder, which the first start of
-0.14.1 or later moves whole from `~/.qualcoder_mcp/` to `~/.exegete/`;
-both ways below were checked to leave the projects and session files
-untouched. When 0.9 was released, a check found that going from 0.6, 0.7
-or 0.8 straight to 0.9 needed no step to move data or sessions, and that
-a session file from 0.6 drove the whole workflow of 0.9.
+program was then called qualcoder-mcp. Both ways below were checked to
+leave the projects and session files untouched. When 0.9 was released, a
+check found that going from 0.6, 0.7 or 0.8 straight to 0.9 needed no
+step to move data or sessions, and that a session file from 0.6 drove
+the whole workflow of 0.9.
 
 **Staying on the copy of the source** needs no change to your host's
 configuration: `-m qualcoder_mcp.server` starts Exegete through a small
@@ -1667,13 +1665,15 @@ environment avoids.
    `~/.codex/state_5.sqlite`), and LM Studio's log
    (`~/Library/Logs/LM Studio/main.log` on a Mac). Codex also keeps the
    text you typed (`~/.codex/history.jsonl`). From its command line, it
-   keeps pieces of the assistant's answers, and your answers to its
-   questions in Plan mode, in its log database
-   (`~/.codex/logs_2.sqlite`). Its background server ("Updating", above)
-   goes on writing there after you quit Codex. Like the conversation,
-   these hold names, paths and quoted text: if you are clearing a
-   study's traces from the computer, look at them too
-   ([PRIVACY.md's checklist](../PRIVACY.md#before-you-use-real-participant-data-check-these)
+   keeps pieces of the assistant's answers in its log database
+   (`~/.codex/logs_2.sqlite`), and your answers to its questions in Plan
+   mode, where it proposes a plan before it starts work
+   (<https://learn.chatgpt.com/docs/cli/slash-commands>, read on 19
+   November 2026). Its background server ("Updating", above) goes on
+   writing there after you quit Codex. Like the conversation, these hold
+   names, paths and quoted text: if you are clearing a study's traces
+   from the computer, look at them too ([PRIVACY.md's
+   checklist](../PRIVACY.md#before-you-use-real-participant-data-check-these)
    lists what stays).
 4. **Exegete's own folder and its reading folder** stay until you
    delete them, as INSTALL.md's

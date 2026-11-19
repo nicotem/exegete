@@ -2724,10 +2724,10 @@ def test_a_wrong_hour_in_privacy_or_a_fragment_names_its_line(tmp_path):
 SIZE_SENTENCES = (
     ("(about 195,000 characters with `full`; TOOLS.md says how", False),
     ("(about 190,000 characters with `full`; TOOLS.md says how", True),
-    ("or 64k if you must run the full surface (its schema alone is about "
-     "49k tokens).", False),
-    ("or 64k if you must run the full surface (its schema alone is about "
-     "47k tokens).", True),
+    ("For the full tool set, `full`, whose schema alone is about 49k "
+     "tokens, you could set 64k.", False),
+    ("For the full tool set, `full`, whose schema alone is about 47k "
+     "tokens, you could set 64k.", True),
 )
 
 

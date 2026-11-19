@@ -353,8 +353,12 @@ class TestFixRoundOneWords:
         # its own there, so its first word is a capital)
         for words in ("move never copies or duplicates the secret",
                       "the folder is put back",
-                      "unless an older copy of the server has already "
-                      "written at the old path in that instant",
+                      # (v0.15.5: "of Exegete" in PRIVACY.md, the
+                      # CHANGELOG's released entry as it was)
+                      "unless an older copy of "
+                      + ("Exegete" if name == "PRIVACY.md" else "the server")
+                      + " has already written at the old path in that "
+                      "instant",
                       "of its own there, which",
                       "does not use",
                       "says so once in its log",

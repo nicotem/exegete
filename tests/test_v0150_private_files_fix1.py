@@ -18,6 +18,7 @@ one; and a folder swapped for a link after its check, never followed.
 import inspect
 import json
 import os
+import re
 import stat
 import sys
 from pathlib import Path
@@ -110,12 +111,16 @@ class TestNarrowingWhatAnAssistantCanReach:
                 "assistant can read it at any time.") in section
         assert ("Some ways narrow that reach, though none closes it.") \
             in section
+        # (v0.15.5, the documents' points left this week: the facts, with
+        # what a prune that stopped partway leaves, a clause of its own)
         assert ("Or you could move a file out of the project once Exegete "
                 "has used it, and remove the backups and copies that still "
                 "hold it: `list_backups` shows the backups, `prune_backups` "
-                "deletes Exegete's own at your word, and QualCoder's "
-                "backups, if you use it, and copies of the project are "
-                "yours to delete.") in section
+                "deletes Exegete's own at your word") in section
+        assert re.search(r"`prune_backups` deletes Exegete's own at your "
+                         r"word[^.]*QualCoder's backups, if you use it, and "
+                         r"copies of the project are yours to delete\.",
+                         section)
 
     def test_a_folder_of_its_own_is_not_enough_for_codex(self):
         """Fix round 2: Codex is no longer the only exception named; the

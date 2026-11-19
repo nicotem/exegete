@@ -8,12 +8,17 @@
 - **An institution's account.** PRIVACY.md's rung 3 quotes Anthropic's
   pages, read on 19 November 2026. On a Team or Enterprise plan, the
   account's Primary Owner manages its data, and can request it through
-  data exports, which may contain your conversations. On Enterprise, the
-  Compliance API can pull chat data and file content, and, by
-  Anthropic's documentation of that API, the Claude Code and Cowork
-  sessions run on your computer under the Enterprise account, with the
-  text of what their tools returned, Exegete's included, kept six years
-  by default. The Primary Owner switches that API on, or a parent
+  data exports, which may contain your conversations, the files you
+  uploaded and usage patterns. On Enterprise, the Compliance API can
+  pull chat data and file content, which your organisation's retention
+  rules keep, indefinitely by default. Its reference for a chat's
+  messages lists the results of the tools the chat used, and no page
+  says whether those include what Exegete's tools return in Claude
+  Desktop's chat. By Anthropic's documentation of that API, it also
+  pulls the Claude Code and Cowork sessions run on your computer under
+  the Enterprise account, with the text of what their tools returned,
+  Exegete's included, kept six years by default. The Primary Owner
+  switches that API on, or a parent
   organisation's Primary Owner for every organisation linked to it, and
   Owners can create keys for their own organisation. Before the Terminal
   guide's table suggests Claude Desktop's chat on such an account, it
@@ -76,6 +81,6 @@
   Work Cloud and local computer access, so the guide now says that,
   citing that page. PRIVACY.md's warning that tool results do not stay
   on the connected computer now covers local computer access for Work
-  Cloud or for dots, and quotes OpenAI's page on it: neither feature
-  "provides strict zero data retention", and for Work "deleting a
+  Cloud or for dots, and quotes OpenAI's page on it: neither Work nor a
+  dot "provides strict zero data retention", and for Work "deleting a
   conversation does not remove every related copy".

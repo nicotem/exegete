@@ -551,8 +551,12 @@ class TestThePublishedSchemaBudget:
         # (v0.15.2: the LM Studio recipe is the Terminal guide's)
         install = self._read("docs/installing-from-the-terminal.md")
         assert "at least 32k for the core toolset" in install
-        assert "16k would not even hold the schema and is not workable" \
-            in install
+        # (v0.15.5, the documents' points left this week: the fact, that
+        # the schema alone passes 16k, in plain words; ruling 85)
+        step = install[install.index("**Step 4."):
+                       install.index("**Step 5.")]
+        assert re.search(r"\b16k\b[^.]*schema[^.]*not\s+fit", step)
+        assert "not workable" not in install
         tokens = SNAPSHOT_SIZES["core"]["tool_definitions_characters"] / 4
         assert tokens > 16_000
         left = re.search(r"that leaves about (\d+)k tokens for your "

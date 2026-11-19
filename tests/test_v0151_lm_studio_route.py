@@ -184,7 +184,9 @@ def test_the_first_project_rests_on_what_core_leaves_out():
                   "or in QualCoder if you use it."):
         assert words in first, words
     # Step 4's figure for the full set is the one this paragraph names
-    assert "or 64k if you must run the full surface" in recipe
+    # (v0.15.5: the fact, the full set and 64k in one sentence of Step 4)
+    step = recipe[recipe.index("**Step 4."):recipe.index("**Step 5.")]
+    assert re.search(r"`full`[^.]*\b64k\b", step)
     # it sits between Step 5 and Step 6
     assert recipe.index("**Step 5.") < recipe.index("**A first project.**") \
         < recipe.index("**Step 6.")

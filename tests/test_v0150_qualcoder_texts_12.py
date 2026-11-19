@@ -788,7 +788,9 @@ class TestTheDocuments:
 
     def test_privacy_names_the_ai_chat_history(self):
         flat = _doc("PRIVACY.md")
-        assert ("QualCoder's search index and QualCoder's AI chat history "
+        # (v0.15.5, the documents' points left this week: for a
+        # researcher who uses QualCoder, said so)
+        assert ("if you use QualCoder, its search index and AI chat history "
                 "keep the old name too") in flat
         assert "QualCoder 4.0's AI chat keep" not in flat
 

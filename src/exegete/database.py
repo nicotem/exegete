@@ -3489,10 +3489,11 @@ class BackupNameTooLongError(OSError):
     """No backup could be made because the project's name is too long for
     the names Exegete gives its backups (v0.15.5): a backup is first made
     under a hidden name 45 characters longer than the project's
-    (`_partial_backup_name`), which a name of more than 210 characters,
-    or on Linux, which counts bytes, of more than 210 bytes, can take
-    past what a file system allows (`backup_name_too_long`). It carries
-    its fixed message alone, never a name or a path."""
+    (`_partial_backup_name`), which a name of more than 210 characters, or
+    on Linux's own file systems, which count bytes, of more than 210
+    bytes, can take past what a file system allows
+    (`backup_name_too_long`). It carries its fixed message alone, never a
+    name or a path."""
 
 
 BACKUP_NAME_TOO_LONG_MESSAGE = (

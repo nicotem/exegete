@@ -1326,7 +1326,7 @@ class TestWhatCodexKeepsAndTheOptOut:
         # (v0.15.5, plans and readings: what the policy says of training
         # and of what you delete, in its words; no longer "not able to
         # read")
-        for words in ("for example to train the models that power ChatGPT.",
+        for words in ("for example to train the models that power ChatGPT",
                       "we will remove it from our systems within 30 days",
                       "does not apply to content that we process on behalf "
                       "of customers of our business offerings"):

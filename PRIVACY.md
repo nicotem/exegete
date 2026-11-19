@@ -2612,15 +2612,15 @@ OpenAI's "Europe privacy policy" is a separate page,
 "Updated: August 24, 2026"; Archive capture of 14 November 2026,
 <https://web.archive.org/web/20261114100059/https://openai.com/policies/eu-privacy-policy/>).
 It "does not apply to content that we process on behalf of customers of
-our business offerings, such as our API." It says: "we may use Content
-you provide us to improve our Services, for example to train the models
-that power ChatGPT." Of what you delete: "we will remove it from our
-systems within 30 days unless we need to retain it for longer as
-described below, or it has already been de-identified and disassociated
-from your account when you allow us to use your Content to improve our
-models." The questions of consent, of controllers and processors, and
-of special-category data are the same when the provider is OpenAI.
-"What this means for research data" and
+our business offerings, such as our API". It says that "we may use
+Content you provide us to improve our Services, for example to train the
+models that power ChatGPT". Of what you delete, it says that "we will
+remove it from our systems within 30 days unless we need to retain it
+for longer as described below, or it has already been de-identified and
+disassociated from your account when you allow us to use your Content to
+improve our models". The questions of consent, of controllers and
+processors, and of special-category data are the same when the provider
+is OpenAI. "What this means for research data" and
 [the checklist](#before-you-use-real-participant-data-check-these),
 near the top of this document, set them out.
 

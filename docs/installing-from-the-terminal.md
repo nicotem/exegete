@@ -31,7 +31,7 @@ Claude, one fully local route, and OpenAI's apps.
 | Route | What it means | Where to read more |
 |---|---|---|
 | **Claude consumer plans** (claude.ai and Claude Desktop on a Free, Pro, Max or Ultra plan; Claude Code with a Pro, Max or Ultra login) | The plans most people start with. While training is on, Anthropic may use your conversations, with the participants' data in them, to train its models. The setting "Help improve our AI models", at [claude.ai/settings/data-privacy-controls](https://claude.ai/settings/data-privacy-controls), switches training off, and its default is worth checking yourself. Claude Code opens files by itself, outside Exegete, and Cowork does so in the folders you connect to it. So for participants' data, this project suggests Claude Desktop's chat with the extension, with computer use off, no folder that holds your projects or transcripts connected to it, and no other extension that reads files ([PRIVACY.md, "Assistants that open files by themselves"](../PRIVACY.md#assistants-that-open-files-by-themselves)). | [PRIVACY.md](../PRIVACY.md), rung 1 |
-| **Anthropic commercial-terms routes** (Claude Code with a Console API key; Team or Enterprise accounts) | The same Claude, under other terms. A personal plan (Free, Pro, Max or Ultra) comes under Anthropic's consumer terms. An account your university or employer manages comes under the agreement it made with Anthropic. Such agreements differ in what they let Anthropic do with your data. Even so, an institution's account is likely to give participants' data more protection than a personal one, since the institution agreed its terms with its own interests in mind. Whoever manages that account can tell you which terms apply, and whether it allows Exegete's extension. By Anthropic's pages, read on 19 November 2026, the account's Primary Owner can request your data through exports, which may contain your conversations, and on Enterprise a feature called the Compliance API can pull chat data. The extension is not signed, and a university or employer that manages your computer or your Claude account may block unsigned extensions, or extensions altogether ([INSTALL.md](../INSTALL.md#installing-the-extension)). The terms do not change what Claude Code reads. Claude Code opens files by itself, outside Exegete. So for participants' data, this project suggests Claude Desktop's chat with Exegete on a Team or Enterprise account, set up as in the row above ([PRIVACY.md](../PRIVACY.md), "Assistants that open files by themselves"). | [PRIVACY.md](../PRIVACY.md), rungs 2 and 3; [the API-key recipe](#claude-code-with-an-anthropic-api-key-experimental) below |
+| **Anthropic commercial-terms routes** (Claude Code with a Console API key; Team or Enterprise accounts) | The same Claude, under other terms. A personal plan (Free, Pro, Max or Ultra) comes under Anthropic's consumer terms. An account your university or employer manages comes under the agreement it made with Anthropic. Such agreements differ in what they let Anthropic do with your data. Even so, an institution's account is likely to give participants' data more protection than a personal one, since the institution agreed its terms with its own interests in mind. Whoever manages that account can tell you which terms apply, and whether it allows Exegete's extension. By Anthropic's pages, read on 19 November 2026, on a Team or Enterprise account the Primary Owner can request your data through exports, which may contain your conversations and the files you uploaded. On Enterprise, a feature called the Compliance API can pull your chats and files, and the transcripts of Claude Code and Cowork sessions run on your computer while you are signed in with that account, with the text of what Exegete's tools returned, kept six years by default. The extension is not signed, and a university or employer that manages your computer or your Claude account may block unsigned extensions, or extensions altogether ([INSTALL.md](../INSTALL.md#installing-the-extension)). The terms do not change what Claude Code reads. Claude Code opens files by itself, outside Exegete. So for participants' data, this project suggests Claude Desktop's chat with Exegete on a Team or Enterprise account, set up as in the row above ([PRIVACY.md](../PRIVACY.md), "Assistants that open files by themselves"). | [PRIVACY.md](../PRIVACY.md), rungs 2 and 3; [the API-key recipe](#claude-code-with-an-anthropic-api-key-experimental) below |
 | **Fully local models** (LM Studio and similar hosts) | The model runs on your computer, so participants' data is not sent to an AI provider. LM Studio's LM Link, a feature still in preview, can load the model on another computer instead, where the model then reads the conversation, participants' data included (<https://lmstudio.ai/link>, read on 10 November 2026). To keep the conversation on your computer, you could check in LM Studio where the model is loaded, or leave LM Link off. We expect a local model to do the analysis less well than the hosted models, and do not know by how much, since we have evaluated neither. It is a route to consider for particular uses, such as a first pass over sensitive material, or work an agreement confines to one computer. Exegete offers its full tool set unless the host's entry asks for the smaller one, `core`. The recipe asks for `core`, which takes less of a local model's room than the full set. | [PRIVACY.md](../PRIVACY.md), rung 4; [the LM Studio recipe](#lm-studio-fully-local-experimental) below |
 | **OpenAI's apps** (the ChatGPT desktop app; Codex's command line and editor extension) | OpenAI's terms apply, and which ones depends on your plan and on how you sign in. Where your university or employer runs your workspace, OpenAI's page on enterprise privacy (Archive capture of 16 November 2026) says what its admins can do. On ChatGPT Business, they "can view, access, export, and delete end user conversations in the workspace". On ChatGPT Enterprise and Edu, they "can access an audit log of conversations and GPTs". While training is on, OpenAI may use your conversations, with the participants' data in them, to train its models. Turning off "Improve the model for everyone" stops it, and on a personal account that covers Codex too (OpenAI's Help Center, Archive capture of 18 November 2026). ChatGPT in a web browser cannot use Exegete directly. On a phone, ChatGPT can use it only through Codex on mobile, which has a computer paired with the phone run the work. For participants' data, this project suggests leaving that computer's remote access off. Codex can also read your projects' files by itself, without asking, so for participants' data this project suggests an assistant with no file access of its own, such as Claude Desktop's chat. OpenAI documents a setting, marked Beta, that can keep Codex's own commands from reading outside the folder it works in; it has not been tested with Exegete. This project has not run Exegete in any OpenAI app. | [PRIVACY.md](../PRIVACY.md), "OpenAI's apps"; [the recipe](#chatgpts-desktop-app-and-codex-experimental) below |
 
@@ -162,13 +162,12 @@ clashing with what other programs need.
 `import_documents` reads Word, OpenDocument, RTF, plain text, Markdown,
 web pages and subtitle files in every install. PDF and EPUB need an
 optional part, `pdf-epub`: the two libraries QualCoder 4.0 reads them
-with, PyMuPDF and EbookLib (with lxml, which EbookLib needs). The
-Claude Desktop extension switches it on by itself. Installed from PyPI
-without it, Exegete imports the other formats and says it cannot read
-PDF or EPUB yet. INSTALL.md's
-["PDF and EPUB: the optional part"](../INSTALL.md#pdf-and-epub-the-optional-part)
-says which PyMuPDF each computer takes, what it costs and under which
-licence.
+with, PyMuPDF and EbookLib (with lxml, which EbookLib needs). The Claude
+Desktop extension switches it on by itself. Installed from PyPI without
+it, Exegete imports the other formats and says it cannot read PDF or
+EPUB yet. INSTALL.md's ["PDF and EPUB: the optional
+part"](../INSTALL.md#pdf-and-epub-the-optional-part) says which PyMuPDF
+each computer takes, what it costs and under which licence.
 
 PyMuPDF and EbookLib are under the AGPL, so an install without the part
 keeps AGPL software off your computer. To install without it, write
@@ -717,7 +716,9 @@ configuration for the same Codex host."
   OpenAI workspaces the tunnel is linked to. This project does not
   recommend it for a project with participants' data, and gives no steps
   for it. There is one more case, where your workspace gives you Work
-  Cloud and local computer access. OpenAI's page on remote connections
+  Cloud and local computer access
+  (<https://learn.chatgpt.com/docs/get-started-with-work>, read on 19
+  November 2026). OpenAI's page on remote connections
   (<https://learn.chatgpt.com/docs/remote-connections>, read on 19
   November 2026) says that a Work conversation can continue "on desktop,
   mobile, or web", and that "Work Cloud can use approved local resources
@@ -753,20 +754,22 @@ configuration for the same Codex host."
 
   Codex's command line can switch remote access on as well, with its
   experimental `codex remote-control`. It can stay on after you quit
-  Codex, and `codex app-server daemon disable-remote-control` switches
-  it off (Codex's source at release 0.170.0, read on 19 November 2026).
-  This project has not tried Codex on mobile, and suggests leaving
-  remote access off on a computer where Exegete works on participants'
-  data. A phone is easier to lose or share, and OpenAI's own advice is
-  "Only connect devices you own and trust." Another computer can do what
-  the phone does: "You can control a host from ChatGPT on iOS or
-  Android, or from another Mac or Windows device when Control other
-  devices is available." (the remote-connections page). The same page
-  adds: "Signing out of ChatGPT turns off **Remote Control**, but it
-  doesn't remove your existing device pairings." To check, look under
-  Settings, Connections in the desktop app, and remove any device paired
-  there ("In the app on the host, use **Settings** > **Connections** to
-  manage connected devices.", the same page).
+  Codex; after `codex remote-control start` it comes back with the
+  background server, even after `codex remote-control stop`, until
+  `codex app-server daemon disable-remote-control` switches it off
+  (Codex's source at release 0.170.0, read on 19 November 2026). This
+  project has not tried Codex on mobile, and suggests leaving remote
+  access off on a computer where Exegete works on participants' data. A
+  phone is easier to lose or share, and OpenAI's own advice is "Only
+  connect devices you own and trust." Another computer can do what the
+  phone does: "You can control a host from ChatGPT on iOS or Android, or
+  from another Mac or Windows device when Control other devices is
+  available." (the remote-connections page). The same page adds:
+  "Signing out of ChatGPT turns off **Remote Control**, but it doesn't
+  remove your existing device pairings." To check, look under Settings,
+  Connections in the desktop app, and remove any device paired there
+  ("In the app on the host, use **Settings** > **Connections** to manage
+  connected devices.", the same page).
 
 **Which plans.** OpenAI's Codex pricing page
 (<https://learn.chatgpt.com/docs/pricing>, read on 19 November 2026)
@@ -1172,61 +1175,59 @@ the two of the check for new versions (`EXEGETE_UPDATE_CHECK` and
   of falling back to `~/Documents/Exegete projects`. The desktop
   extension sets it, so an emptied "Folder for projects" never sends
   projects into a synced Documents folder.
-- `EXEGETE_CODER_NAME` (0.15.0): your own coder name, the name your
-  own codings carry in a project, kept apart from the AI's. Set, it is
-  given by `create_project` to each project it makes, without asking,
-  and the answer says the name came from the settings
-  (`coder_name_source`); unset or blank, the assistant asks for it at
-  each new project. Projects that already exist keep their coder name,
-  or their lack of one: Exegete gives it only to the projects it
-  creates from now on, and selecting a project that records another
-  name, or none, or whose AI coder name is this one, says so
-  (`coder_name_notes`). It must differ from the AI
-  coder name: with `EXEGETE_AI_CODER_NAME` the same, `create_project`
-  makes no project until one of them is changed, and
+- `EXEGETE_CODER_NAME` (0.15.0): your own coder name, the name your own
+  codings carry in a project, kept apart from the AI's. Set, it is given
+  by `create_project` to each project it makes, without asking, and the
+  answer says the name came from the settings (`coder_name_source`);
+  unset or blank, the assistant asks for it at each new project.
+  Projects that already exist keep their coder name, or their lack of
+  one: Exegete gives it only to the projects it creates from now on, and
+  selecting a project that records another name, or none, or whose AI
+  coder name is this one, says so (`coder_name_notes`). It must differ
+  from the AI coder name: with `EXEGETE_AI_CODER_NAME` the same,
+  `create_project` makes no project until one of them is changed, and
   `set_project_ai_coder_name` refuses it as an AI coder name. If you
-  also use QualCoder, use the name its settings show as "Current
-  coder", exactly as written there. The value is trimmed and follows
-  the rules for `EXEGETE_AI_CODER_NAME`, below (at most 80 characters,
-  single-line plain text, no invisible formatting character, no
-  `#####`). An invalid value stops Exegete at start-up with "Error:
-  EXEGETE_CODER_NAME ..." on stderr, naming the setting, never its
-  value, and saying where to change it, or to leave it empty to be
-  asked for the name in each new project. The desktop extension sets it
-  from its "Your coder name" setting.
-- `EXEGETE_AI_CODER_NAME`: the AI coder name in Exegete's settings.
-  The name that rows actually carry is each project's own (see
-  "Choosing the AI coder name" in TOOLS.md). Set, it is given by
-  `create_project` to each project it makes, without asking, and the
-  answer says so (`ai_coder_name`, with the source `settings`); a
-  project made another way that has no AI coder name yet is asked for
-  one at the first write that needs it, with this name offered first.
-  A project that already has another AI coder name keeps it: the next
-  write asks once which to use there, rather than re-attributing
-  anything. Up to 0.14.3 it was offered first and checked against a
-  project's own AI coder name, but never stored by itself.
-  Give the model this host runs (`"Qwen 3.8 6bit"`). If you also use
-  QualCoder 4.0's own assistant, `AI Agent` is the exact name it writes
-  under, which groups Exegete's work with the assistant's under one coder in
-  QualCoder's per-coder visibility toggle, undo and reports. `default`
-  and QualCoder's speaker coder are never stored as an AI coder name:
-  a new project is then made without one, and its answer says why; nor
-  are they, or your own coder name, offered when a project is asked
-  for one.
-  Empty or unset, no name is offered first. The value is trimmed and
-  must be at most 80 characters of single-line plain text. It may hold
-  no control characters, no line or paragraph separators, and no
-  invisible formatting character of Unicode category Cf, which covers
-  every bidirectional control and every zero-width character. ZWNJ and
-  ZWJ, which spell words in Persian and Indic scripts, are the two
+  also use QualCoder, use the name its settings show as "Current coder",
+  exactly as written there. The value is trimmed and follows the rules
+  for `EXEGETE_AI_CODER_NAME`, below (at most 80 characters, single-line
+  plain text, no invisible formatting character, no `#####`). An invalid
+  value stops Exegete at start-up with "Error: EXEGETE_CODER_NAME ..."
+  on stderr, naming the setting, never its value, and saying where to
+  change it, or to leave it empty to be asked for the name in each new
+  project. The desktop extension sets it from its "Your coder name"
+  setting.
+- `EXEGETE_AI_CODER_NAME`: the AI coder name in Exegete's settings. The
+  name that rows actually carry is each project's own (see "Choosing the
+  AI coder name" in TOOLS.md). Set, it is given by `create_project` to
+  each project it makes, without asking, and the answer says so
+  (`ai_coder_name`, with the source `settings`); a project made another
+  way that has no AI coder name yet is asked for one at the first write
+  that needs it, with this name offered first. A project that already
+  has another AI coder name keeps it: the next write asks once which to
+  use there, rather than re-attributing anything. Up to 0.14.3 it was
+  offered first and checked against a project's own AI coder name, but
+  never stored by itself. Give the model this host runs
+  (`"Qwen 3.8 6bit"`). If you also use QualCoder 4.0's own assistant,
+  `AI Agent` is the exact name it writes under, which groups Exegete's
+  work with the assistant's under one coder in QualCoder's per-coder
+  visibility toggle, undo and reports. `default` and QualCoder's speaker
+  coder are never stored as an AI coder name: a new project is then made
+  without one, and its answer says why; nor are they, or your own coder
+  name, offered when a project is asked for one. Empty or unset, no name
+  is offered first. The value is trimmed and must be at most 80
+  characters of single-line plain text. It may hold no control
+  characters, no line or paragraph separators, and no invisible
+  formatting character of Unicode category Cf, which covers every
+  bidirectional control and every zero-width character. ZWNJ and ZWJ,
+  which spell words in Persian and Indic scripts, are the two
   exceptions. It must not contain `#####`, the QualCoder 4.0
-  private-memo marker. An invalid value stops
-  Exegete at start-up with "Error: EXEGETE_AI_CODER_NAME ..." on
-  stderr. It must differ from your own coder name (`EXEGETE_CODER_NAME`,
-  and each project's): AI rows would otherwise be
-  indistinguishable from yours, in Exegete's reads and in QualCoder,
-  and the setter refuses that name anyway. The desktop extension sets
-  it, under both spellings, from its "AI coder name" setting.
+  private-memo marker. An invalid value stops Exegete at start-up with
+  "Error: EXEGETE_AI_CODER_NAME ..." on stderr. It must differ from your
+  own coder name (`EXEGETE_CODER_NAME`, and each project's): AI rows
+  would otherwise be indistinguishable from yours, in Exegete's reads
+  and in QualCoder, and the setter refuses that name anyway. The desktop
+  extension sets it, under both spellings, from its "AI coder name"
+  setting.
 
   ```json
   "env": {
@@ -1241,26 +1242,25 @@ the two of the check for new versions (`EXEGETE_UPDATE_CHECK` and
   and compared later.
 
 - `EXEGETE_USES_QUALCODER` (0.15.0): your answer to "Do you also use
-  QualCoder on this computer?": `yes`, `no` or `not sure`, in any
-  letter case. Unset or blank, it is `not sure`, the default. With
-  `yes`, Exegete adds some notes that matter only if you also open
-  your projects in QualCoder. With `no`, it leaves those out, unless a
+  QualCoder on this computer?": `yes`, `no` or `not sure`, in any letter
+  case. Unset or blank, it is `not sure`, the default. With `yes`,
+  Exegete adds some notes that matter only if you also open your
+  projects in QualCoder. With `no`, it leaves those out, unless a
   project shows signs that QualCoder may have opened it or QualCoder is
   running when a project is selected. With `not sure`, it decides from
   what it finds on each project and on this computer. Notes worded "if
-  the project is opened in QualCoder",
-  such as the one on emoji and Windows line breaks, are given with any
-  answer, and so is the line saying that a new project is in
-  QualCoder's format. Any other value is read as `not sure`, and the log
-  says so once at start, never the value; it never stops Exegete.
-  Whatever it says, Exegete still refuses to write while QualCoder
-  3.8.2 has a project open, and still warns when it sees signs that QualCoder
-  4.0 may have one open: an answer can be out of date (a colleague's
-  project, QualCoder installed later), and a write into a project open
-  in QualCoder can lose work. The desktop extension does not set it:
-  its switch sets `EXEGETE_I_USE_QUALCODER`, below, and with the switch
-  off the answer is `not sure`. With both set, either one saying yes
-  gives yes.
+  the project is opened in QualCoder", such as the one on emoji and
+  Windows line breaks, are given with any answer, and so is the line
+  saying that a new project is in QualCoder's format. Any other value is
+  read as `not sure`, and the log says so once at start, never the
+  value; it never stops Exegete. Whatever it says, Exegete still refuses
+  to write while QualCoder 3.8.2 has a project open, and still warns
+  when it sees signs that QualCoder 4.0 may have one open: an answer can
+  be out of date (a colleague's project, QualCoder installed later), and
+  a write into a project open in QualCoder can lose work. The desktop
+  extension does not set it: its switch sets `EXEGETE_I_USE_QUALCODER`,
+  below, and with the switch off the answer is `not sure`. With both
+  set, either one saying yes gives yes.
 
 - `EXEGETE_I_USE_QUALCODER` (0.15.1): the extension's switch "I use
   QualCoder on this computer". `on`, `true` or `1` gives the answer yes

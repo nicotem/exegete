@@ -919,6 +919,16 @@ class TestPhonesAndTheWeb:
         assert re.search(r"`codex app-server daemon disable-remote-control`"
                          r"[^.]*\(Codex's source at release 0\.170\.0, "
                          + READ_ON + r"\)", section)
+        # (the readers of the lead's batch: the warning itself, and the
+        # saved setting: after `codex remote-control start` remote access
+        # comes back with the background server, even after `codex
+        # remote-control stop`, which stops the server and leaves the
+        # setting on; app-server-daemon/src/lib.rs 676-700, 771-791,
+        # 853-854 and 1136 at rust-v0.170.0)
+        assert re.search(r"stay on[^.]*after you quit Codex|"
+                         r"after you quit Codex[^.]*stay on", section)
+        assert re.search(r"`codex remote-control start`[^.]*"
+                         r"`codex remote-control stop`", section)
         # The route table says the same in a line
         table = _between(_read("INSTALL.md"), "| **OpenAI's apps**", "\n")
         # (v0.15.5, the readability reading: whole sentences where the
@@ -987,9 +997,26 @@ class TestPhonesAndTheWeb:
         # OpenAI's page on getting started with Work, read on 19 November
         # 2026, speaks of any workspace that gives you Work Cloud and
         # local computer access, not of enterprise workspaces alone)
-        for text in (section, _privacy_openai()):
-            assert "Work Cloud and local computer access" in text
+        assert "Work Cloud and local computer access" in section
+        privacy = _privacy_openai()
+        for text in (section, privacy):
             assert "enterprise workspaces" not in text
+        # (the readers of the lead's batch: the guide cites the page the
+        # case comes from; PRIVACY.md's warning is as wide as the page on
+        # local computer access, which covers Work Cloud and dots, and
+        # gives what it says of retention and deletion; and PRIVACY.md
+        # says that remote access switched on from the command line can
+        # stay on)
+        assert re.search(r"<https://learn\.chatgpt\.com/docs/get-started-"
+                         r"with-work>, " + READ_ON, section)
+        assert re.search(r"local computer access[^.]*Work Cloud[^.]*dots",
+                         privacy)
+        for words in ("\"provides strict zero data retention\"",
+                      "\"deleting a conversation does not remove every "
+                      "related copy\""):
+            assert words in privacy, words
+        assert re.search(r"stay on[^.]*after you quit Codex|"
+                         r"after you quit Codex[^.]*stay on", privacy)
         assert "\"on desktop, mobile, or web\"" in section
         assert "eligible ChatGPT Work conversations" not in section
         assert ("Whether such a conversation can use Exegete on the "
@@ -1499,6 +1526,7 @@ class TestTheStepsANewcomerCanGetWrong:
         assert "`codex app-server daemon stop`" in flat
         assert "wait a minute" not in flat
         assert re.search(r"\b(two|2) minutes\b", flat)
+        assert re.search(r"(over|more than) a minute", flat)
         assert re.search(r"release 0\.170\.0, " + READ_ON, flat)
 
     def test_a_first_session_speaks_to_any_assistant(self):

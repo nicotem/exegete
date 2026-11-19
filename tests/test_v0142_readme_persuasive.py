@@ -1085,6 +1085,20 @@ def test_the_assistants_table():
     assert re.search(r"parent organi[sz]ation's Primary Owner", rung)
     assert "Primary Owner" in row and "exports" in row
     assert "Compliance API" in row
+    # (the readers of the lead's batch: Anthropic's documentation of the
+    # Compliance API, read on 19 November 2026, says that on Enterprise it
+    # captures the Claude Code and Cowork sessions run on the user's
+    # computer under the Enterprise account, with "the text portions of
+    # tool results", "stored for 6 years from capture by default"
+    # (compliance-sessions.md 26, 36, 132 and 161); the row says so too)
+    assert re.search(r"<https://platform\.claude\.com/docs/en/manage-claude/"
+                     r"compliance-sessions>" + read_on, rung)
+    for words in ("\"the text portions of tool results\"",
+                  "\"stored for 6 years from capture by default\"",
+                  "across all your Claude deployments"):
+        assert words in rung, words
+    assert "Cowork" in row and re.search(r"six years|6 years", row)
+    assert "Exegete's tools returned" in row
 
 
 # ---------------------------------------------------------------------------

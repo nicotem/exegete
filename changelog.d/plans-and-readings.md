@@ -9,19 +9,23 @@
   pages, read on 19 November 2026. On a Team or Enterprise plan, the
   account's Primary Owner manages its data, and can request it through
   data exports, which may contain your conversations. On Enterprise, the
-  Compliance API can pull chat data. The Primary Owner switches that API
-  on, or a parent organisation's Primary Owner for every organisation
-  linked to it, and Owners can create keys for their own organisation.
-  Before the Terminal guide's table suggests Claude Desktop's chat on
-  such an account, it says that the extension is not signed, that a
-  university or employer may block it, that whoever manages the account
-  can say whether it allows it, and that the Primary Owner can request
-  the account's data through exports. Its row on OpenAI's apps quotes
-  OpenAI's page on enterprise privacy: on ChatGPT Business, workspace
-  admins "can view, access, export, and delete end user conversations in
-  the workspace", and on Enterprise and Edu they "can access an audit
-  log of conversations and GPTs" (the Internet Archive's capture of 16
-  November 2026).
+  Compliance API can pull chat data and file content, and, by
+  Anthropic's documentation of that API, the Claude Code and Cowork
+  sessions run on your computer under the Enterprise account, with the
+  text of what their tools returned, Exegete's included, kept six years
+  by default. The Primary Owner switches that API on, or a parent
+  organisation's Primary Owner for every organisation linked to it, and
+  Owners can create keys for their own organisation. Before the Terminal
+  guide's table suggests Claude Desktop's chat on such an account, it
+  says that the extension is not signed, that a university or employer
+  may block it, and that whoever manages the account can say whether it
+  allows it; it now also says what the Primary Owner's exports and the
+  Compliance API can reach. Its row on OpenAI's apps quotes OpenAI's
+  page on enterprise privacy: on ChatGPT Business, workspace admins "can
+  view, access, export, and delete end user conversations in the
+  workspace", and on Enterprise and Edu they "can access an audit log of
+  conversations and GPTs" (the Internet Archive's capture of 16 November
+  2026).
 - **Codex on mobile.** The Terminal guide and PRIVACY.md call OpenAI's
   phone route by the name OpenAI's pages give it, Codex on mobile, and
   suggest leaving the computer's remote access off for participants'
@@ -32,8 +36,10 @@
   for an API key. By Codex's source at release 0.170.0, its command line
   can also switch remote access on, with the experimental
   `codex remote-control`. Remote access can then stay on after you quit
-  Codex, and `codex app-server daemon disable-remote-control` switches
-  it off; the guide and PRIVACY.md say so.
+  Codex; after `codex remote-control start` it comes back with Codex's
+  background server, even after `codex remote-control stop`, until
+  `codex app-server daemon disable-remote-control` switches it off. The
+  guide says so, and PRIVACY.md points to it.
 - **What Codex keeps.** PRIVACY.md says, from Codex's source at release
   0.170.0, that Codex's log database also keeps the answers you give to
   Codex's own questions in Plan mode. It also says that Codex's command
@@ -65,6 +71,11 @@
   off too.
 - **Work Cloud.** The Terminal guide and PRIVACY.md gave the case of a
   Work conversation that reaches a connected computer as one for
-  enterprise workspaces only. OpenAI's page on getting started with Work,
-  read on 19 November 2026, speaks of any workspace that gives you Work
-  Cloud and local computer access, so both now say that.
+  enterprise workspaces only. OpenAI's page on getting started with
+  Work, read on 19 November 2026, speaks of any workspace that gives you
+  Work Cloud and local computer access, so the guide now says that,
+  citing that page. PRIVACY.md's warning that tool results do not stay
+  on the connected computer now covers local computer access for Work
+  Cloud or for dots, and quotes OpenAI's page on it: neither feature
+  "provides strict zero data retention", and for Work "deleting a
+  conversation does not remove every related copy".

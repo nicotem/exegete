@@ -7,6 +7,7 @@ signs ids, never names. After a rename the residue count no longer finds
 the old label, and the preview's texts say what a rename cannot reach.
 """
 
+import re
 import json
 import sqlite3
 import sys
@@ -333,10 +334,10 @@ def test_the_rename_notes_say_what_a_notes_run_leaves():
         {}, server._RenameSigns()).split())
     assert tail in file_note
     # (v0.15.5, the readability reading: PRIVACY.md says the same in
-    # sentences of its own)
-    assert ("they then name the file by its id. A later run that rewrites "
-            "the notes across the whole project rewrites the public part of "
-            "those journal entries.") in _flat("PRIVACY.md")
+    # sentences of its own; the documents' points, fix round: the fact)
+    assert re.search(r"name the file by its id\. [^.]*later run [^.]*across "
+                     r"the whole project [^.]*public part of those journal "
+                     r"entries", _flat("PRIVACY.md"))
 
 
 def test_the_readme_keeps_no_completed_lists():

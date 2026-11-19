@@ -432,8 +432,7 @@ in it until Exegete here saves or deletes its session:
 
 - an approval withdrawn on another computer;
 - one withdrawn in a session deleted outside Exegete;
-- one withdrawn by a save here cut short before the record was
-  updated.
+- one withdrawn by a save here cut short before the record was updated.
 
 Until then, an older copy of the session put back still counts such an
 approval. The same holds if Exegete's own folder is put back from an
@@ -625,7 +624,8 @@ GitHub Issues ("Getting help", below).
      codings, and read-only copies of originals. It also holds the pages
      for checking letters that look garbled before an import, and for
      choosing occurrences of a name to leave as they are. They hold a
-     file's text too. It is `~/Library/Caches/Exegete/Reading.noindex`
+     file's text too, and the page for choosing marks the names you
+     asked to replace. It is `~/Library/Caches/Exegete/Reading.noindex`
      on a Mac, `%LOCALAPPDATA%\Exegete\Reading` on Windows, and
      `~/.cache/exegete/reading` on Linux, or `exegete/reading` under
      `$XDG_CACHE_HOME` if it is set. Exegete tidies it only while it

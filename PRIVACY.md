@@ -812,24 +812,24 @@ owner-only. It also holds:
   Today's answer gives only the plain SHA-256 of the text after the run
   (`new_sha256`), which whoever reads the answer can read already.
 
-**The earlier name.** At the first start of 0.14.1 or later, an
-existing `~/.qualcoder_mcp` is renamed to `~/.exegete` whole, in one
-step on the same disk. The move never copies or duplicates the secret,
-and the files stay owner-only. A link named `~/.qualcoder_mcp` (on
-Windows, a junction, its kind of folder link) is left pointing at the
-new folder. So an older copy of Exegete on the same computer keeps
-using the same folder and secret. When no link can be made, the folder
-is put back where it was, unless an older copy of Exegete has already
-written at the old path in that instant; then both folders are kept. An older copy that makes a folder of its own under the old name,
-then or after the link was removed, has a secret of its own there,
-which Exegete does not use. Exegete takes from that folder only the
-session files it lacks, and says so once in its log. INSTALL.md's
-troubleshooting says what to do. A link left under the old name after
-`~/.exegete` was removed by hand is left as it is, and a fresh
-`~/.exegete` is made. The help's overview (`explain_ai_coding_tools()`)
-checks only whether `~/.qualcoder_mcp` is there, as a folder or a link,
-to point the assistant to the topic on the earlier name. Nothing inside
-it is listed or read.
+**The earlier name.** At the first start of 0.14.1 or later, an existing
+`~/.qualcoder_mcp` is renamed to `~/.exegete` whole, in one step on the
+same disk. The move never copies or duplicates the secret, and the files
+stay owner-only. A link named `~/.qualcoder_mcp` (on Windows, a
+junction, its kind of folder link) is left pointing at the new folder.
+So an older copy of Exegete on the same computer keeps using the same
+folder and secret. When no link can be made, the folder is put back
+where it was, unless an older copy of Exegete has already written at the
+old path in that instant; then both folders are kept. An older copy that
+makes a folder of its own under the old name, then or after the link was
+removed, has a secret of its own there, which Exegete does not use.
+Exegete takes from that folder only the session files it lacks, and says
+so once in its log. INSTALL.md's troubleshooting says what to do. A link
+left under the old name after `~/.exegete` was removed by hand is left
+as it is, and a fresh `~/.exegete` is made. The help's overview
+(`explain_ai_coding_tools()`) checks only whether `~/.qualcoder_mcp` is
+there, as a folder or a link, to point the assistant to the topic on the
+earlier name. Nothing inside it is listed or read.
 
 **In the project's folder**, besides the database and the documents'
 originals:
@@ -1025,28 +1025,28 @@ assistant can read it at any time.
 Work cut short can leave copies behind. A backup that fails part-way is
 removed. A backup cut short, because Exegete's process ended during the
 copy (when the app quit, for example), stays beside the project under a
-hidden name, and so does what is left of one that `prune_backups` could
-not remove whole. Each holds whatever it still has, the names file and
-`pseudonyms.json` among them. The next backup of the project removes
-it once it is an hour old. A save of the names list cut short
-the same way, or a pseudonymisation run ended before its mapping took
-its place, can leave a temporary copy of the list in the project's
-folder, with the real names in it: its name is `pseudonyms.json.`, then
-eight letters, digits or underscores, then `.tmp`. The next backup of
-the project removes it once it is an hour old. Until then it goes into
-every backup made, as `pseudonyms.json` does, and a restore of one of
-those backups brings it back. A copy made with
-`copy_project_to_workspace` leaves it out, whatever its age. A copy made
-with it by 0.15.3 or earlier may still hold one, until a backup of that
-copy removes it. A copy made another way, in Finder or File Explorer for
-example, carries it. If you take `pseudonyms.json` and the names file
-out of such a copy before sharing it, you could also look in it for a
-file whose name starts with `pseudonyms.json.` and ends with `.tmp`. A
-copy made with `copy_project_to_workspace` that fails part-way is
-removed too, unless that removal fails. A copy cut short, or one whose
-removal failed, stays in the folder for projects under its own name,
-with whatever it had copied, until you delete it. That can include the
-names file and `pseudonyms.json`.
+hidden name, and so does what is left of one whose removal by
+`prune_backups` stopped partway. Either can still hold the names file
+and `pseudonyms.json`. The next backup of the project removes what it
+can of it once it is an hour old, and the rest is yours to delete. A
+save of the names list cut short the same way, or a pseudonymisation run
+ended before its mapping took its place, can leave a temporary copy of
+the list in the project's folder, with the real names in it: its name is
+`pseudonyms.json.`, then eight letters, digits or underscores, then
+`.tmp`. The next backup of the project removes it once it is an hour
+old. Until then it goes into every backup made, as `pseudonyms.json`
+does, and a restore of one of those backups brings it back. A copy made
+with `copy_project_to_workspace` leaves it out, whatever its age. A copy
+made with it by 0.15.3 or earlier may still hold one, until a backup of
+that copy removes it. A copy made another way, in Finder or File
+Explorer for example, carries it. If you take `pseudonyms.json` and the
+names file out of such a copy before sharing it, you could also look in
+it for a file whose name starts with `pseudonyms.json.` and ends with
+`.tmp`. A copy made with `copy_project_to_workspace` that fails part-way
+is removed too, unless that removal fails. A copy cut short, or one
+whose removal failed, stays in the folder for projects under its own
+name, with whatever it had copied, until you delete it. That can include
+the names file and `pseudonyms.json`.
 
 Some ways narrow that reach, though none closes it. You could keep the
 project in a folder no assistant with its own file access is given. How
@@ -1058,13 +1058,13 @@ tools in auto mode, read beyond its working folders. And computer use
 sees whatever a window shows. Or you could move a file out of the
 project once Exegete has used it, and remove the backups and copies that
 still hold it. `list_backups` shows the backups, and `prune_backups`
-deletes Exegete's own at your word, though one it could not remove whole
-stays under a hidden name (above). QualCoder's backups, if you use it,
-and copies of the project are yours to delete. If you want to be sure
-that what you write never reaches an assistant, a safer way is to
-prepare pseudonymised copies elsewhere, before the documents come to
-this computer, as "What pseudonymisation is for" suggests. Then no list
-of real names need be written on this computer at all.
+deletes Exegete's own at your word, though what a removal stopped
+partway leaves stays under a hidden name (above). QualCoder's backups,
+if you use it, and copies of the project are yours to delete. If you
+want to be sure that what you write never reaches an assistant, a safer
+way is to prepare pseudonymised copies elsewhere, before the documents
+come to this computer, as "What pseudonymisation is for" suggests. Then
+no list of real names need be written on this computer at all.
 
 ## What pseudonymisation is for
 
@@ -1399,17 +1399,17 @@ Exegete tidies the reading folder itself:
   tidy once it is an hour old (it tidies when it starts, and at most
   every five minutes while it writes there, so in an app that keeps
   Exegete running such a page can stay longer);
-- if you use QualCoder, a page left for a file you delete there goes
-  when a new file that takes its number comes in through Exegete, or
-  when Exegete next writes a page or a copy for that file;
+- a page left for a file deleted in QualCoder goes when a new file that
+  takes its number comes in through Exegete, or when Exegete next writes
+  a page or a copy for that file;
 - anything there goes at Exegete's first tidy once it is a week old.
 
 Without this tidying, a page written before you pseudonymised a file
-would keep the real names. If you use QualCoder, a file you delete or
-rename there keeps its page until one of these happens. If your study
-sets a date for deleting its data, pages from it can still be in the
-reading folder on that day. You could delete the folder then too, which
-changes nothing in any project.
+would keep the real names. A file deleted or renamed in QualCoder keeps
+its page until one of these happens. If your study sets a date for
+deleting its data, pages from it can still be in the reading folder on
+that day. You could delete the folder then too, which changes nothing in
+any project.
 
 ## Attribution: the AI coder name is yours to choose
 
@@ -2043,8 +2043,8 @@ improve our AI models", at
 <https://claude.ai/settings/data-privacy-controls>, switches training
 off. Your account's default is worth checking yourself. Claude's
 pricing page, <https://claude.com/pricing>, read on 19 November 2026,
-lists Ultra beside Free, Pro and Max under "Individual", and Claude Code
-on Pro, Max and Ultra, not on Free. The governing documents:
+lists Ultra beside Free, Pro and Max under "Individual", and says:
+"Claude Code is included in all paid plans." The governing documents:
 
 - Consumer Terms of Service (effective date shown: October 8, 2025),
   <https://www.anthropic.com/legal/consumer-terms>, which state:
@@ -2137,9 +2137,9 @@ read on 19 November 2026) adds that the API captures the Claude Code and
 Cowork sessions run on your computer under the Enterprise account. Each
 holds "the text portions of tool results", so what Exegete's tools
 returned, "stored for 6 years from capture by default". Its other pages
-say that chats and files follow "the retention rules configured for
-your organization (indefinite by default)", and that a chat's messages
-include each tool's result, "Text content returned by the tool"
+say that chats and files follow "the retention rules configured for your
+organization (indefinite by default)", and that a chat's messages can
+hold "Text content returned by the tool"
 (<https://platform.claude.com/docs/en/manage-claude/compliance-faq>,
 <https://platform.claude.com/docs/en/api/compliance/apps/chats/messages/list>,
 both read on 19 November 2026). No page says whether a chat's tool
@@ -2454,12 +2454,12 @@ read on 19 November 2026). OpenAI's page on local computer access for
 both, <https://learn.chatgpt.com/docs/enterprise/cloud-local-access>
 (read on 19 November 2026), says that a dot given access to your
 computer can "Create local Work or Codex threads and control existing
-local Codex threads.", and that choosing Revoke access removes the dot's
-grant for that computer. It also says: "Conversations, tool results, and
-other task context do not stay exclusively on the connected computer."
-It adds that neither Work nor a dot "provides strict zero data
-retention", and that for Work "deleting a conversation does not remove
-every related copy".
+local Codex threads.", and: "Choose Revoke access and confirm to remove
+the dot's grant for that computer." It also says: "Conversations, tool
+results, and other task context do not stay exclusively on the connected
+computer." It adds that neither Work nor a dot "provides strict zero
+data retention", and that for Work "deleting a conversation does not
+remove every related copy".
 
 **Services for individuals.** While training is on, OpenAI may use
 your conversations, with the participants' data in them, to train its
@@ -2814,13 +2814,13 @@ improve our models".
     original text, and QualCoder's exports ship that copy. Each rename's
     result counts the saved graph labels, table displays and filters for
     the case or file it renamed; nothing in Exegete reads the saved SQL
-    queries. Every backup, Exegete's session files and, if you use
-    QualCoder, its search index and AI chat history keep the old name
-    too. So do Exegete's pseudonymisation journal entries and run
-    records, which keep a file's name as it was at the run, unless that
-    name carried a name from the mapping: they then name the file by its
-    id. A later run that rewrites the notes across the whole project
-    rewrites the public part of those journal entries.
+    queries. Every backup, Exegete's session files and, where the
+    project has them, QualCoder's search index and AI chat history keep
+    the old name too. So do Exegete's pseudonymisation journal entries
+    and run records, which keep a file's name as it was at the run,
+    unless that name carried a name from the mapping: they then name the
+    file by its id. A later run that rewrites the notes across the whole
+    project rewrites the public part of those journal entries.
   - **QualCoder's `ai_data/` folder.** Its chat history may quote the
     previous text, and its search index (QualCoder 4.0's
     `search.sqlite`, or QualCoder 3.8's `vectorstore/faiss_store.bin`)

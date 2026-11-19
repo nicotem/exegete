@@ -648,15 +648,15 @@ and not checked since).
 
 **Step 7. Check offline work.** Disconnect from the network and work.
 Step 5's entry keeps Exegete's check for new versions off, and Exegete's
-log says so at every start. With that check off, the chats and all of
-Exegete's work are local, and so is the model, unless LM Link has loaded
-it on another computer (above). On Windows x64, a library Exegete
-installs for PDFs reports its use to Windows' diagnostic data, which
-working offline does not stop ([PRIVACY.md](../PRIVACY.md), "How your
-data flows"). LM Studio says it needs the internet only to search for
-and download models and runtimes, and to check for its own updates
-(<https://lmstudio.ai/docs/app/offline>). A note that you checked this
-yourself is good evidence for a data-management plan.
+log says so at every start. With that check off, all of Exegete's work
+is local, and so are the model and the conversation it reads, unless LM
+Link loads the model on another computer (above). On Windows x64, a
+library Exegete installs for PDFs reports its use to Windows' diagnostic
+data, which working offline does not stop ([PRIVACY.md](../PRIVACY.md),
+"How your data flows"). LM Studio says it needs the internet only to
+search for and download models and runtimes, and to check for its own
+updates (<https://lmstudio.ai/docs/app/offline>). A note that you
+checked this yourself is good evidence for a data-management plan.
 
 **What to expect.** From the published evidence on work with many tools,
 expect a narrower workflow than with a hosted model: one document or one
@@ -1665,9 +1665,9 @@ environment avoids.
    `~/.codex/state_5.sqlite`), and LM Studio's log
    (`~/Library/Logs/LM Studio/main.log` on a Mac). Codex also keeps the
    text you typed (`~/.codex/history.jsonl`). From its command line, it
-   keeps pieces of the assistant's answers in its log database
-   (`~/.codex/logs_2.sqlite`), and your answers to its questions in Plan
-   mode, where it proposes a plan before it starts work
+   keeps in its log database (`~/.codex/logs_2.sqlite`) pieces of the
+   assistant's answers and your answers to its questions in Plan mode,
+   where it proposes a plan before it starts work
    (<https://learn.chatgpt.com/docs/cli/slash-commands>, read on 19
    November 2026). Its background server ("Updating", above) goes on
    writing there after you quit Codex. Like the conversation, these hold

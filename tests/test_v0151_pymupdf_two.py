@@ -29,6 +29,7 @@ import importlib.machinery
 import importlib.util
 import json
 import os
+import re
 import subprocess
 import sys
 import time
@@ -515,9 +516,11 @@ def test_privacy_says_what_onnxruntime_reports_and_what_can_be_done():
     # says that Exegete's work is local)
     step = install[install.index("**Step 7. Check offline work.**"):
                    install.index("**What to expect.**")]
-    assert "the chats and all of Exegete's work are local" in step
-    assert "On Windows x64, a library Exegete installs for PDFs reports " \
-        "its use to Windows' diagnostic data" in step
+    # (v0.15.5, the documents' points, fix round: the fact, that the step
+    # says Exegete's work is local and then gives the reports)
+    caveat = step.index("On Windows x64, a library Exegete installs for PDFs "
+                        "reports its use to Windows' diagnostic data")
+    assert re.search(r"Exegete's work (?:is|are) local", step[:caveat])
     assert "Nothing leaves your computer through Exegete" not in install
     readme = " ".join((REPO / "README.md").read_text(encoding="utf-8").split())
     # (v0.15.2, the readability reading: Exegete named, after a sentence

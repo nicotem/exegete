@@ -19,6 +19,8 @@
   uninstall gave only the reading pages and the copies of originals. It
   now gives the pages for checking letters that look garbled before an
   import, and for choosing occurrences of a name to leave as they are.
+  It says that the page for choosing marks the names you asked to
+  replace.
 - **The notes Exegete gives once.** PRIVACY.md gives every case in
   which one can come again. Two copies of Exegete on one computer, a
   file Exegete could not write, and a stop in the instant after the
@@ -59,18 +61,21 @@
     your computer can do, and that Revoke access withdraws it (OpenAI's
     pages, read on 19 November 2026).
 - **Backups a prune could not remove.** PRIVACY.md says what work cut
-  short leaves, and how `prune_backups` can remove a file's copies. In
-  both places it now says that what is left of a backup the prune could
-  not remove whole stays under a hidden name, until a later backup
-  removes what it can of it.
-- **Exegete, and QualCoder if you use it.** PRIVACY.md calls an older
-  copy of Exegete by Exegete's name. It says "if you use QualCoder"
-  where it spoke of that program's files and actions as if you did.
+  short leaves, and how `prune_backups` can remove a file's copies. Both
+  places now say that what is left of a backup whose removal stopped
+  partway stays under a hidden name. For it, as for a backup cut short,
+  a later backup removes what it can after an hour, and the rest is
+  yours to delete.
+- **Exegete, and QualCoder's own files.** PRIVACY.md calls an older copy
+  of Exegete by Exegete's name. Where it spoke of QualCoder's files and
+  actions as if you used QualCoder, it now speaks of the files
+  themselves: a file deleted or renamed in QualCoder, and QualCoder's
+  search index and AI chat history where the project has them.
 
 ### For contributors
 
 - `tests/test_v0151_facts.py` holds the hour after which a later
-  backup removes a backup's hidden folder,
+  backup removes what it can of a backup's hidden folder,
   `database.BACKUP_LEFTOVER_SECONDS`. It reads the hour wherever
   PRIVACY.md, a fragment or the prune's note states it, as a time in
   words read in seconds.
@@ -79,3 +84,7 @@
   tidying hold their facts instead. The tests of two safety facts on
   Codex's remote access hold their sense, so that each fails with its
   fact reversed.
+- `tests/test_v0155_doc_points_2.py` shows, on Linux and macOS, that a
+  later backup removes what it can of a backup's hidden folder and
+  leaves what a folder not writable for you keeps, as PRIVACY.md now
+  says.

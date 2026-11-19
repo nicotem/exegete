@@ -15,7 +15,9 @@ facts check (tests/test_v0151_facts.py).
   comes again, the fourth for the two notes check_for_updates tells
   itself (updates.py, server.py);
 - the prune's remains, under a backup's hidden name, where PRIVACY.md
-  says what work cut short leaves and how to remove a file's copies;
+  says what work cut short leaves and how to remove a file's copies, and
+  that the next backup removes what it can of them, the rest being the
+  researcher's to delete (sweep_partial_backups clears no marks);
 - rung 1 gives Claude Code to the paid plans alone; rung 3 and the
   guide's row give the retention of chats and of local sessions apart,
   and say that no page settles whether a chat's copy holds what
@@ -24,9 +26,13 @@ facts check (tests/test_v0151_facts.py).
 """
 
 import inspect
+import os
 import re
+import stat
 import sys
 from pathlib import Path
+
+import pytest
 
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
@@ -67,7 +73,16 @@ def test_the_uninstall_names_what_the_reading_folder_holds():
                  "checking letters that look garbled before an import",
                  "choosing occurrences of a name to leave as they are"):
         assert kind in item, kind
-    assert "They hold a file's text too" in item
+    # (the fix round: what the two pages hold, the text, and for the page
+    # for choosing, which words are the names to replace, which is why it
+    # goes after an hour; after an uninstall no tidy runs)
+    assert "marks which words are names" in " ".join(account.split())
+    start = item.index("It also holds the pages")
+    pages = item[start:item.index("It is ", start)]
+    assert "a file's text" in pages
+    assert re.search(r"page for choosing marks[^.]*names you asked to "
+                     r"replace", pages)
+    assert "after an uninstall it stays until you delete it" in item
 
 
 def test_the_api_key_recipe_warns_before_it_suggests_the_chat():
@@ -118,8 +133,12 @@ def test_where_a_local_model_keeps_the_data_lm_link_is_named():
             "leave LM Link off.") in opening
     assert "participants' data included" in opening
     step = _between(recipe, "**Step 7.", "**What to expect.**")
-    assert re.search(r"so is the model, unless LM Link has loaded it on "
-                     r"another computer", step)
+    # (the fix round: the exception reaches the conversation the model
+    # reads, not the model alone, as the opening and rung 4 say)
+    (local,) = [sentence for sentence in step.split(". ")
+                if "local" in sentence and "LM Link" in sentence]
+    assert local.index("conversation") < local.index("unless LM Link")
+    assert "the chats" not in local
     checklist = _between(_flat("PRIVACY.md"), "- **Which assistant, and "
                          "whether it opens files by itself.**",
                          "- **What stays on the computer")
@@ -162,22 +181,71 @@ def test_every_case_in_which_a_note_given_once_comes_again():
 def test_what_a_prune_that_stopped_leaves_is_said_where_copies_are():
     """remove_backup_folder renames a backup to the hidden name of a
     backup being made before it removes it, so what a removal or a
-    process stopped partway leaves stays under that name, which the next
-    backup's sweep removes once BACKUP_LEFTOVER_SECONDS have passed (the
-    facts check holds the hour). PRIVACY.md says so where it says what
-    work cut short leaves, and where it offers prune_backups."""
+    process stopped partway leaves stays under that name; a backup whose
+    rename was refused stays whole, listed, under its own name. The next
+    backup's sweep removes what it can of such a folder once
+    BACKUP_LEFTOVER_SECONDS have passed (the facts check holds the hour):
+    it passes every error over and clears no marks, so what stopped the
+    prune can stop it too, and the rest is the researcher's to delete.
+    PRIVACY.md says so where it says what work cut short leaves, and
+    points there where it offers prune_backups."""
     assert "_partial_backup_name(stem, timestamp)" in inspect.getsource(
         database.remove_backup_folder)
+    sweep = inspect.getsource(database.sweep_partial_backups)
+    assert "ignore_errors=True" in sweep
+    assert "_clear_backup_marks" not in sweep
     privacy = _flat("PRIVACY.md")
     cut_short = _between(privacy, "Work cut short can leave copies behind.",
                          "A save of the names list cut short")
-    assert re.search(r"under a hidden name, and so does what is left of one "
-                     r"that `prune_backups` could not remove whole", cut_short)
+    # (the fix round: the remains of a removal that stopped, not of a
+    # refused rename; what they can hold, not what they must)
+    assert re.search(r"what is left of one whose removal by `prune_backups` "
+                     r"stopped partway", cut_short)
+    assert re.search(r"can still hold the names file and `pseudonyms\.json`",
+                     cut_short)
+    assert "among them" not in cut_short
+    (sweeping,) = [sentence for sentence in cut_short.split(". ")
+                   if "next backup" in sentence]
+    assert "what it can" in sweeping and "yours to delete" in sweeping
     narrow = _between(privacy, "Some ways narrow that reach",
                       "## What pseudonymisation is for")
     assert re.search(r"`prune_backups` deletes Exegete's own at your word, "
-                     r"though one it could not remove whole stays under a "
-                     r"hidden name", narrow)
+                     r"though what a removal stopped partway leaves stays "
+                     r"under a hidden name \(above\)", narrow)
+    entry = _between(_flat("changelog.d/doc-points-2.md"),
+                     "**Backups a prune could not remove.**", "- **")
+    assert "removes what it can" in entry and "yours to delete" in entry
+
+
+@pytest.mark.skipif(os.name == "nt" or os.geteuid() == 0,
+                    reason="a folder's mode stops a removal on Linux and "
+                    "macOS, for an account other than the administrator's")
+def test_the_next_backup_leaves_what_a_mark_keeps(tmp_path):
+    """What PRIVACY.md now says of a hidden folder (the fix round, the
+    readers' major): a later backup's sweep removes what it can of it
+    and passes over the rest. A hidden folder over an hour old, with a
+    folder in it not writable for its owner, keeps that folder and the
+    file inside it; one without such a mark goes."""
+    stem = "Study"
+    project = tmp_path / f"{stem}.qda"
+    project.mkdir()
+    kept = tmp_path / f".{stem}_backup_20200101_000000_partial_0123abcd.qda"
+    gone = tmp_path / f".{stem}_backup_20200101_000001_partial_4567cdef.qda"
+    for folder in (kept, gone):
+        (folder / "inner").mkdir(parents=True)
+        (folder / "inner" / "pseudonyms.json").write_text(
+            "{}", encoding="utf-8")
+        (folder / "data.qda").write_text("", encoding="utf-8")
+    marked = kept / "inner"
+    os.chmod(marked, stat.S_IRUSR | stat.S_IXUSR)
+    try:
+        assert database.is_partial_backup_name(kept.name, stem)
+        assert database.sweep_partial_backups(project) == 1
+        assert not gone.exists()
+        assert (marked / "pseudonyms.json").exists()
+        assert not (kept / "data.qda").exists()
+    finally:
+        os.chmod(marked, stat.S_IRWXU)
 
 
 def test_rung_one_gives_claude_code_to_the_paid_plans_alone():
@@ -191,9 +259,10 @@ def test_rung_one_gives_claude_code_to_the_paid_plans_alone():
                      heading)
     assert "signed in with them" not in heading
     rung = _between(_flat("PRIVACY.md"), "### Rung 1:", "### Rung 2:")
+    # (the fix round: the page quoted, as the rungs say they quote it)
     assert re.search(r"<https://claude\.com/pricing>, " + READ_ON
-                     + r", lists [^.]*Claude Code on Pro, Max and Ultra, not "
-                     r"on Free", rung)
+                     + r", lists [^\"]*\"Individual\", and says: \"Claude "
+                     r"Code is included in all paid plans\.\"", rung)
 
 
 def test_who_can_reach_an_institution_s_chats_and_for_how_long():
@@ -215,10 +284,14 @@ def test_who_can_reach_an_institution_s_chats_and_for_how_long():
     assert re.search(r"messages/list>, both " + READ_ON, rung)
     assert ("\"the retention rules configured for your organization "
             "(indefinite by default)\"") in rung
-    assert "\"Text content returned by the tool\"" in rung
-    # (the readability reading: "these" named, a chat's tool results)
-    assert ("No page says whether a chat's tool results include what "
-            "Exegete's tools return in Claude Desktop's chat.") in rung
+    # (the fix round: the reference quoted, never "each tool's result")
+    assert "a chat's messages can hold \"Text content returned by the " \
+        "tool\"" in rung
+    assert "each tool's result" not in rung
+    # (the readability reading: "these" named, a chat's tool results; the
+    # fix round: the fact, that no page settles it)
+    assert re.search(r"No page says whether [^.]*what Exegete's tools "
+                     r"return in Claude Desktop's chat\.", rung)
     sessions = rung.index("\"stored for 6 years from capture by default\"")
     assert rung.index("Cowork sessions run on your computer") < sessions \
         < rung.index("chats and files follow")
@@ -267,9 +340,14 @@ def test_dots_are_explained_with_what_they_can_do_and_how_to_stop_them():
     phones = _between(_flat("PRIVACY.md"),
                       "**Phones, through a connected computer.**",
                       "**Services for individuals.**")
-    # (the readability reading: what a dot is, a sentence of its own)
-    assert "A dot is one of OpenAI's always-on agents" in phones
+    # (the readability reading: what a dot is, a sentence of its own; the
+    # fix round: the fact, not the words)
+    assert re.search(r"A dot is [^.]*always-on agent", phones)
     assert "personal Pro accounts" in phones
+    # (the fix round: the page on local computer access quoted on
+    # withdrawing a dot's access, enterprise/cloud-local-access.md 205)
+    assert ("\"Choose Revoke access and confirm to remove the dot's grant "
+            "for that computer.\"") in phones
     assert re.search(r"<https://learn\.chatgpt\.com/docs/dots>, " + READ_ON,
                      phones)
     assert ("\"Create local Work or Codex threads and control existing "
@@ -282,5 +360,6 @@ def test_dots_are_explained_with_what_they_can_do_and_how_to_stop_them():
         not in phones
     case = _between(_flat(GUIDE), "There is one more case",
                     "- **ChatGPT on a phone**")
-    assert "PRIVACY.md, \"OpenAI's apps\", quotes it on retention and " \
-        "deletion." in case
+    # (the fix round: the pointer, whatever its words)
+    assert re.search(r"PRIVACY\.md, \"OpenAI's apps\"[^.]*\bretention\b",
+                     case)

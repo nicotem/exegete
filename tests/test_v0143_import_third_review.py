@@ -505,12 +505,16 @@ class TestTheTexts:
                 "writes them, is held back") in privacy
         assert "in capitals (\"MARIA BROWN\")" in privacy
         assert "goes into Apple Books" in privacy
-        # (v0.15.5, the documents' points left this week: for a
-        # researcher who uses QualCoder, said so)
-        assert ("if you use QualCoder, a page left for a file you delete "
-                "there goes when a new file that takes its number comes in "
-                "through Exegete, or when Exegete next writes a page or a "
-                "copy for that file") in privacy
+        # (v0.15.5, the documents' points left this week; its fix round: a
+        # file deleted in QualCoder, by whoever deleted it, since the project
+        # decides and not the reader's own use; the fact, when its page goes)
+        item = privacy[privacy.index("a page left for a file deleted in "
+                                     "QualCoder"):]
+        item = item[:item.index(";")]
+        assert "a new file that takes its number comes in through Exegete" \
+            in item
+        assert "next writes a page or a copy for that file" in item
+        assert "if you use" not in item
 
     def test_the_warnings_warn_and_suggest(self):
         for name in ("INSTALL.md", "PRIVACY.md"):

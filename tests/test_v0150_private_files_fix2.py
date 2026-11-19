@@ -16,6 +16,7 @@ on links, PRIVACY's rows and the lock file, TOOLS, the CHANGELOG, the
 module's own words).
 """
 
+import re
 import json
 import os
 import stat
@@ -255,20 +256,24 @@ class TestHowFarAFolderOfItsOwnGoes:
 
     def test_each_kind_of_assistant(self):
         section = _files_section()
-        assert ("Some ways narrow that reach, though none closes it. You "
-                "could keep the project in a folder no assistant with its "
-                # (v0.15.4, the readability reading: the pointer first, then
-                # Cowork, then the others, each a sentence)
-                "own file access is given. How far that goes depends on the "
-                "assistant (\"Assistants that open files by themselves\" "
-                "says which). It keeps the project out of Cowork's reach when "
-                "no folder connected to it holds the project. But Codex "
-                # (v0.15.5, the readability reading: each of the others a
-                # sentence of its own too)
-                "reads well beyond any folder of its own. Claude Code's "
-                "read-only commands, and its file tools in auto mode, read "
-                "beyond its working folders. And computer use sees whatever "
-                "a window shows.") in section
+        # (v0.15.4 and v0.15.5, the readability readings, moved the words;
+        # the documents' points, fix round: each assistant's reach held as
+        # a fact, in a sentence of its own, after the pointer)
+        start = section.index("Some ways narrow that reach")
+        narrow = section[start:section.index("Or you could move", start)]
+        sentences = narrow.split(". ")
+        for reach in (r"folder no assistant with its own file access is given",
+                      r"\"Assistants that open files by themselves\"",
+                      r"out of Cowork's reach when no folder connected to it "
+                      r"holds the project",
+                      r"Codex reads[^.]* beyond any folder of its own",
+                      r"Claude Code's read-only commands, and its file tools "
+                      r"in auto mode, read beyond its working folders",
+                      r"computer use sees whatever a window shows"):
+            assert len([s for s in sentences if re.search(reach, s)]) == 1, \
+                reach
+        assert narrow.index("Assistants that open files") < narrow.index(
+            "Cowork's reach") < narrow.index("Codex reads")
         assert "for Codex a folder of its own is not enough" not in section
 
     def test_what_that_section_says_of_claude_code(self):

@@ -788,10 +788,15 @@ class TestTheDocuments:
 
     def test_privacy_names_the_ai_chat_history(self):
         flat = _doc("PRIVACY.md")
-        # (v0.15.5, the documents' points left this week: for a
-        # researcher who uses QualCoder, said so)
-        assert ("if you use QualCoder, its search index and AI chat history "
-                "keep the old name too") in flat
+        # (v0.15.5, the documents' points left this week; its fix round:
+        # QualCoder's files where the project has them, whoever ran
+        # QualCoder's AI on it, not the reader's own use; the fact, that
+        # they keep the old name)
+        (sentence,) = [s for s in flat.split(". ")
+                       if "search index and AI chat history" in s]
+        assert "QualCoder's search index" in sentence
+        assert "keep the old name" in sentence
+        assert "if you use" not in sentence
         assert "QualCoder 4.0's AI chat keep" not in flat
 
     def test_tools_on_the_reading_copy(self):

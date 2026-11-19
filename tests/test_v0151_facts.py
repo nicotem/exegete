@@ -546,13 +546,15 @@ def _seconds(stated: str) -> Optional[int]:
 # project removes it, or what it can of what a prune left under that
 # name (v0.15.5, the prune's review, its finding 16:
 # database.BACKUP_LEFTOVER_SECONDS): PRIVACY.md's "removes it once it is
-# an hour old" and "removes what it can after an hour", the prune's
+# an hour old", "removes what it can of it once it is an hour old" (the
+# fix round of the documents' points: the sweep passes over what it
+# cannot remove) and "removes what it can after an hour", the prune's
 # fragment's "from an hour after the prune", and the prune's note in
 # server.py, "from an hour after this prune"
 LEFTOVER = {"n": ("backup_leftover_seconds",)}
 LEFTOVER_PATTERNS = (
-    (r"\bbackup\s+of\s+the\s+project\s+removes\s+it\s+once\s+it\s+is\s+"
-     + DURATION + r"\s+old\b", LEFTOVER),
+    (r"\bbackup\s+of\s+the\s+project\s+removes\s+(?:it|what\s+it\s+can\s+"
+     r"of\s+it)\s+once\s+it\s+is\s+" + DURATION + r"\s+old\b", LEFTOVER),
     (r"\bbackups?\s+removes?\s+what\s+(?:it|they)\s+can\s+after\s+"
      + DURATION, LEFTOVER),
     (r"\bremove\s+what\s+they\s+can\s+of\s+(?:\S+\s+){0,2}?from\s+"
@@ -2674,6 +2676,10 @@ LEFTOVER_SENTENCES = (
      "it is an hour old.", False),
     ("PRIVACY.md", "until the next backup of the project removes it once "
      "it is two hours old.", True),
+    ("PRIVACY.md", "The next backup of the project removes what it can of "
+     "it once it is an hour old, and the rest is yours to delete.", False),
+    ("PRIVACY.md", "The next backup of the project removes what it can of "
+     "it once it is a week old, and the rest is yours to delete.", True),
     ("PRIVACY.md", "until a later backup removes what it can after 60 "
      "minutes, or you delete it.", False),
     ("PRIVACY.md", "until a later backup removes what it can after a day, "
@@ -2710,8 +2716,11 @@ def test_a_wrong_hour_in_privacy_or_a_fragment_names_its_line(tmp_path):
             (fragment, "of that folder from an hour after the prune",
              "of that folder from a day after the prune")):
         text = (root / name).read_text(encoding="utf-8")
-        at = text.index(right)
-        (root / name).write_text(text[:at] + wrong + text[at + len(right):],
+        # (v0.15.5, the documents' points, fix round: found across a line
+        # break, since a rewrap may put one inside the words)
+        found = re.search(r"\s+".join(map(re.escape, right.split())), text)
+        at = found.start()
+        (root / name).write_text(text[:at] + wrong + text[found.end():],
                                  encoding="utf-8")
         expected.append((name, text.count("\n", 0, at) + 1))
     outcome = check_documents(facts_from_the_code(), read_documents(root))

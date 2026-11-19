@@ -381,8 +381,10 @@ class TestTheReadmesRoute:
                 "codex-experimental") in section
         assert "cannot use such tools at all" not in section
         install = _install_openai_flat()
+        # (v0.15.5, plans and readings: by the name OpenAI's page gives it,
+        # read on 19 November 2026)
         assert "**ChatGPT on a phone**: it cannot start Exegete, but it can " \
-            "use it through OpenAI's Remote." in install
+            "use it through Codex on mobile" in install
         assert "read one file, `config.toml`" in install
 
     def test_the_tunnel_is_never_recommended(self):
@@ -849,8 +851,12 @@ class TestPhonesAndTheWeb:
     def test_install_says_what_remote_needs_in_openais_words(self):
         section = _install_openai_flat()
         for words in (
+                # (v0.15.5, plans and readings: OpenAI's page is titled
+                # "Codex on mobile" and says "If your mobile app still shows
+                # Remote, open it instead.", read on 19 November 2026)
                 "**ChatGPT on a phone**: it cannot start Exegete, but it can "
-                "use it through OpenAI's Remote.",
+                "use it through Codex on mobile, which an app not yet "
+                "updated calls Remote.",
                 # (v0.15.3: the page moved, and says the cloud too)
                 "<https://learn.chatgpt.com/docs/mobile>",
                 "\"Follow progress, approve actions, and send instructions "
@@ -864,31 +870,57 @@ class TestPhonesAndTheWeb:
                 "the computer must run the ChatGPT desktop app on macOS or "
                 "Windows (\"you can't set it up from the Codex CLI or IDE "
                 "extension\")",
-                "\"Mobile remote control\" for Plus, Pro, Business and "
-                "Enterprise, not for an API key",
+                # (v0.15.5, plans and readings: the pricing page no longer
+                # says "Mobile remote control"; read on 19 November 2026,
+                # it lists for an API key "Codex in the CLI, SDK, or IDE
+                # extension", and the remote-connections page asks for the
+                # same account and workspace on both)
+                "you sign in to both with the same ChatGPT account and "
+                "workspace",
+                "\"Codex in the CLI, SDK, or IDE extension\"",
                 "\"Availability depends on rollout and your workspace "
                 "settings.\"",
-                "This project has not tried it, and suggests leaving Remote "
-                "off on a computer where Exegete works on participants' "
-                "data",
+                "This project has not tried it, and suggests leaving remote "
+                "access off on a computer where Exegete works on "
+                "participants' data",
                 "\"Only connect devices you own and trust.\""):
             assert words in section, words
+        assert "OpenAI's Remote" not in section
+        for page in ("mobile", "remote-connections"):
+            assert re.search(r"<https://learn\.chatgpt\.com/docs/" + page
+                             + r">, " + READ_ON + r"\)", section), page
         # The route table says the same in a line
         table = _between(_read("INSTALL.md"), "| **OpenAI's apps**", "\n")
         # (v0.15.5, the readability reading: whole sentences where the
-        # row had fragments)
-        assert ("On a phone, ChatGPT can use it only through OpenAI's "
-                "Remote, which has the paired computer run the work; this "
-                "project suggests leaving Remote off for participants' "
-                "data.") in table
+        # row had fragments; plans and readings: the feature by OpenAI's
+        # name for it, and the suggestion a sentence of its own)
+        for words in ("On a phone, ChatGPT can use it only through Codex on "
+                      "mobile, which has the paired computer run the work.",
+                      "this project suggests leaving that computer's remote "
+                      "access off"):
+            assert words in table, words
+        assert "Remote" not in table
+        # (v0.15.5, plans and readings: on an institution's workspace, the
+        # people who run it can reach the conversations, as PRIVACY.md's
+        # reading of "Enterprise privacy at OpenAI" says)
+        reach = ("can reach your conversations, with what Exegete's tools "
+                 "returned in them")
+        assert "On a workspace your university or employer runs" in table
+        assert reach in table and reach in _privacy_openai()
 
     def test_privacy_and_the_changelog_say_the_same(self):
         section = _privacy_openai()
         assert "**Phones, through a connected computer.**" in section
         assert ("\"MCP servers, skills, browser access, and Computer Use "
                 "come from that host's configuration.\"") in section
-        assert ("suggests leaving Remote off on a computer where Exegete "
-                "works on participants' data") in section
+        # (v0.15.5, plans and readings: the computer's remote access, by
+        # OpenAI's pages read on 19 November 2026; the page "on Codex on
+        # mobile" read that day)
+        assert ("suggests leaving the computer's remote access off where "
+                "Exegete works on participants' data") in section
+        assert "suggests leaving Remote off" not in section
+        assert re.search(r"Codex on mobile, <https://learn\.chatgpt\.com/"
+                         r"docs/mobile> \(" + READ_ON + r"\)", section)
         changelog = _flat("CHANGELOG.md")
         assert ("ChatGPT's phone app does not start Exegete, but by OpenAI's "
                 "documentation its Remote feature lets a phone start and "
@@ -1194,6 +1226,30 @@ class TestWhatCodexKeepsAndTheOptOut:
                       "deleting a conversation leaves them",
                       "ten days old, but only while it runs"):
             assert words in leaves, words
+        # v0.15.5, plans and readings: Codex's source at rust-v0.170.0
+        # (29eb79e9). The app server logs every response a client gives,
+        # at info, by its Debug form (app-server/src/outgoing_message.rs
+        # 577); the answer to request_user_input derives Debug with the
+        # answers' words (app-server-protocol/src/protocol/v2/item.rs
+        # 1928-1942), and that tool is Plan mode's (core/src/tools/
+        # handlers/request_user_input_spec_tests.rs 158-166). The command
+        # line starts the shared background server by default
+        # (features/src/lib.rs 1140-1145, daemon_auto_start;
+        # tui/src/startup_orchestration.rs 571-575), detached from it
+        # (app-server-daemon/src/backend/pid_start.rs 162-184), and the
+        # server starts the same log writer (app-server/src/lib.rs
+        # 763-774); `codex app-server daemon stop` stops it
+        # (cli/src/main.rs 697-698)
+        assert re.search(r"release 0\.170\.0, " + READ_ON + r", it also "
+                         r"keeps the answers you give to Codex's own "
+                         r"questions in Plan mode\.", leaves)
+        for words in ("starts a background server by default",
+                      "keeps running after you quit Codex, and writes to "
+                      "the same log database.",
+                      "`codex app-server daemon stop`",
+                      "With Codex quit and its background server stopped"):
+            assert words in leaves, words
+        assert "With Codex quit, you could" not in leaves
         # and both lists of what stays name the two files
         checklist = _between(_flat("PRIVACY.md"), "**What stays on the "
                              "computer, and for how long.**",
@@ -1249,10 +1305,14 @@ class TestWhatCodexKeepsAndTheOptOut:
         # so the test holds the form: the capture's day, as written, is the
         # day in its address)
         import datetime
+        # (v0.15.5, plans and readings: the Europe privacy policy, which
+        # openai.com refused to the reader on 19 November 2026, read in the
+        # Archive's capture of 14 November)
         for page in ("help.openai.com/en/articles/5722486-how-your-data-is-"
                      "used-to-improve-model-performance",
                      "openai.com/enterprise-privacy/",
-                     "openai.com/policies/eu-terms-of-use/"):
+                     "openai.com/policies/eu-terms-of-use/",
+                     "openai.com/policies/eu-privacy-policy/"):
             found = re.search(r"Archive capture of (\d{1,2} [A-Z][a-z]+ "
                               r"20\d\d), <https://web\.archive\.org/web/"
                               r"(\d{8})\d{6}/https://" + re.escape(page)
@@ -1263,6 +1323,15 @@ class TestWhatCodexKeepsAndTheOptOut:
         assert ("In the page, \"this article\" links to <https://openai.com/"
                 "policies/how-your-data-is-used-to-improve-model-"
                 "performance/>.") in section
+        # (v0.15.5, plans and readings: what the policy says of training
+        # and of what you delete, in its words; no longer "not able to
+        # read")
+        for words in ("for example to train the models that power ChatGPT.",
+                      "we will remove it from our systems within 30 days",
+                      "does not apply to content that we process on behalf "
+                      "of customers of our business offerings"):
+            assert words in section, words
+        assert "not been able to read" not in section
 
 
 class TestTheStepsANewcomerCanGetWrong:
@@ -1845,8 +1914,10 @@ class TestAssistantsOwnFileAccess:
         assert "or on another computer paired with it" in _privacy_openai()
         # INSTALL quotes some of OpenAI's words and paraphrases others
         assert "in OpenAI's words" not in _flat("PRIVACY.md")
-        assert ("the Terminal guide lists what Remote needs, from OpenAI's "
-                "pages" in _privacy_openai())
+        # (v0.15.5, plans and readings: by the feature's name on OpenAI's
+        # page, read on 19 November 2026)
+        assert ("the Terminal guide lists what else Codex on mobile needs"
+                in _privacy_openai())
 
 
 # ---------------------------------------------------------------------------

@@ -379,7 +379,8 @@ ac42ae6a51f20a86	TOOLS.md	document	qualcoder	about QualCoder itself: what it doe
 d8173635a066f39b	changelog.d/audit-wording.md	document	qualcoder	says where Exegete departs from QualCoder, with the reason	merge_codes: it no longer says that it follows QualCoder's merge exactly, since 
 6bb759dd9455c49e	changelog.d/audit-wording.md	document	qualcoder	says where Exegete departs from QualCoder, with the reason	which codings merge_codes loses, and how it differs from QualCoder 4.0's merge;
 8687d3d579db4038	changelog.d/doc-points-2.md	document	qualcoder	about QualCoder itself: what it does, offers, keeps or shows	Exegete, and QualCoder's own files. PRIVACY.md calls an older copy of Exegete by
-d07b3ce3f1260958	changelog.d/doc-points-2.md	document	qualcoder	about QualCoder itself: what it does, offers, keeps or shows	Where it spoke of QualCoder's files and actions as if you used QualCoder, it now
+5ab7b3b0a6a163b5	changelog.d/doc-points-2.md	document	qualcoder	about QualCoder itself: what it does, offers, keeps or shows	It spoke of QualCoder's files and actions as if you used QualCoder.
+faf8f976d7b12c6f	changelog.d/doc-points-2.md	document	qualcoder	about QualCoder itself: what it does, offers, keeps or shows	Now it speaks of a file deleted or renamed in QualCoder, and of QualCoder's sear
 887922b49d97eaf5	docs/installing-from-the-terminal.md	document	qualcoder	about QualCoder's format or conventions, which Exegete follows, as the sentence says	A missing or unreadable value is no sign of a newer QualCoder: if it was changed
 3b0f7ce1a53b034d	docs/installing-from-the-terminal.md	document	qualcoder	about QualCoder itself: what it does, offers, keeps or shows	A relative path, or a folder inside ~/.exegete (or ~/.qualcoder_mcp, its earlier
 44724221a5e03f8e	docs/installing-from-the-terminal.md	document	qualcoder	quotes the question this setting answers	EXEGETE_USES_QUALCODER (0.15.0): your answer to "Do you also use QualCoder on th

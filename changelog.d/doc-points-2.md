@@ -67,10 +67,10 @@
   a later backup removes what it can after an hour, and the rest is
   yours to delete.
 - **Exegete, and QualCoder's own files.** PRIVACY.md calls an older copy
-  of Exegete by Exegete's name. Where it spoke of QualCoder's files and
-  actions as if you used QualCoder, it now speaks of the files
-  themselves: a file deleted or renamed in QualCoder, and QualCoder's
-  search index and AI chat history where the project has them.
+  of Exegete by Exegete's name. It spoke of QualCoder's files and
+  actions as if you used QualCoder. Now it speaks of a file deleted or
+  renamed in QualCoder, and of QualCoder's search index and AI chat
+  history where the project has them.
 
 ### For contributors
 
@@ -84,7 +84,7 @@
   tidying hold their facts instead. The tests of two safety facts on
   Codex's remote access hold their sense, so that each fails with its
   fact reversed.
-- `tests/test_v0155_doc_points_2.py` shows, on Linux and macOS, that a
-  later backup removes what it can of a backup's hidden folder and
-  leaves what a folder not writable for you keeps, as PRIVACY.md now
-  says.
+- A test in `tests/test_v0155_doc_points_2.py` checks what PRIVACY.md
+  now says of a backup's hidden folder. On Linux and macOS, a later
+  backup removes what it can of it, and leaves what a folder not
+  writable for you keeps.

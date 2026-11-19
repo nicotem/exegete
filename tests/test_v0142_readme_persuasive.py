@@ -1076,6 +1076,15 @@ def test_the_assistants_table():
                   "Owners can create keys limited to their own organization"):
         assert words in rung, words
     assert "can also reach your conversations" not in rung
+    # (the lead's batch of 19 November, the privacy reader's points: the
+    # same paragraph of 13015708 says "If your organization is linked to
+    # a parent organization, the parent organization's Primary Owner
+    # enables it and the setting applies to every linked organization.";
+    # and the guide's row says who can export the conversations, as its
+    # row on OpenAI's apps does for OpenAI's workspaces)
+    assert re.search(r"parent organi[sz]ation's Primary Owner", rung)
+    assert "Primary Owner" in row and "exports" in row
+    assert "Compliance API" in row
 
 
 # ---------------------------------------------------------------------------

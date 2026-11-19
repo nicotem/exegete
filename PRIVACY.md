@@ -2151,10 +2151,11 @@ feature called the Compliance API "lets your organization
 programmatically pull activity feed events, chat data, and file content"
 (<https://support.claude.com/en/articles/13015708-access-the-compliance-api>,
 read on 19 November 2026). That page says that "only your organization's
-Primary Owner can enable the Compliance API", and that "Owners can
-create keys limited to their own organization". Exegete's extension is
-not signed, and an institution that manages your computer or your Claude
-account may block unsigned extensions, or extensions altogether
+Primary Owner can enable the Compliance API" (or a parent organisation's
+Primary Owner, for every organisation linked to it), and that "Owners
+can create keys limited to their own organization". Exegete's extension
+is not signed, and an institution that manages your computer or your
+Claude account may block unsigned extensions, or extensions altogether
 (INSTALL.md, "Installing the extension"). For participants' data, this
 project suggests Claude Desktop's chat with Exegete under that account,
 set up as "Assistants that open files by themselves" says.
@@ -2261,11 +2262,10 @@ file, <https://nicotem.github.io/exegete/latest.json>: at most once a
 week on its own, and at most once a day when the assistant checks for
 you. Hosts that ask before a tool runs ask before that check too
 (INSTALL.md, "What hosts do with the tools' read and write marks", says
-which do).
-The file holds four values: the newest version, its date, whether it is
-an important update, and the file's format. Exegete writes every
-sentence and link it shows you itself; nothing from the file but those
-values reaches the conversation.
+which do). The file holds four values: the newest version, its date,
+whether it is an important update, and the file's format. Exegete writes
+every sentence and link it shows you itself; nothing from the file but
+those values reaches the conversation.
 
 **When it is on.** In the Claude Desktop extension, it is on unless you
 switch it off: Settings, Extensions, Exegete, "Tell me when a new
@@ -2439,23 +2439,23 @@ such as Claude Desktop's chat.
 mobile, <https://learn.chatgpt.com/docs/mobile> (read on 19 November
 2026), says: "Follow progress, approve actions, and send instructions
 from your phone. Codex runs tasks in the cloud or on a connected
-computer." The Terminal guide lists what Codex on mobile needs. OpenAI's
-page on remote connections,
-<https://learn.chatgpt.com/docs/remote-connections> (read on 19 November
-2026), says: "MCP servers, skills, browser access, and Computer Use come
-from that host's configuration.", and "You can control a host from
-ChatGPT on iOS or Android, or from another Mac or Windows device when
-Control other devices is available." So what Exegete's tools return on
-that computer can be shown on the phone, or on another computer paired
-with it. This project has not tried it, and suggests leaving the
-computer's remote access off where Exegete works on participants' data.
-The page on remote connections adds: "Signing out of ChatGPT turns off
-**Remote Control**, but it doesn't remove your existing device
-pairings." To check, you could look under Settings, Connections in the
-desktop app, and remove any device paired there ("In the app on the
-host, use **Settings** > **Connections** to manage connected devices.",
-the same page). On enterprise workspaces with local computer access
-switched on, OpenAI's page on that feature,
+computer." The Terminal guide lists what Codex on mobile needs, and how
+Codex's command line switches it on and off. OpenAI's page on remote
+connections, <https://learn.chatgpt.com/docs/remote-connections> (read
+on 19 November 2026), says: "MCP servers, skills, browser access, and
+Computer Use come from that host's configuration.", and "You can control
+a host from ChatGPT on iOS or Android, or from another Mac or Windows
+device when Control other devices is available." So what Exegete's tools
+return on that computer can be shown on the phone, or on another
+computer paired with it. This project has not tried it, and suggests
+leaving the computer's remote access off where Exegete works on
+participants' data. The page on remote connections adds: "Signing out of
+ChatGPT turns off **Remote Control**, but it doesn't remove your
+existing device pairings." To check, you could look under Settings,
+Connections in the desktop app, and remove any device paired there ("In
+the app on the host, use **Settings** > **Connections** to manage
+connected devices.", the same page). Where your workspace gives you Work
+Cloud and local computer access, OpenAI's page on that feature,
 <https://learn.chatgpt.com/docs/enterprise/cloud-local-access> (read on
 19 November 2026), says: "Conversations, tool results, and other task
 context do not stay exclusively on the connected computer."

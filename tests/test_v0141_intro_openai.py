@@ -861,7 +861,9 @@ class TestPhonesAndTheWeb:
         # on iOS or **Remote** in an app that still uses that label")
         phone = _between(section, "**ChatGPT on a phone**", "OpenAI's page "
                          "on it")
-        assert "it can use it through Codex on mobile" in phone
+        # (the lead's batch of 19 November, the fact reader's point: the
+        # name is the fact, not the sentence around it)
+        assert "Codex on mobile" in phone
         assert "iOS" in phone and "**Codex**" in phone
         assert "**Remote**" in phone and "not yet updated" not in phone
         for words in (
@@ -908,8 +910,15 @@ class TestPhonesAndTheWeb:
         # experimental `codex remote-control`, "[experimental] Manage the
         # app-server daemon with remote control enabled.", cli/src/main.rs
         # 180 at rust-v0.170.0; remote_control_cmd.rs 59-67)
-        assert re.search(r"`codex remote-control` \(Codex's source at "
-                         r"release 0\.170\.0, " + READ_ON + r"\)", section)
+        # (the lead's batch of 19 November, the privacy reader's point:
+        # once on, remote access can stay on after Codex quits, so the
+        # off switch is named: "Disable remote control for future starts
+        # and a currently running managed daemon.", cli/src/main.rs
+        # 694-695 at rust-v0.170.0)
+        assert "`codex remote-control`" in section
+        assert re.search(r"`codex app-server daemon disable-remote-control`"
+                         r"[^.]*\(Codex's source at release 0\.170\.0, "
+                         + READ_ON + r"\)", section)
         # The route table says the same in a line
         table = _between(_read("INSTALL.md"), "| **OpenAI's apps**", "\n")
         # (v0.15.5, the readability reading: whole sentences where the
@@ -974,6 +983,13 @@ class TestPhonesAndTheWeb:
         # says now)
         assert ("\"Work Cloud can use approved local resources through a "
                 "connected computer.\"") in section
+        # (the lead's batch of 19 November, the privacy reader's point:
+        # OpenAI's page on getting started with Work, read on 19 November
+        # 2026, speaks of any workspace that gives you Work Cloud and
+        # local computer access, not of enterprise workspaces alone)
+        for text in (section, _privacy_openai()):
+            assert "Work Cloud and local computer access" in text
+            assert "enterprise workspaces" not in text
         assert "\"on desktop, mobile, or web\"" in section
         assert "eligible ChatGPT Work conversations" not in section
         assert ("Whether such a conversation can use Exegete on the "
@@ -1474,10 +1490,15 @@ class TestTheStepsANewcomerCanGetWrong:
         # rust-v0.170.0, the command line's conversation runs in the
         # background server, which ends a conversation idle with no client
         # after thread_unload_delay_secs, 60 by default, and with it its
-        # MCP servers: so a minute's wait, or the server stopped)
+        # MCP servers: so a wait, or the server stopped; the lead's batch
+        # of 19 November, the fact reader's point: those servers stop
+        # near the end of a shutdown that starts after the 60 seconds,
+        # so a wait of a minute can fall short, and the wait given is
+        # longer)
         flat = " ".join(updating.split())
         assert "`codex app-server daemon stop`" in flat
-        assert "a minute after you leave it" in flat
+        assert "wait a minute" not in flat
+        assert re.search(r"\b(two|2) minutes\b", flat)
         assert re.search(r"release 0\.170\.0, " + READ_ON, flat)
 
     def test_a_first_session_speaks_to_any_assistant(self):

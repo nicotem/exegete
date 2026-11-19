@@ -9,16 +9,19 @@
   pages, read on 19 November 2026. On a Team or Enterprise plan, the
   account's Primary Owner manages its data, and can request it through
   data exports, which may contain your conversations. On Enterprise, the
-  Compliance API can pull chat data. Only the Primary Owner can switch
-  that API on, and Owners can create keys for their own organisation.
+  Compliance API can pull chat data. The Primary Owner switches that API
+  on, or a parent organisation's Primary Owner for every organisation
+  linked to it, and Owners can create keys for their own organisation.
   Before the Terminal guide's table suggests Claude Desktop's chat on
   such an account, it says that the extension is not signed, that a
-  university or employer may block it, and that whoever manages the
-  account can say whether it allows it. Its row on
-  OpenAI's apps quotes OpenAI's page on enterprise privacy: on ChatGPT
-  Business, workspace admins "can view, access, export, and delete end
-  user conversations in the workspace", and on Enterprise and Edu they
-  "can access an audit log of conversations and GPTs".
+  university or employer may block it, that whoever manages the account
+  can say whether it allows it, and that the Primary Owner can request
+  the account's data through exports. Its row on OpenAI's apps quotes
+  OpenAI's page on enterprise privacy: on ChatGPT Business, workspace
+  admins "can view, access, export, and delete end user conversations in
+  the workspace", and on Enterprise and Edu they "can access an audit
+  log of conversations and GPTs" (the Internet Archive's capture of 16
+  November 2026).
 - **Codex on mobile.** The Terminal guide and PRIVACY.md call OpenAI's
   phone route by the name OpenAI's pages give it, Codex on mobile, and
   suggest leaving the computer's remote access off for participants'
@@ -28,7 +31,9 @@
   for the Plus, Pro, Business, Enterprise and Education plans, and not
   for an API key. By Codex's source at release 0.170.0, its command line
   can also switch remote access on, with the experimental
-  `codex remote-control`.
+  `codex remote-control`. Remote access can then stay on after you quit
+  Codex, and `codex app-server daemon disable-remote-control` switches
+  it off; the guide and PRIVACY.md say so.
 - **What Codex keeps.** PRIVACY.md says, from Codex's source at release
   0.170.0, that Codex's log database also keeps the answers you give to
   Codex's own questions in Plan mode. It also says that Codex's command
@@ -37,9 +42,10 @@
   `codex app-server daemon stop` stops it before you delete those files.
   The Terminal guide's uninstall steps name those answers and that
   background server. Its "Updating" says, from the same source, that
-  this background server ends a conversation, and Exegete with it,
-  about a minute after you leave it. So after a session in Codex's
-  command line, you could wait a minute before updating, or stop it.
+  this background server ends a conversation, and Exegete with it, a
+  little over a minute after you leave it. So after a session in Codex's
+  command line, you could wait two minutes before updating, or stop that
+  server.
 - **OpenAI's privacy policy for Europe.** openai.com refuses automated
   reading, so PRIVACY.md quotes the policy from the Internet Archive's
   capture of 18 November 2026: what it says of training, of the content
@@ -57,3 +63,8 @@
   applies to your Codex conversations. The Terminal guide and
   PRIVACY.md now say so, where they suggested switching that setting
   off too.
+- **Work Cloud.** The Terminal guide and PRIVACY.md gave the case of a
+  Work conversation that reaches a connected computer as one for
+  enterprise workspaces only. OpenAI's page on getting started with Work,
+  read on 19 November 2026, speaks of any workspace that gives you Work
+  Cloud and local computer access, so both now say that.

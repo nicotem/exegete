@@ -187,6 +187,11 @@ def test_install_and_privacy_give_the_same_advice():
     # ChatGPT training preference applies to Codex conversations)
     assert "\"Improve the model for everyone\"" in rows["OpenAI"]
     assert "personal account" in rows["OpenAI"]
+    # (the lead's batch of 19 November, the fact reader's point: the
+    # row dates its two readings, the page on enterprise privacy and the
+    # training article, as PRIVACY.md does)
+    assert len(re.findall(r"Archive capture of \d{1,2} [A-Z][a-z]+ 20\d\d",
+                          rows["OpenAI"])) >= 2
     first = _plain(_between(install, "**First, switch training off.**",
                             "**Step 1. Install Exegete.**"))
     assert WARNING.format(maker="OpenAI") in first
@@ -220,7 +225,6 @@ def test_install_and_privacy_give_the_same_advice():
     for words in (WARNING.format(maker="the AI provider"),
                   "\"Help improve our AI models\"",
                   "\"Improve the model for everyone\"",
-                  "which on a personal account covers Codex too",
                   "Rating a reply (thumbs up or down) can still let either "
                   "provider train on that conversation",
                   "(rung 1, the first of the governance options in \"Your "
@@ -229,6 +233,10 @@ def test_install_and_privacy_give_the_same_advice():
                   "By its terms, Anthropic can also train on a conversation "
                   "flagged for a safety review (rung 1)."):
         assert words in item, words
+    # (the lead's batch of 19 November, the fact reader's point, ruling
+    # 85: the fact in either order, as for the guide's first step)
+    assert re.search(r"on a personal account[^.]*covers Codex|"
+                     r"covers Codex[^.]*on a personal account", item)
     assert "(2) your Materials are flagged for safety review" in rung_one
     assert "maker" not in checklist
     assert privacy.index("rung 1, the first of the governance options") \

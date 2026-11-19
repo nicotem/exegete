@@ -31,9 +31,9 @@ Claude, one fully local route, and OpenAI's apps.
 | Route | What it means | Where to read more |
 |---|---|---|
 | **Claude consumer plans** (claude.ai and Claude Desktop on a Free, Pro, Max or Ultra plan; Claude Code with a Pro, Max or Ultra login) | The plans most people start with. While training is on, Anthropic may use your conversations, with the participants' data in them, to train its models. The setting "Help improve our AI models", at [claude.ai/settings/data-privacy-controls](https://claude.ai/settings/data-privacy-controls), switches training off, and its default is worth checking yourself. Claude Code opens files by itself, outside Exegete, and Cowork does so in the folders you connect to it. So for participants' data, this project suggests Claude Desktop's chat with the extension, with computer use off, no folder that holds your projects or transcripts connected to it, and no other extension that reads files ([PRIVACY.md, "Assistants that open files by themselves"](../PRIVACY.md#assistants-that-open-files-by-themselves)). | [PRIVACY.md](../PRIVACY.md), rung 1 |
-| **Anthropic commercial-terms routes** (Claude Code with a Console API key; Team or Enterprise accounts) | The same Claude, under other terms. A personal plan (Free, Pro, Max or Ultra) comes under Anthropic's consumer terms. An account your university or employer manages comes under the agreement it made with Anthropic. Such agreements differ in what they let Anthropic do with your data. Even so, an institution's account is likely to give participants' data more protection than a personal one, since the institution agreed its terms with its own interests in mind. Whoever manages that account can tell you which terms apply, and whether it allows Exegete's extension. The extension is not signed, and a university or employer that manages your computer or your Claude account may block unsigned extensions, or extensions altogether ([INSTALL.md](../INSTALL.md#installing-the-extension)). The terms do not change what Claude Code reads. Claude Code opens files by itself, outside Exegete. So for participants' data, this project suggests Claude Desktop's chat with Exegete on a Team or Enterprise account, set up as in the row above ([PRIVACY.md](../PRIVACY.md), "Assistants that open files by themselves"). | [PRIVACY.md](../PRIVACY.md), rungs 2 and 3; [the API-key recipe](#claude-code-with-an-anthropic-api-key-experimental) below |
+| **Anthropic commercial-terms routes** (Claude Code with a Console API key; Team or Enterprise accounts) | The same Claude, under other terms. A personal plan (Free, Pro, Max or Ultra) comes under Anthropic's consumer terms. An account your university or employer manages comes under the agreement it made with Anthropic. Such agreements differ in what they let Anthropic do with your data. Even so, an institution's account is likely to give participants' data more protection than a personal one, since the institution agreed its terms with its own interests in mind. Whoever manages that account can tell you which terms apply, and whether it allows Exegete's extension. By Anthropic's pages, read on 19 November 2026, the account's Primary Owner can request your data through exports, which may contain your conversations, and on Enterprise a feature called the Compliance API can pull chat data. The extension is not signed, and a university or employer that manages your computer or your Claude account may block unsigned extensions, or extensions altogether ([INSTALL.md](../INSTALL.md#installing-the-extension)). The terms do not change what Claude Code reads. Claude Code opens files by itself, outside Exegete. So for participants' data, this project suggests Claude Desktop's chat with Exegete on a Team or Enterprise account, set up as in the row above ([PRIVACY.md](../PRIVACY.md), "Assistants that open files by themselves"). | [PRIVACY.md](../PRIVACY.md), rungs 2 and 3; [the API-key recipe](#claude-code-with-an-anthropic-api-key-experimental) below |
 | **Fully local models** (LM Studio and similar hosts) | The model runs on your computer, so participants' data is not sent to an AI provider. LM Studio's LM Link, a feature still in preview, can load the model on another computer instead, where the model then reads the conversation, participants' data included (<https://lmstudio.ai/link>, read on 10 November 2026). To keep the conversation on your computer, you could check in LM Studio where the model is loaded, or leave LM Link off. We expect a local model to do the analysis less well than the hosted models, and do not know by how much, since we have evaluated neither. It is a route to consider for particular uses, such as a first pass over sensitive material, or work an agreement confines to one computer. Exegete offers its full tool set unless the host's entry asks for the smaller one, `core`. The recipe asks for `core`, which takes less of a local model's room than the full set. | [PRIVACY.md](../PRIVACY.md), rung 4; [the LM Studio recipe](#lm-studio-fully-local-experimental) below |
-| **OpenAI's apps** (the ChatGPT desktop app; Codex's command line and editor extension) | OpenAI's terms apply, and which ones depends on your plan and on how you sign in. Where your university or employer runs your workspace, OpenAI's page on enterprise privacy says what its admins can do. On ChatGPT Business, they "can view, access, export, and delete end user conversations in the workspace". On ChatGPT Enterprise and Edu, they "can access an audit log of conversations and GPTs". While training is on, OpenAI may use your conversations, with the participants' data in them, to train its models. Turning off "Improve the model for everyone" stops it, and on a personal account that covers Codex too. ChatGPT in a web browser cannot use Exegete directly. On a phone, ChatGPT can use it only through Codex on mobile, which has a computer paired with the phone run the work. For participants' data, this project suggests leaving that computer's remote access off. Codex can also read your projects' files by itself, without asking, so for participants' data this project suggests an assistant with no file access of its own, such as Claude Desktop's chat. OpenAI documents a setting, marked Beta, that can keep Codex's own commands from reading outside the folder it works in; it has not been tested with Exegete. This project has not run Exegete in any OpenAI app. | [PRIVACY.md](../PRIVACY.md), "OpenAI's apps"; [the recipe](#chatgpts-desktop-app-and-codex-experimental) below |
+| **OpenAI's apps** (the ChatGPT desktop app; Codex's command line and editor extension) | OpenAI's terms apply, and which ones depends on your plan and on how you sign in. Where your university or employer runs your workspace, OpenAI's page on enterprise privacy (Archive capture of 16 November 2026) says what its admins can do. On ChatGPT Business, they "can view, access, export, and delete end user conversations in the workspace". On ChatGPT Enterprise and Edu, they "can access an audit log of conversations and GPTs". While training is on, OpenAI may use your conversations, with the participants' data in them, to train its models. Turning off "Improve the model for everyone" stops it, and on a personal account that covers Codex too (OpenAI's Help Center, Archive capture of 18 November 2026). ChatGPT in a web browser cannot use Exegete directly. On a phone, ChatGPT can use it only through Codex on mobile, which has a computer paired with the phone run the work. For participants' data, this project suggests leaving that computer's remote access off. Codex can also read your projects' files by itself, without asking, so for participants' data this project suggests an assistant with no file access of its own, such as Claude Desktop's chat. OpenAI documents a setting, marked Beta, that can keep Codex's own commands from reading outside the folder it works in; it has not been tested with Exegete. This project has not run Exegete in any OpenAI app. | [PRIVACY.md](../PRIVACY.md), "OpenAI's apps"; [the recipe](#chatgpts-desktop-app-and-codex-experimental) below |
 
 The `core` tool set and the recipes below are **Experimental**. They
 are written from official documentation and checked by Exegete's own
@@ -709,21 +709,21 @@ configuration for the same Codex host."
   editors**: yes, by the same documentation, from the same settings
   file.
 - **ChatGPT in a web browser**: not directly. It runs on OpenAI's
-  computers and connects to servers on the internet. OpenAI's Secure
-  MCP Tunnel can connect it to a program on your computer, but it is
-  made for developers and IT teams (it needs an OpenAI API Platform
+  computers and connects to servers on the internet. OpenAI's Secure MCP
+  Tunnel can connect it to a program on your computer, but it is made
+  for developers and IT teams (it needs an OpenAI API Platform
   organisation, an API key, a helper program left running and ChatGPT's
   developer mode), and it makes every Exegete tool callable from the
   OpenAI workspaces the tunnel is linked to. This project does not
-  recommend it for a project with participants' data, and gives no
-  steps for it. There is one more case, for enterprise workspaces only.
-  OpenAI's page on remote connections
-  (<https://learn.chatgpt.com/docs/remote-connections>, read on
-  19 November 2026) says that a Work conversation can continue "on
-  desktop, mobile, or web", and that "Work Cloud can use approved local
-  resources through a connected computer." Whether such a conversation
-  can use Exegete on the connected computer is not documented, and this
-  project gives no steps for it. OpenAI's page on local computer access
+  recommend it for a project with participants' data, and gives no steps
+  for it. There is one more case, where your workspace gives you Work
+  Cloud and local computer access. OpenAI's page on remote connections
+  (<https://learn.chatgpt.com/docs/remote-connections>, read on 19
+  November 2026) says that a Work conversation can continue "on desktop,
+  mobile, or web", and that "Work Cloud can use approved local resources
+  through a connected computer." Whether such a conversation can use
+  Exegete on the connected computer is not documented, and this project
+  gives no steps for it. OpenAI's page on local computer access
   (<https://learn.chatgpt.com/docs/enterprise/cloud-local-access>, read
   on 19 November 2026) says: "Conversations, tool results, and other
   task context do not stay exclusively on the connected computer."
@@ -752,20 +752,21 @@ configuration for the same Codex host."
   - and "Availability depends on rollout and your workspace settings."
 
   Codex's command line can switch remote access on as well, with its
-  experimental `codex remote-control` (Codex's source at release
-  0.170.0, read on 19 November 2026). This project has not tried Codex
-  on mobile, and suggests leaving remote access off on a computer where
-  Exegete works on participants' data. A phone is easier to lose or
-  share, and OpenAI's own advice is "Only connect devices you own and
-  trust." Another computer can do what the phone does: "You can control
-  a host from ChatGPT on iOS or Android, or from another Mac or Windows
-  device when Control other devices is available." (the
-  remote-connections page). The same page adds: "Signing out of ChatGPT
-  turns off **Remote Control**, but it doesn't remove your existing
-  device pairings." To check, look under Settings, Connections in the
-  desktop app, and remove any device paired there ("In the app on the
-  host, use **Settings** > **Connections** to manage connected
-  devices.", the same page).
+  experimental `codex remote-control`. It can stay on after you quit
+  Codex, and `codex app-server daemon disable-remote-control` switches
+  it off (Codex's source at release 0.170.0, read on 19 November 2026).
+  This project has not tried Codex on mobile, and suggests leaving
+  remote access off on a computer where Exegete works on participants'
+  data. A phone is easier to lose or share, and OpenAI's own advice is
+  "Only connect devices you own and trust." Another computer can do what
+  the phone does: "You can control a host from ChatGPT on iOS or
+  Android, or from another Mac or Windows device when Control other
+  devices is available." (the remote-connections page). The same page
+  adds: "Signing out of ChatGPT turns off **Remote Control**, but it
+  doesn't remove your existing device pairings." To check, look under
+  Settings, Connections in the desktop app, and remove any device paired
+  there ("In the app on the host, use **Settings** > **Connections** to
+  manage connected devices.", the same page).
 
 **Which plans.** OpenAI's Codex pricing page
 (<https://learn.chatgpt.com/docs/pricing>, read on 19 November 2026)
@@ -1402,10 +1403,10 @@ tool, the notice gives the address of the update page). Quit your host
 fully before updating, and open it again afterwards ("Tools missing or
 unchanged after an update", above, says why). By default, Codex's
 command line runs conversations in a background server, which ends a
-conversation, and Exegete with it, a minute after you leave it (Codex's
-source at release 0.170.0, read on 19 November 2026). So end the
-Codex session and wait a minute, or stop the background server with
-`codex app-server daemon stop`.
+conversation, and Exegete with it, a little over a minute after you
+leave it (Codex's source at release 0.170.0, read on 19 November 2026).
+So end the Codex session and wait two minutes, or stop the background
+server with `codex app-server daemon stop`.
 
 **An install from PyPI** is updated with the optional part for PDF and
 EPUB named, so that its libraries are brought up too:
@@ -1512,19 +1513,18 @@ Exegete's own folder, which is best done with no older copy running.
   points the copy at the new address; the old address redirects, so this
   is optional.
 - **Keep your entry.** If a host's configuration already has an entry
-  for Exegete under the name `qualcoder`, keep it, and do not add
-  an `exegete` entry beside it: that would start two servers, show
-  every tool twice and need a second set of "always allow" rules. If
-  you do rename the entry, Claude Code names the tools after it
+  for Exegete under the name `qualcoder`, keep it, and do not add an
+  `exegete` entry beside it: that would start two servers, show every
+  tool twice and need a second set of "always allow" rules. If you do
+  rename the entry, Claude Code names the tools after it
   (`mcp__exegete__...`), and permissions you gave under the old name
-  must be given again. If you also set up QualCoder 4.0's own MCP
-  server
-  ([TOOLS.md](../TOOLS.md#supported-qualcoder-versions)),
-  take care with its name: it calls itself `qualcoder-mcp`, Exegete's
-  former name, and the extension QualCoder's source can build
-  is named `qualcoder`. Added to the same host under the name
-  `qualcoder`, it could replace Exegete's entry or be mistaken for
-  it; a name of its own, such as `qualcoder-app`, keeps the two apart.
+  must be given again. If you also set up QualCoder 4.0's own MCP server
+  ([TOOLS.md](../TOOLS.md#supported-qualcoder-versions)), take care with
+  its name: it calls itself `qualcoder-mcp`, Exegete's former name, and
+  the extension QualCoder's source can build is named `qualcoder`. Added
+  to the same host under the name `qualcoder`, it could replace
+  Exegete's entry or be mistaken for it; a name of its own, such as
+  `qualcoder-app`, keeps the two apart.
 - **The settings.** The variables now start `EXEGETE_` (for example
   `EXEGETE_TOOLSET`); the earlier `QUALCODER_MCP_...` spellings and
   `QUALCODER_PROJECT_PATH` are still read until v1.0, and the log says

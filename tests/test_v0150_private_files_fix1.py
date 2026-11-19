@@ -113,13 +113,16 @@ class TestNarrowingWhatAnAssistantCanReach:
             in section
         # (v0.15.5, the documents' points left this week: the facts, with
         # what a prune that stopped partway leaves, a clause of its own)
+        # (the readability reading: what follows the colon, sentences of
+        # its own)
         assert ("Or you could move a file out of the project once Exegete "
                 "has used it, and remove the backups and copies that still "
-                "hold it: `list_backups` shows the backups, `prune_backups` "
-                "deletes Exegete's own at your word") in section
+                "hold it. `list_backups` shows the backups, and "
+                "`prune_backups` deletes Exegete's own at your word") \
+            in section
         assert re.search(r"`prune_backups` deletes Exegete's own at your "
-                         r"word[^.]*QualCoder's backups, if you use it, and "
-                         r"copies of the project are yours to delete\.",
+                         r"word[^.]*\. QualCoder's backups, if you use it, "
+                         r"and copies of the project are yours to delete\.",
                          section)
 
     def test_a_folder_of_its_own_is_not_enough_for_codex(self):

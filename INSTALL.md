@@ -621,10 +621,11 @@ GitHub Issues ("Getting help", below).
        and its approvals are given again ("Coding sessions, from
        0.15.4", above).
    - **The reading folder**, where Exegete writes the pages you read on
-     your own computer, with a file's whole text and its codings,
-     read-only copies of originals, and the pages for checking an
-     import's letters and for choosing occurrences of a name, which hold
-     a file's text too. It is `~/Library/Caches/Exegete/Reading.noindex`
+     your own computer. It holds pages with a file's whole text and its
+     codings, and read-only copies of originals. It also holds the pages
+     for checking letters that look garbled before an import, and for
+     choosing occurrences of a name to leave as they are. They hold a
+     file's text too. It is `~/Library/Caches/Exegete/Reading.noindex`
      on a Mac, `%LOCALAPPDATA%\Exegete\Reading` on Windows, and
      `~/.cache/exegete/reading` on Linux, or `exegete/reading` under
      `$XDG_CACHE_HOME` if it is set. Exegete tidies it only while it
@@ -877,9 +878,8 @@ What each host does, from Anthropic's pages as read on 4 November 2026
   allow is approved if it is read-only. Any other tool set to always
   allow, and any tool that needs approval, goes to Claude's safety
   review instead of to you. **Skip all approvals** runs every tool that
-  is not blocked. The
-  page does not say how a local server's tools are sorted into
-  read-only and write or delete, nor whether Cowork honours
+  is not blocked. The page does not say how a local server's tools are
+  sorted into read-only and write or delete, nor whether Cowork honours
   `anthropic/requiresUserInteraction`.
 - **Chat and Cowork as one conversation.** Anthropic is rolling this
   version of Claude out to Pro, Max and Ultra plans first ("Claude

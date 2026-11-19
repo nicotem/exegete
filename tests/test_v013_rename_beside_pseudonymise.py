@@ -226,7 +226,9 @@ def test_the_records_this_server_keeps_are_named():
     # Fix round 1, QA-5 (Q10): the backup sentence is pinned too.
     assert "Every backup, including the one just taken, keeps the old " \
            "name, and so do Exegete's coding-session files" in flat
-    assert "so do Exegete's pseudonymisation journal entries and run " \
+    # (v0.15.5, the readability reading: a sentence of its own in
+    # PRIVACY.md)
+    assert "So do Exegete's pseudonymisation journal entries and run " \
            "records, which keep a file's name as it was at the run" \
            in _flat("PRIVACY.md")
 
@@ -330,7 +332,11 @@ def test_the_rename_notes_say_what_a_notes_run_leaves():
     file_note = " ".join(server._rename_file_note(
         {}, server._RenameSigns()).split())
     assert tail in file_note
-    assert tail in _flat("PRIVACY.md")
+    # (v0.15.5, the readability reading: PRIVACY.md says the same in
+    # sentences of its own)
+    assert ("they then name the file by its id. A later run that rewrites "
+            "the notes across the whole project rewrites the public part of "
+            "those journal entries.") in _flat("PRIVACY.md")
 
 
 def test_the_readme_keeps_no_completed_lists():

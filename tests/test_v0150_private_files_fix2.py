@@ -263,9 +263,11 @@ class TestHowFarAFolderOfItsOwnGoes:
                 "assistant (\"Assistants that open files by themselves\" "
                 "says which). It keeps the project out of Cowork's reach when "
                 "no folder connected to it holds the project. But Codex "
-                "reads well beyond any folder of its own, Claude Code's "
+                # (v0.15.5, the readability reading: each of the others a
+                # sentence of its own too)
+                "reads well beyond any folder of its own. Claude Code's "
                 "read-only commands, and its file tools in auto mode, read "
-                "beyond its working folders, and computer use sees whatever "
+                "beyond its working folders. And computer use sees whatever "
                 "a window shows.") in section
         assert "for Codex a folder of its own is not enough" not in section
 

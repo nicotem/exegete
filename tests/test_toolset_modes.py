@@ -559,7 +559,7 @@ class TestThePublishedSchemaBudget:
         assert "not workable" not in install
         tokens = SNAPSHOT_SIZES["core"]["tool_definitions_characters"] / 4
         assert tokens > 16_000
-        left = re.search(r"that leaves about (\d+)k tokens for your "
+        left = re.search(r"[Tt]hat leaves about (\d+)k tokens for your "
                          r"transcript", install)
         assert left, "Step 4 no longer says what 32k leaves"
         assert abs(int(left.group(1)) * 1000 - (32_000 - tokens)) <= 1000

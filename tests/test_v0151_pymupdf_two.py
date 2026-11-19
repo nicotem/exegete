@@ -510,9 +510,15 @@ def test_privacy_says_what_onnxruntime_reports_and_what_can_be_done():
     # (v0.15.2: the LM Studio recipe is the Terminal guide's)
     install = " ".join((REPO / "docs/installing-from-the-terminal.md"
                         ).read_text(encoding="utf-8").split())
-    assert install.count("library it installs for PDFs reports its use") \
-        + install.count("library Exegete installs for PDFs reports its use") \
-        == 2
+    # (v0.15.5, the readability reading: "What to expect" no longer
+    # repeats step 7, so the reports are given once, where the recipe
+    # says that Exegete's work is local)
+    step = install[install.index("**Step 7. Check offline work.**"):
+                   install.index("**What to expect.**")]
+    assert "the chats and all of Exegete's work are local" in step
+    assert "On Windows x64, a library Exegete installs for PDFs reports " \
+        "its use to Windows' diagnostic data" in step
+    assert "Nothing leaves your computer through Exegete" not in install
     readme = " ".join((REPO / "README.md").read_text(encoding="utf-8").split())
     # (v0.15.2, the readability reading: Exegete named, after a sentence
     # whose subject is the check)

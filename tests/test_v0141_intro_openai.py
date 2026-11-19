@@ -938,8 +938,10 @@ class TestPhonesAndTheWeb:
         # backend/pid.rs 395-402)
         assert re.search(r"\bcan stay on[^.]*after you quit Codex",
                          section)
+        # (the readability reading: the start, and what follows from it,
+        # two sentences; the sense held as before)
         assert re.search(r"`codex remote-control start`[^.]*remote access "
-                         r"on, so remote access is back as soon as you open "
+                         r"on\. So remote access is back as soon as you open "
                          r"Codex again, even after `codex remote-control "
                          r"stop`[^.]*until[^.]*`codex app-server daemon "
                          r"disable-remote-control`", section)
@@ -954,8 +956,8 @@ class TestPhonesAndTheWeb:
         # readings 2, the readability reading: the facts, a phone through
         # Codex on mobile alone and a paired computer running the work)
         assert re.search(r"On a phone, ChatGPT can use it only through "
-                         r"Codex on mobile, which has [^.]*paired[^.]* run "
-                         r"the work\.", table)
+                         r"Codex on mobile, where the work runs on a "
+                         r"computer paired with the phone\.", table)
         assert ("this project suggests leaving that computer's remote "
                 "access off") in table
         assert "Remote" not in table

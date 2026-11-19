@@ -60,12 +60,14 @@ def test_the_uninstall_names_what_the_reading_folder_holds():
     assert callable(reading_folder.occurrences_folder)
     item = _between(_flat("INSTALL.md"), "- **The reading folder**",
                     "- **Claude Desktop's log of the extension**")
+    # (the readability reading: what the two pages are for, in the words
+    # of reading_folder.py's account, and a sentence for what they hold)
     for kind in ("a file's whole text and its codings",
                  "read-only copies of originals",
-                 "checking an import's letters",
-                 "choosing occurrences of a name"):
+                 "checking letters that look garbled before an import",
+                 "choosing occurrences of a name to leave as they are"):
         assert kind in item, kind
-    assert "which hold a file's text too" in item
+    assert "They hold a file's text too" in item
 
 
 def test_the_api_key_recipe_warns_before_it_suggests_the_chat():
@@ -80,8 +82,10 @@ def test_the_api_key_recipe_warns_before_it_suggests_the_chat():
     guide = _flat(GUIDE)
     recipe = _between(guide, "## Claude Code with an Anthropic API key",
                       "**1. Install Exegete**")
-    warning = recipe.index("Exegete's extension is not signed, and an "
-                           "institution may block it (the table above)")
+    # (the readability reading: the extension named as Claude Desktop's)
+    warning = recipe.index("Exegete's extension for Claude Desktop is not "
+                           "signed, and an institution may block it (the "
+                           "table above)")
     assert warning < recipe.index("this project suggests Claude Desktop's "
                                   "chat")
     row = _between((REPO / GUIDE).read_text(encoding="utf-8"),
@@ -119,9 +123,11 @@ def test_where_a_local_model_keeps_the_data_lm_link_is_named():
     checklist = _between(_flat("PRIVACY.md"), "- **Which assistant, and "
                          "whether it opens files by itself.**",
                          "- **What stays on the computer")
-    assert re.search(r"A local model keeps the data on your computer "
-                     r"unless LM Link loads it elsewhere \(\"Rung 4\"\)",
-                     checklist)
+    # (the readability reading: LM Link named as LM Studio's, and what it
+    # loads elsewhere, the model)
+    assert re.search(r"A local model keeps the data on your computer, "
+                     r"unless LM Studio's LM Link loads the model on "
+                     r"another computer \(\"Rung 4\"\)", checklist)
 
 
 def test_every_case_in_which_a_note_given_once_comes_again():
@@ -210,8 +216,9 @@ def test_who_can_reach_an_institution_s_chats_and_for_how_long():
     assert ("\"the retention rules configured for your organization "
             "(indefinite by default)\"") in rung
     assert "\"Text content returned by the tool\"" in rung
-    assert ("No page says whether these include what Exegete's tools "
-            "return in Claude Desktop's chat.") in rung
+    # (the readability reading: "these" named, a chat's tool results)
+    assert ("No page says whether a chat's tool results include what "
+            "Exegete's tools return in Claude Desktop's chat.") in rung
     sessions = rung.index("\"stored for 6 years from capture by default\"")
     assert rung.index("Cowork sessions run on your computer") < sessions \
         < rung.index("chats and files follow")
@@ -221,8 +228,11 @@ def test_who_can_reach_an_institution_s_chats_and_for_how_long():
     chats = row.index("can pull your chats and files")
     assert row.index("(indefinitely by default)", chats) < row.index(
         "is not documented", chats) < row.index("kept six years by default")
+    # (the readability reading: the six years in a sentence of their own,
+    # whose subject is those transcripts)
     assert re.search(r"transcripts of the Claude Code and Cowork sessions "
-                     r"[^.]*kept six years by default", row)
+                     r"[^.]*\. Those transcripts [^.]*kept six years by "
+                     r"default", row)
     fragment = _flat("changelog.d/plans-and-readings.md")
     assert "the files you uploaded" in fragment
     assert "indefinitely by default" in fragment
@@ -257,7 +267,8 @@ def test_dots_are_explained_with_what_they_can_do_and_how_to_stop_them():
     phones = _between(_flat("PRIVACY.md"),
                       "**Phones, through a connected computer.**",
                       "**Services for individuals.**")
-    assert "a dot, one of OpenAI's always-on agents" in phones
+    # (the readability reading: what a dot is, a sentence of its own)
+    assert "A dot is one of OpenAI's always-on agents" in phones
     assert "personal Pro accounts" in phones
     assert re.search(r"<https://learn\.chatgpt\.com/docs/dots>, " + READ_ON,
                      phones)

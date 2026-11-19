@@ -138,7 +138,8 @@ officer will ask, and the summary above depends on them:
   commands from reading outside the folder it works in; it has not been
   tested with Exegete. "Assistants that open files by themselves",
   below, says what narrows the others' reach. A local model keeps the
-  data on your computer unless LM Link loads it elsewhere ("Rung 4").
+  data on your computer, unless LM Studio's LM Link loads the model on
+  another computer ("Rung 4").
 - **What stays on the computer, and for how long.** Copies stay on the
   computer you work on, and "Files Exegete keeps on your computer",
   below, says how long each stays:
@@ -173,8 +174,6 @@ officer will ask, and the summary above depends on them:
   Your data-management plan can say where each is kept, whether a sync
   or backup service copies it, who else can reach the computer, and
   when you will delete them.
-
-The rest of this document gives the detail.
 
 ## How your data flows
 
@@ -1028,8 +1027,8 @@ removed. A backup cut short, because Exegete's process ended during the
 copy (when the app quit, for example), stays beside the project under a
 hidden name, and so does what is left of one that `prune_backups` could
 not remove whole. Each holds whatever it still has, the names file and
-`pseudonyms.json` among them, until the next backup of the project
-removes it once it is an hour old. A save of the names list cut short
+`pseudonyms.json` among them. The next backup of the project removes
+it once it is an hour old. A save of the names list cut short
 the same way, or a pseudonymisation run ended before its mapping took
 its place, can leave a temporary copy of the list in the project's
 folder, with the real names in it: its name is `pseudonyms.json.`, then
@@ -1054,18 +1053,18 @@ project in a folder no assistant with its own file access is given. How
 far that goes depends on the assistant ("Assistants that open files by
 themselves" says which). It keeps the project out of Cowork's reach when
 no folder connected to it holds the project. But Codex reads well beyond
-any folder of its own, Claude Code's read-only commands, and its file
-tools in auto mode, read beyond its working folders, and computer use
+any folder of its own. Claude Code's read-only commands, and its file
+tools in auto mode, read beyond its working folders. And computer use
 sees whatever a window shows. Or you could move a file out of the
 project once Exegete has used it, and remove the backups and copies that
-still hold it: `list_backups` shows the backups, `prune_backups` deletes
-Exegete's own at your word, though one it could not remove whole stays
-under a hidden name (above), and QualCoder's backups, if you use it, and
-copies of the project are yours to delete. If you want to be sure that
-what you write never reaches an assistant, a safer way is to prepare
-pseudonymised copies elsewhere, before the documents come to this
-computer, as "What pseudonymisation is for" suggests. Then no list of
-real names need be written on this computer at all.
+still hold it. `list_backups` shows the backups, and `prune_backups`
+deletes Exegete's own at your word, though one it could not remove whole
+stays under a hidden name (above). QualCoder's backups, if you use it,
+and copies of the project are yours to delete. If you want to be sure
+that what you write never reaches an assistant, a safer way is to
+prepare pseudonymised copies elsewhere, before the documents come to
+this computer, as "What pseudonymisation is for" suggests. Then no list
+of real names need be written on this computer at all.
 
 ## What pseudonymisation is for
 
@@ -1316,8 +1315,7 @@ or name, as a run on the file, an undo that changes it or a restore
 does. Otherwise it goes at Exegete's first tidy once it is an hour old,
 which can be later (below). The preview's answer says where the page is
 only when the page did not open. With the names list, the answer
-withholds the page's place when the place itself holds a name from the
-list.
+withholds the page's place when the place holds a name from the list.
 
 The page has one script, Exegete's own, which runs in your browser on
 that page alone. The page's policy allows that script by a digest of its
@@ -2136,21 +2134,22 @@ Primary Owner, for every organisation linked to it), and that "Owners
 can create keys limited to their own organization". Its documentation
 (<https://platform.claude.com/docs/en/manage-claude/compliance-sessions>,
 read on 19 November 2026) adds that the API captures the Claude Code and
-Cowork sessions run on your computer under the Enterprise account, with
-"the text portions of tool results", so what Exegete's tools returned,
-"stored for 6 years from capture by default". Its other pages say that
-chats and files follow "the retention rules configured for your
-organization (indefinite by default)", and that a chat's messages
+Cowork sessions run on your computer under the Enterprise account. Each
+holds "the text portions of tool results", so what Exegete's tools
+returned, "stored for 6 years from capture by default". Its other pages
+say that chats and files follow "the retention rules configured for
+your organization (indefinite by default)", and that a chat's messages
 include each tool's result, "Text content returned by the tool"
 (<https://platform.claude.com/docs/en/manage-claude/compliance-faq>,
 <https://platform.claude.com/docs/en/api/compliance/apps/chats/messages/list>,
-both read on 19 November 2026). No page says whether these include what
-Exegete's tools return in Claude Desktop's chat. Exegete's extension is
-not signed, and an institution that manages your computer or your Claude
-account may block unsigned extensions, or extensions altogether
-(INSTALL.md, "Installing the extension"). For participants' data, this
-project suggests Claude Desktop's chat with Exegete under that account,
-set up as "Assistants that open files by themselves" says.
+both read on 19 November 2026). No page says whether a chat's tool
+results include what Exegete's tools return in Claude Desktop's chat.
+Exegete's extension is not signed, and an institution that manages your
+computer or your Claude account may block unsigned extensions, or
+extensions altogether (INSTALL.md, "Installing the extension"). For
+participants' data, this project suggests Claude Desktop's chat with
+Exegete under that account, set up as "Assistants that open files by
+themselves" says.
 
 ### Rung 4: fully local models (Experimental)
 
@@ -2324,7 +2323,7 @@ write its file, or when Exegete stops in the instant after the answer
 has gone out. The first two notes can also come twice while a check you
 asked for runs. A note can also count as given without being shown, when
 the app cancels the request as the answer is sent. The same can happen
-when, while a call runs, the app sends several other messages and then
+when the app sends several other messages while a call runs, and then
 cancels that call. Whether a note reaches you depends on the assistant
 passing it on, and on the app showing the answer. When you ask, the
 answer gives the installed and newest versions, how Exegete was
@@ -2350,11 +2349,10 @@ Codex"), what a tool returns goes to OpenAI, and OpenAI's terms apply.
 As above, OpenAI's pages are quoted word for word, and the linked pages
 govern. OpenAI's Help Center and openai.com refuse automated reading. So
 those pages were read on 19 November 2026 in the Internet Archive's
-newest captures of them, its saved copies of the pages. Each quote below
-names its capture and gives the day the capture was made. The live page
-may have changed since, so you could open it before you rely on the
-quote. The recipe itself is Experimental, and this project has not tried
-it.
+newest captures, its saved copies of them. Each quote below names its
+capture and gives the day the capture was made. The live page may have
+changed since, so you could open it before you rely on the quote. The
+recipe itself is Experimental, and this project has not tried it.
 
 **Codex's own file access.** Besides calling Exegete's tools, Codex
 runs commands of its own, outside Exegete, which change files in the
@@ -2433,8 +2431,8 @@ mobile, <https://learn.chatgpt.com/docs/mobile> (read on 19 November
 2026), says: "Follow progress, approve actions, and send instructions
 from your phone. Codex runs tasks in the cloud or on a connected
 computer." The Terminal guide lists what Codex on mobile needs, and how
-Codex's command line switches the computer's remote access on and off;
-it can stay on after you quit Codex. OpenAI's page on remote
+Codex's command line switches the computer's remote access on and off.
+Remote access can stay on after you quit Codex. OpenAI's page on remote
 connections, <https://learn.chatgpt.com/docs/remote-connections> (read
 on 19 November 2026), says: "MCP servers, skills, browser access, and
 Computer Use come from that host's configuration.", and "You can control
@@ -2450,17 +2448,18 @@ Connections in the desktop app, and remove any device paired there ("In
 the app on the host, use **Settings** > **Connections** to manage
 connected devices.", the same page). Work Cloud, where your workspace
 gives you local computer access, can use a computer you connect, and so
-can a dot, one of OpenAI's always-on agents, which some personal Pro
-accounts get too (<https://learn.chatgpt.com/docs/dots>, read on 19
-November 2026). OpenAI's page on local computer access for both,
-<https://learn.chatgpt.com/docs/enterprise/cloud-local-access> (read on
-19 November 2026), says that a dot given your computer can "Create local
-Work or Codex threads and control existing local Codex threads.", and
-that choosing Revoke access removes the dot's grant for that computer.
-It also says: "Conversations, tool results, and other task context do
-not stay exclusively on the connected computer." It adds that neither
-Work nor a dot "provides strict zero data retention", and that for Work
-"deleting a conversation does not remove every related copy".
+can a dot. A dot is one of OpenAI's always-on agents, which some
+personal Pro accounts get too (<https://learn.chatgpt.com/docs/dots>,
+read on 19 November 2026). OpenAI's page on local computer access for
+both, <https://learn.chatgpt.com/docs/enterprise/cloud-local-access>
+(read on 19 November 2026), says that a dot given access to your
+computer can "Create local Work or Codex threads and control existing
+local Codex threads.", and that choosing Revoke access removes the dot's
+grant for that computer. It also says: "Conversations, tool results, and
+other task context do not stay exclusively on the connected computer."
+It adds that neither Work nor a dot "provides strict zero data
+retention", and that for Work "deleting a conversation does not remove
+every related copy".
 
 **Services for individuals.** While training is on, OpenAI may use
 your conversations, with the participants' data in them, to train its
@@ -2645,28 +2644,29 @@ improve our models".
     that save, or removes the list if the save made it. `restore_backup`
     rolls the project back, this file with it, all but its `Exegete`,
     `Exegete coding sessions`, `audio` and `video` folders, which a
-    restore keeps. Its preview says beforehand whether the backup's
-    file is the same, differs or is missing, by a fingerprint of the
-    two files' bytes, never a name. And
-    the file the project had stays in the pre-restore safety backup.
-    `prune_backups` lists in its preview any backup it would remove that
-    holds the only copy of a `pseudonyms.json` that Exegete knows of, and
-    says afterwards which of the backups it removed held one, where no
-    backup it could not remove still holds that copy, or may. QualCoder's
-    own `_BKUP_` backups do not count as keeping a copy, because
-    QualCoder deletes them past its `backup_num` when a project closes.
-    The token that approves the prune signs that set of backups holding
-    the only copies, so a prune whose set changed after its preview is
-    refused and removes nothing. The prune takes each backup out of the
-    listing, under a hidden name, before removing it, and clears the
-    read-only marks and locks inside it alone. One it cannot rename stays
-    whole and listed, as when a file in it is open, its folder or the one
-    holding it is locked or not writable for you, or the project's name
-    is too long. What is left of one whose removal stops stays beside the
-    project under that name, which nothing in Exegete lists or restores,
-    until a later backup removes what it can after an hour, or you delete
-    it. Either may hold the only copy of a `pseudonyms.json`, named in
-    the answer unless Exegete's process ended first.
+    restore keeps. Its preview says beforehand whether the backup's file
+    is the same, differs or is missing, by a fingerprint of the two
+    files' bytes, never a name. And the file the project had stays in
+    the pre-restore safety backup. `prune_backups` lists in its preview
+    any backup it would remove that holds the only copy of a
+    `pseudonyms.json` that Exegete knows of, and says afterwards which
+    of the backups it removed held one, where no backup it could not
+    remove still holds that copy, or may. QualCoder's own `_BKUP_`
+    backups do not count as keeping a copy, because QualCoder deletes
+    them past its `backup_num` when a project closes. The token that
+    approves the prune signs that set of backups holding the only
+    copies, so a prune whose set changed after its preview is refused
+    and removes nothing. Before removing a backup, the prune gives it a
+    hidden name, which takes it out of the listing. It clears the
+    read-only marks and locks inside that backup alone. A backup it
+    cannot rename stays whole and listed, as when a file in it is open,
+    its folder or the one holding it is locked or not writable for you,
+    or the project's name is too long. If a removal stops partway, what
+    is left stays beside the project under the hidden name, which
+    nothing in Exegete lists or restores. It stays until a later backup
+    removes what it can after an hour, or you delete it. Either may hold
+    the only copy of a `pseudonyms.json`, and the prune's answer names
+    that backup, unless Exegete's process ended first.
 
     A run on a mapping you typed is refused unless the call either asks
     for the mapping to be saved into this file
@@ -2816,11 +2816,11 @@ improve our models".
     the case or file it renamed; nothing in Exegete reads the saved SQL
     queries. Every backup, Exegete's session files and, if you use
     QualCoder, its search index and AI chat history keep the old name
-    too, and so do Exegete's pseudonymisation journal entries and run
-    records, which keep a file's name as it was at the run unless that
-    name carried a name from the mapping (they then name the file by its
-    id), though a later run that rewrites the notes across the whole
-    project rewrites the public part of those journal entries.
+    too. So do Exegete's pseudonymisation journal entries and run
+    records, which keep a file's name as it was at the run, unless that
+    name carried a name from the mapping: they then name the file by its
+    id. A later run that rewrites the notes across the whole project
+    rewrites the public part of those journal entries.
   - **QualCoder's `ai_data/` folder.** Its chat history may quote the
     previous text, and its search index (QualCoder 4.0's
     `search.sqlite`, or QualCoder 3.8's `vectorstore/faiss_store.bin`)

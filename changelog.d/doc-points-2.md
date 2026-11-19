@@ -6,15 +6,19 @@
   preview, can load the model on another computer, which then reads the
   conversation (read on 19 November 2026). The recipe suggests checking
   in LM Studio where the model is loaded, or leaving LM Link off. Its
-  step 4 says in plain words that at 16k the core set's schema would not
-  fit. For the full tool set, `full`, you could set 64k.
+  step 4 says in plain words that at 16k the core set's tool definitions
+  would not fit. For the full tool set, `full`, you could set 64k.
+- **Words explained.** The Terminal guide's LM Studio recipe says what a
+  token and a model's context are. Its recipe for OpenAI's apps quotes
+  OpenAI's page on ChatGPT Work, read on 19 November 2026, for what Work
+  and Work Cloud are.
 - **What a bug report can publish.** The bug report form counts coder
   names among what the tools' answers hold: yours, the AI coder name and
   colleagues'.
 - **The reading folder.** INSTALL.md's list of what stays after an
-  uninstall gives the pages for checking an import's letters and for
-  choosing occurrences of a name. It gave only the reading pages and the
-  copies of originals.
+  uninstall gives the pages for checking letters that look garbled
+  before an import, and for choosing occurrences of a name to leave as
+  they are. It gave only the reading pages and the copies of originals.
 - **The notes Exegete gives once.** PRIVACY.md gives every case in
   which one can come again. Two copies of Exegete on one computer, a
   file Exegete could not write, and a stop in the instant after the
@@ -27,15 +31,16 @@
 - **An institution's account.** The Terminal guide's recipe for an API
   key suggests Claude Desktop's chat on a Team or Enterprise account. It
   now says first that the extension is not signed, and that an
-  institution may block it. By Anthropic's pages, read on 19 November
-  2026, the Compliance API keeps the transcripts of local sessions six
-  years by default. Chats and files follow the organisation's retention
-  rules, indefinitely by default. PRIVACY.md's rung 3 and the guide's
-  table now keep the two apart. They also say that no page settles
-  whether a chat's copy holds what Exegete's tools returned, though the
-  API's reference lists the results of the tools a chat used. Rung 3
-  quotes in full what a Primary Owner's exports may contain: "your
-  conversations with Claude, uploaded files, and usage patterns."
+  institution may block it. Anthropic's pages, read on 19 November 2026,
+  say that the transcripts of local sessions that the Compliance API
+  captures are kept six years by default. Chats and files follow the
+  organisation's retention rules, indefinitely by default. PRIVACY.md's
+  rung 3 and the guide's table now keep the two apart. They also say
+  that no page settles whether a chat's copy holds what Exegete's tools
+  returned, though the API's reference lists the results of the tools a
+  chat used. Rung 3 quotes in full what a Primary Owner's exports may
+  contain: "your conversations with Claude, uploaded files, and usage
+  patterns."
 - **Codex.**
   - By default, Codex's command line starts its background server when
     you open Codex (Codex's source at release 0.170.0). So remote access

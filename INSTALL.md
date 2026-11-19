@@ -641,10 +641,17 @@ GitHub Issues ("Getting help", below).
 The backups Exegete took sit beside each project, in folders named
 `<project>_backup_<timestamp>.qda`. The `prune_backups` tool removes
 those you no longer need before you uninstall, or you can remove them by
-hand afterwards. Working copies made with `copy_project_to_workspace`
-are in the folder for projects, by default `~/Exegete projects`. If you
-are clearing a study's traces from the computer,
-[PRIVACY.md's checklist](PRIVACY.md#before-you-use-real-participant-data-check-these)
+hand afterwards. A backup cut short, or what is left of one whose
+removal by `prune_backups` stopped partway, stays beside the project
+under a hidden name, `.<project>_backup_<time>_partial_<8 hex>.qda`,
+which Finder does not show. It can hold the names list and
+`pseudonyms.json`, with the real names in them. Later backups remove
+what they can of such folders after an hour, so after an uninstall they
+stay until you delete them. Working copies made with
+`copy_project_to_workspace` are in the folder for projects, by default
+`~/Exegete projects`. If you are clearing a study's traces from the
+computer, [PRIVACY.md's
+checklist](PRIVACY.md#before-you-use-real-participant-data-check-these)
 lists everything that stays, under "What stays on the computer, and for
 how long".
 

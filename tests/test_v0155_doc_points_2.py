@@ -362,3 +362,39 @@ def test_dots_are_explained_with_what_they_can_do_and_how_to_stop_them():
     # (the fix round: the pointer, whatever its words)
     assert re.search(r"PRIVACY\.md, \"OpenAI's apps\"[^.]*\bretention\b",
                      case)
+
+
+def test_the_uninstall_names_the_backups_hidden_folders():
+    """A backup cut short, or what a prune could not remove, stays under
+    a hidden name that only a later backup sweeps (database.py's
+    `.<project>_backup_<time>_partial_<8 hex>.qda`, swept by
+    sweep_partial_backups), so after an uninstall it stays, and it can
+    hold the names list and pseudonyms.json (the lead's batch of 19
+    November, from row 17's privacy reader)."""
+    uninstall = _between(_flat("INSTALL.md"),
+                         "The backups Exegete took sit beside each project",
+                         "lists everything that stays")
+    assert ".<project>_backup_<time>_partial_<8 hex>.qda" in uninstall
+    assert database.is_partial_backup_name(
+        ".study_backup_20261119_101500_partial_0123abcd.qda", "study")
+    assert "pseudonyms.json" in uninstall
+    assert re.search(r"after an uninstall[^.]*until you delete them",
+                     uninstall)
+
+
+def test_the_openai_row_names_a_dot_beside_codex_on_mobile():
+    """OpenAI's page on connecting a computer to a dot, read on 19
+    November 2026 (learn.chatgpt.com/docs/dots/computers-and-apps.md
+    85-90 and 101-104): access to the computer "applies wherever you
+    message the same dot, including from your phone", the dot "can create
+    local Work or Codex tasks", and its permission "is separate from
+    connecting a computer to Codex". So the route table no longer says a
+    phone reaches Exegete only through Codex on mobile, and its
+    suggestion covers a dot (the lead's batch, from row 17's privacy
+    reader)."""
+    row = _between((REPO / GUIDE).read_text(encoding="utf-8"),
+                   "| **OpenAI's apps**", "\n")
+    assert "can use it only through Codex on mobile" not in row
+    assert re.search(r"\bdot\b[^.]*Codex", row)
+    assert re.search(r"Exegete is not documented", row)
+    assert "no dot access" in row

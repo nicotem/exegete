@@ -955,9 +955,15 @@ class TestPhonesAndTheWeb:
         # name for it, and the suggestion a sentence of its own; plans and
         # readings 2, the readability reading: the facts, a phone through
         # Codex on mobile alone and a paired computer running the work)
-        assert re.search(r"On a phone, ChatGPT can use it only through "
-                         r"Codex on mobile, where the work runs on a "
-                         r"computer paired with the phone\.", table)
+        # (the lead's batch of 19 November, from row 17's privacy reader:
+        # OpenAI's page on connecting a computer to a dot, read on 19
+        # November 2026, says a dot given the computer can create local
+        # Codex tasks there, from a phone too; so no longer Codex on
+        # mobile alone, and the facts, not the sentence)
+        assert re.search(r"On a phone[^.]*Codex on mobile[^.]*computer "
+                         r"paired with the phone", table)
+        assert "only through Codex on mobile" not in table
+        assert re.search(r"\bdot\b[^.]*Codex's work", table)
         assert ("this project suggests leaving that computer's remote "
                 "access off") in table
         assert "Remote" not in table

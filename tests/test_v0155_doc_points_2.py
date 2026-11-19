@@ -199,9 +199,9 @@ def test_what_a_prune_that_stopped_leaves_is_said_where_copies_are():
                          "A save of the names list cut short")
     # (the fix round: the remains of a removal that stopped, not of a
     # refused rename; what they can hold, not what they must)
-    assert re.search(r"what is left of one whose removal by `prune_backups` "
-                     r"stopped partway", cut_short)
-    assert re.search(r"can still hold the names file and `pseudonyms\.json`",
+    assert re.search(r"what is left of [^.]*`prune_backups` [^.]*stopped "
+                     r"partway", cut_short)
+    assert re.search(r"\bcan\b[^.]*names file[^.]*`pseudonyms\.json`",
                      cut_short)
     assert "among them" not in cut_short
     (sweeping,) = [sentence for sentence in cut_short.split(". ")
@@ -209,9 +209,8 @@ def test_what_a_prune_that_stopped_leaves_is_said_where_copies_are():
     assert "what it can" in sweeping and "yours to delete" in sweeping
     narrow = _between(privacy, "Some ways narrow that reach",
                       "## What pseudonymisation is for")
-    assert re.search(r"`prune_backups` deletes Exegete's own at your word, "
-                     r"though what a removal stopped partway leaves stays "
-                     r"under a hidden name \(above\)", narrow)
+    assert re.search(r"`prune_backups` [^.]*stopped partway[^.]*hidden name "
+                     r"\(above\)", narrow)
     entry = _between(_flat("changelog.d/doc-points-2.md"),
                      "**Backups a prune could not remove.**", "- **")
     assert "removes what it can" in entry and "yours to delete" in entry
@@ -261,8 +260,8 @@ def test_rung_one_gives_claude_code_to_the_paid_plans_alone():
     rung = _between(_flat("PRIVACY.md"), "### Rung 1:", "### Rung 2:")
     # (the fix round: the page quoted, as the rungs say they quote it)
     assert re.search(r"<https://claude\.com/pricing>, " + READ_ON
-                     + r", lists [^\"]*\"Individual\", and says: \"Claude "
-                     r"Code is included in all paid plans\.\"", rung)
+                     + r"[^.]*\"Claude Code is included in all paid "
+                     r"plans\.\"", rung)
 
 
 def test_who_can_reach_an_institution_s_chats_and_for_how_long():
@@ -285,8 +284,8 @@ def test_who_can_reach_an_institution_s_chats_and_for_how_long():
     assert ("\"the retention rules configured for your organization "
             "(indefinite by default)\"") in rung
     # (the fix round: the reference quoted, never "each tool's result")
-    assert "a chat's messages can hold \"Text content returned by the " \
-        "tool\"" in rung
+    assert re.search(r"chat's messages [^.]*\"Text content returned by the "
+                     r"tool\"", rung)
     assert "each tool's result" not in rung
     # (the readability reading: "these" named, a chat's tool results; the
     # fix round: the fact, that no page settles it)

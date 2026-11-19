@@ -692,10 +692,13 @@ def test_install_turns_training_off_first_in_the_readmes_words():
     # capture of 18 November 2026, says that with a personal ChatGPT
     # account the ChatGPT training preference applies to Codex
     # conversations, and no longer names Codex's "Include environments")
-    for words in ("choose \"Do not train on my content\" in OpenAI's "
-                  "Privacy Portal",
-                  "Either is enough, and covers Codex on a personal account"):
-        assert words in first, words
+    assert ("choose \"Do not train on my content\" in OpenAI's Privacy "
+            "Portal") in first
+    # (plans and readings 2, the readability reading: the facts, either
+    # setting enough and Codex covered on a personal account, by the Help
+    # Center, whatever the sentence's order)
+    assert re.search(r"Help Center[^.]*either is enough", first)
+    assert re.search(r"on a personal account[^.]*covers Codex", first)
     assert "Include environments" not in first
     # before any numbered step, and the steps are the four the README
     # says follow it

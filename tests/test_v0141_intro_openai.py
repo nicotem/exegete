@@ -884,11 +884,14 @@ class TestPhonesAndTheWeb:
                 "workspace",
                 "\"Availability depends on rollout and your workspace "
                 "settings.\"",
-                "This project has not tried it, and suggests leaving remote "
-                "access off on a computer where Exegete works on "
-                "participants' data",
                 "\"Only connect devices you own and trust.\""):
             assert words in section, words
+        # (v0.15.5, plans and readings 2, the readability reading: the
+        # fact is that the route is untried and the suggestion, whatever
+        # the sentence names as untried)
+        assert re.search(r"This project has not tried [^.]*, and suggests "
+                         r"leaving remote access off on a computer where "
+                         r"Exegete works on participants' data", section)
         assert "OpenAI's Remote" not in section
         for page in ("mobile", "remote-connections"):
             assert re.search(r"<https://learn\.chatgpt\.com/docs/" + page
@@ -911,12 +914,14 @@ class TestPhonesAndTheWeb:
         table = _between(_read("INSTALL.md"), "| **OpenAI's apps**", "\n")
         # (v0.15.5, the readability reading: whole sentences where the
         # row had fragments; plans and readings: the feature by OpenAI's
-        # name for it, and the suggestion a sentence of its own)
-        for words in ("On a phone, ChatGPT can use it only through Codex on "
-                      "mobile, which has the paired computer run the work.",
-                      "this project suggests leaving that computer's remote "
-                      "access off"):
-            assert words in table, words
+        # name for it, and the suggestion a sentence of its own; plans and
+        # readings 2, the readability reading: the facts, a phone through
+        # Codex on mobile alone and a paired computer running the work)
+        assert re.search(r"On a phone, ChatGPT can use it only through "
+                         r"Codex on mobile, which has [^.]*paired[^.]* run "
+                         r"the work\.", table)
+        assert ("this project suggests leaving that computer's remote "
+                "access off") in table
         assert "Remote" not in table
         # (v0.15.5, plans and readings 2: who can reach a workspace's
         # conversations, in the words of "Enterprise privacy at OpenAI",
@@ -926,7 +931,12 @@ class TestPhonesAndTheWeb:
         business = ("can view, access, export, and delete end user "
                     "conversations in the workspace")
         audit = "can access an audit log of conversations and GPTs"
-        assert "On a workspace your university or employer runs" in table
+        # (the readability reading: each quote after the plan it is about,
+        # on a workspace a university or employer runs)
+        assert "your university or employer" in table
+        assert re.search(r"ChatGPT Business[^.]*" + re.escape(business),
+                         table)
+        assert re.search(r"Enterprise and Edu[^.]*" + re.escape(audit), table)
         for text in (table, _privacy_openai()):
             assert business in text and audit in text
             assert ("can reach your conversations, with what Exegete's "

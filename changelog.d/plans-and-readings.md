@@ -6,15 +6,15 @@
   19 November 2026). Claude Code's login is given as Pro, Max or Ultra,
   since the page offers Claude Code on every paid plan and not on Free.
 - **An institution's account.** PRIVACY.md's rung 3 quotes Anthropic's
-  pages, read on 19 November 2026: on a Team or Enterprise plan, the
-  account's Primary Owner manages its data and can request it through
-  data exports, which may contain your conversations, and on Enterprise
-  the Compliance API can pull chat data. Only the Primary Owner can
-  switch that API on, and Owners can create keys for their own
-  organisation. The Terminal guide's table says, before it suggests
-  Claude Desktop's chat on such an account, that the extension is not
-  signed and that a university or employer may block it, and that
-  whoever manages the account can say whether it allows it. Its row on
+  pages, read on 19 November 2026. On a Team or Enterprise plan, the
+  account's Primary Owner manages its data, and can request it through
+  data exports, which may contain your conversations. On Enterprise, the
+  Compliance API can pull chat data. Only the Primary Owner can switch
+  that API on, and Owners can create keys for their own organisation.
+  Before the Terminal guide's table suggests Claude Desktop's chat on
+  such an account, it says that the extension is not signed, that a
+  university or employer may block it, and that whoever manages the
+  account can say whether it allows it. Its row on
   OpenAI's apps quotes OpenAI's page on enterprise privacy: on ChatGPT
   Business, workspace admins "can view, access, export, and delete end
   user conversations in the workspace", and on Enterprise and Edu they
@@ -32,8 +32,8 @@
 - **What Codex keeps.** PRIVACY.md says, from Codex's source at release
   0.170.0, that Codex's log database also keeps the answers you give to
   Codex's own questions in Plan mode. It also says that Codex's command
-  line starts a background server by default, which keeps running after
-  you quit Codex and writes to the same log database, and that
+  line starts a background server by default. That server keeps running
+  after you quit Codex and writes to the same log database, and
   `codex app-server daemon stop` stops it before you delete those files.
   The Terminal guide's uninstall steps name those answers and that
   background server. Its "Updating" says, from the same source, that

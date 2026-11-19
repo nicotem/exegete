@@ -2138,17 +2138,19 @@ your data depends on the agreement your institution made with Anthropic,
 and such agreements differ. Even so, an institution's account is likely
 to give participants' data more protection than a personal one, since
 the institution agreed its terms with its own interests in mind. Whoever
-manages the account can tell you which terms apply. Anthropic's page on
-who manages a team's data
+manages the account can tell you which terms apply.
+
+Two of Anthropic's pages say who in your institution can export your
+data. The page on who manages a team's data
 (<https://support.claude.com/en/articles/9265372-who-owns-and-manages-the-data-of-my-team>,
 read on 19 November 2026) says: "Your organization's designated Primary
 Owner manages your Work account and all associated data. This includes
 the ability to request access to your user data through data exports,
-which may contain your conversations with Claude". On Enterprise, the
-Compliance API "lets your organization programmatically pull activity
-feed events, chat data, and file content"
+which may contain your conversations with Claude". On Enterprise, a
+feature called the Compliance API "lets your organization
+programmatically pull activity feed events, chat data, and file content"
 (<https://support.claude.com/en/articles/13015708-access-the-compliance-api>,
-read on 19 November 2026). The page says that "only your organization's
+read on 19 November 2026). That page says that "only your organization's
 Primary Owner can enable the Compliance API", and that "Owners can
 create keys limited to their own organization". Exegete's extension is
 not signed, and an institution that manages your computer or your Claude
@@ -2189,12 +2191,11 @@ LM Studio that the model you use is loaded on this computer, or leave
 LM Link off.
 
 There is a trade-off. We expect a local model to do the analysis less
-well than the hosted models, and do not know by how much, since we
-have evaluated neither. A local model is a route to consider for
-particular uses, such as a first pass over sensitive material, or work
-an agreement confines to one computer, rather than a suggestion for
-participants' data as such. It means a narrower workflow with more
-supervision.
+well than the hosted models, and do not know by how much, since we have
+evaluated neither. A local model is a route to consider for particular
+uses, such as a first pass over sensitive material, or work an agreement
+confines to one computer, rather than a suggestion for participants'
+data as such. It means a narrower workflow with more supervision.
 
 ### Cross-rung cautions
 
@@ -2238,9 +2239,8 @@ supervision.
   characters", in the session's `tool-results` folder there, unless the
   tool raises that threshold (<https://code.claude.com/docs/en/mcp>,
   read on 10 November 2026). `read_file_with_codings` raises it for its
-  parts; a longer answer from another of Exegete's tools is kept in
-  such a file too. Anthropic's pages, read on 11 November 2026, say
-  that:
+  parts; a longer answer from another of Exegete's tools is kept in such
+  a file too. Anthropic's pages, read on 11 November 2026, say that:
   - `CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC=1` turns off the usage
     metrics, the error reports and the surveys
     (<https://code.claude.com/docs/en/data-usage>);
@@ -2449,13 +2449,13 @@ Control other devices is available." So what Exegete's tools return on
 that computer can be shown on the phone, or on another computer paired
 with it. This project has not tried it, and suggests leaving the
 computer's remote access off where Exegete works on participants' data.
-A pairing lasts: "Signing out of ChatGPT turns off **Remote Control**,
-but it doesn't remove your existing device pairings." (the same page).
-To check, you could look under Settings, Connections in the desktop app,
-and remove any device paired there ("In the app on the host, use
-**Settings** > **Connections** to manage connected devices.", the same
-page). On enterprise workspaces with local computer access switched on,
-OpenAI's page on that feature,
+The page on remote connections adds: "Signing out of ChatGPT turns off
+**Remote Control**, but it doesn't remove your existing device
+pairings." To check, you could look under Settings, Connections in the
+desktop app, and remove any device paired there ("In the app on the
+host, use **Settings** > **Connections** to manage connected devices.",
+the same page). On enterprise workspaces with local computer access
+switched on, OpenAI's page on that feature,
 <https://learn.chatgpt.com/docs/enterprise/cloud-local-access> (read on
 19 November 2026), says: "Conversations, tool results, and other task
 context do not stay exclusively on the connected computer."
@@ -2513,11 +2513,11 @@ The Privacy Portal is <https://privacy.openai.com/>.
 The same page says that on ChatGPT Enterprise and Edu, "Your workspace
 admins control how long your data is retained", and that "workspace
 admins can access an audit log of conversations and GPTs through the
-Enterprise Compliance API". On ChatGPT Business, "Workspace admins have
-control over workspaces and can view, access, export, and delete end
-user conversations in the workspace." As with Anthropic, whoever
-manages the account can tell you which terms apply, and who can read
-the conversations.
+Enterprise Compliance API". Of ChatGPT Business, it says: "Workspace
+admins have control over workspaces and can view, access, export, and
+delete end user conversations in the workspace." As with Anthropic,
+whoever manages the account can tell you which terms apply, and who can
+read the conversations.
 
 **Codex: how you sign in decides.** Codex can be signed in to with a
 ChatGPT account or with an API key. <https://learn.chatgpt.com/docs/auth>

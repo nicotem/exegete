@@ -16,9 +16,9 @@
   names among what the tools' answers hold: yours, the AI coder name and
   colleagues'.
 - **The reading folder.** INSTALL.md's list of what stays after an
-  uninstall gives the pages for checking letters that look garbled
-  before an import, and for choosing occurrences of a name to leave as
-  they are. It gave only the reading pages and the copies of originals.
+  uninstall gave only the reading pages and the copies of originals. It
+  now gives the pages for checking letters that look garbled before an
+  import, and for choosing occurrences of a name to leave as they are.
 - **The notes Exegete gives once.** PRIVACY.md gives every case in
   which one can come again. Two copies of Exegete on one computer, a
   file Exegete could not write, and a stop in the instant after the

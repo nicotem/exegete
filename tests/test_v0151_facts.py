@@ -3,7 +3,8 @@
 
 The documents repeat values the code holds: the folder for projects,
 the places the project listing searches, the state folder and the
-reading folder, the time one import call may take, the memory a file's
+reading folder, the time one import call may take, the hour before a
+later backup removes a backup's hidden folder, the memory a file's
 reading is given, how many tools each set registers and how many
 preview first, the size of each set's tool definitions (within five per
 cent, since the documents round it), the optional part an install needs for PDF and EPUB,
@@ -24,9 +25,10 @@ The values are always read from the code's constants and files
 statements from the documents as they are now. The CHANGELOG is read in
 its `[Unreleased]` part alone, with the fragments its next entry is
 written from (changelog.d/, v0.15.2), for wrong values only, and only by
-the first five facts: a sprint's entry lists that sprint's changes and
-need not repeat any fact, and the released entries are a record of their
-own release, which a later release must never rewrite.
+the first five facts and the backups' hour (v0.15.5): a sprint's entry
+lists that sprint's changes and need not repeat any fact, and the
+released entries are a record of their own release, which a later
+release must never rewrite.
 
 The table below is the whole of what is checked: for each fact, the
 code it reads, the documents that state it (each must still state it at
@@ -63,8 +65,8 @@ try:
 except ModuleNotFoundError:  # Python 3.10, where pytest itself needs tomli
     import tomli as tomllib
 
-from exegete import (doc_import, env_settings, import_reading, names,
-                     occurrences, preview_tokens, pseudonymise,
+from exegete import (database, doc_import, env_settings, import_reading,
+                     names, occurrences, preview_tokens, pseudonymise,
                      reading_folder, server)
 
 REPO = Path(__file__).resolve().parents[1]
@@ -141,6 +143,10 @@ class Facts:
     import_file_seconds: int
     keep_seconds: int
     read_timeout_seconds: float
+    # v0.15.5: how old a backup's hidden folder, or what a prune left of
+    # one, must be before a later backup of the project removes it
+    # (database.py)
+    backup_leftover_seconds: int
     # the memory a file's reading is given, and a PDF's (v0.15.1)
     memory_cap_bytes: int
     pdf_memory_cap_bytes: int
@@ -403,6 +409,7 @@ def facts_from_the_code(root: Path = REPO,
         import_file_seconds=doc_import.IMPORT_FILE_SECONDS,
         keep_seconds=doc_import.KEEP_SECONDS,
         read_timeout_seconds=import_reading.READ_TIMEOUT_SECONDS,
+        backup_leftover_seconds=database.BACKUP_LEFTOVER_SECONDS,
         memory_cap_bytes=import_reading.MEMORY_CAP_BYTES,
         pdf_memory_cap_bytes=import_reading.PDF_MEMORY_CAP_BYTES,
         # the tools registered when exegete.server is imported: `full`
@@ -458,7 +465,7 @@ QUANTITIES: Dict[str, Tuple[Tuple[str, ...], Callable[[Facts], float]]] = {
 for _field in ("extension_call_seconds", "terminal_call_seconds",
                "call_seconds_least", "call_seconds_most",
                "import_file_seconds", "keep_seconds",
-               "read_timeout_seconds"):
+               "read_timeout_seconds", "backup_leftover_seconds"):
     QUANTITIES[_field] = ((_field,), lambda f, n=_field: getattr(f, n))
 del _field
 # the documents give the memory in GB (1024 MB)
@@ -518,6 +525,39 @@ def _count(stated: str) -> Optional[int]:
         return int(stated)
     return NUMBER_WORDS.index(stated.lower()) + 1 \
         if stated.lower() in NUMBER_WORDS else None
+
+
+# A time in words, "an hour", "two hours", "a day" or "90 minutes", read
+# in seconds by _seconds
+DURATION = (r"(?P<n>(?i:an?|\d+|" + "|".join(NUMBER_WORDS) + r")\s+"
+            r"(?:second|minute|hour|day|week)s?)\b")
+UNIT_SECONDS = {"second": 1, "minute": 60, "hour": 60 * 60,
+                "day": 24 * 60 * 60, "week": 7 * 24 * 60 * 60}
+
+
+def _seconds(stated: str) -> Optional[int]:
+    """A time in words, as DURATION finds it, in seconds."""
+    amount, unit = stated.lower().split()
+    count = 1 if amount in ("a", "an") else _count(amount)
+    return None if count is None else count * UNIT_SECONDS[unit.rstrip("s")]
+
+
+# How old a backup's hidden folder must be before a later backup of the
+# project removes it, or what it can of what a prune left under that
+# name (v0.15.5, the prune's review, its finding 16:
+# database.BACKUP_LEFTOVER_SECONDS): PRIVACY.md's "removes it once it is
+# an hour old" and "removes what it can after an hour", the prune's
+# fragment's "from an hour after the prune", and the prune's note in
+# server.py, "from an hour after this prune"
+LEFTOVER = {"n": ("backup_leftover_seconds",)}
+LEFTOVER_PATTERNS = (
+    (r"\bbackup\s+of\s+the\s+project\s+removes\s+it\s+once\s+it\s+is\s+"
+     + DURATION + r"\s+old\b", LEFTOVER),
+    (r"\bbackups?\s+removes?\s+what\s+(?:it|they)\s+can\s+after\s+"
+     + DURATION, LEFTOVER),
+    (r"\bremove\s+what\s+they\s+can\s+of\s+(?:\S+\s+){0,2}?from\s+"
+     + DURATION + r"\s+after\s+(?:the|this)\s+prune\b", LEFTOVER),
+)
 
 
 COUNT_PATTERNS = (
@@ -884,6 +924,14 @@ FACTS: Dict[str, Fact] = {
         documents=("README.md", GUIDE, "TOOLS.md", "CONTRIBUTING.md"),
         patterns=tuple(p for p, _ in COUNT_PATTERNS),
         history=True),
+    # (v0.15.5: read in the fragments too, where the prune's states it,
+    # and in the code's texts, where the prune's note does)
+    "the backups' hour": Fact(
+        code="database.py: BACKUP_LEFTOVER_SECONDS",
+        documents=("PRIVACY.md", SERVER_SOURCE),
+        patterns=tuple(p for p, _ in LEFTOVER_PATTERNS),
+        history=True,
+        code_texts=True),
     "the install commands": Fact(
         code="pyproject.toml: the optional part that lists PyMuPDF",
         documents=("README.md", GUIDE, "QUICKSTART.md", "CLAUDE.md",
@@ -1429,14 +1477,17 @@ def _number(value: float) -> str:
 
 
 def _check_numbers(fact: str, patterns, facts: Facts,
-                   document: Document) -> List[Place]:
-    """Each number a pattern finds equals every quantity its group names."""
+                   document: Document,
+                   read: Callable[[str], Optional[int]] = _count
+                   ) -> List[Place]:
+    """Each number a pattern finds equals every quantity its group names;
+    `read` reads the number (a time in words: _seconds)."""
     places = []
     for pattern, groups in patterns:
         for match in re.finditer(pattern, document.text):
             words = " ".join(match.group(0).split())
             for group, quantities in groups.items():
-                stated = _count(match[group])
+                stated = read(match[group])
                 if stated is None:
                     continue
                 differ = [f"{_number(QUANTITIES[q][1](facts))} ({q})"
@@ -2287,6 +2338,9 @@ CHECKS: Dict[str, Callable[[Facts, Document], List[Place]]] = {
         "the time per import call", TIME_PATTERNS, facts, document),
     "the counts": lambda facts, document: _check_numbers(
         "the counts", COUNT_PATTERNS, facts, document),
+    "the backups' hour": lambda facts, document: _check_numbers(
+        "the backups' hour", LEFTOVER_PATTERNS, facts, document,
+        read=_seconds),
     "the install commands": check_install_commands,
     "the settings": check_settings,
     "the names": check_names,
@@ -2332,9 +2386,9 @@ class Outcome:
 
 def _reads(fact: Fact, document: Document) -> bool:
     """Whether the fact reads the document: the CHANGELOG and its
-    fragments only for the first five facts, the code's texts
-    only for the facts that say so, and none of a fact's documents left
-    out."""
+    fragments only for the facts that say so (the first five and the
+    backups' hour), the code's texts only for the facts that say so, and
+    none of a fact's documents left out."""
     if document.code_text:
         return fact.code_texts
     if document.name in fact.left_out:
@@ -2433,6 +2487,8 @@ CHANGES = (
     ("import_file_seconds", lambda f: f.import_file_seconds + 5),
     ("keep_seconds", lambda f: f.keep_seconds + 1),
     ("read_timeout_seconds", lambda f: f.read_timeout_seconds + 15),
+    # v0.15.5: a backup's hidden folder kept twice as long
+    ("backup_leftover_seconds", lambda f: f.backup_leftover_seconds * 2),
     ("memory_cap_bytes", lambda f: f.memory_cap_bytes * 2),
     ("pdf_memory_cap_bytes", lambda f: f.pdf_memory_cap_bytes // 2),
     ("registered_tools", lambda f: f.registered_tools | {"one_tool_more"}),
@@ -2609,6 +2665,58 @@ def test_a_wrong_count_in_a_scratch_copy_names_its_line(tmp_path):
     assert [(p.document, p.line, p.stated) for p in _unknown(outcome)] == [
         ("TOOLS.md", text.count("\n", 0, first) + 1, str(count - 1))]
     assert outcome.missing == ()
+
+
+# A backup's hidden folder's time (v0.15.5), each sentence in the words
+# it is written in, against the code's hour: "60 minutes" is an hour too
+LEFTOVER_SENTENCES = (
+    ("PRIVACY.md", "until the next backup of the project removes it once "
+     "it is an hour old.", False),
+    ("PRIVACY.md", "until the next backup of the project removes it once "
+     "it is two hours old.", True),
+    ("PRIVACY.md", "until a later backup removes what it can after 60 "
+     "minutes, or you delete it.", False),
+    ("PRIVACY.md", "until a later backup removes what it can after a day, "
+     "or you delete it.", True),
+    ("changelog.d/prune-removal.md", "The project's later backups remove "
+     "what they can of that folder from an hour after the prune.", False),
+    ("src/exegete/server.py", "Exegete's later backups of this project "
+     "remove what they can of {} from a week after this prune;", True),
+)
+
+
+@pytest.mark.parametrize("name, sentence, wrong", LEFTOVER_SENTENCES)
+def test_the_backups_hour_is_held_to_the_code(name, sentence, wrong):
+    places = CHECKS["the backups' hour"](facts_from_the_code(),
+                                         _document(name, [sentence]))
+    assert len(places) == 1, places
+    assert places[0].reads == (frozenset() if wrong else frozenset(
+        {"backup_leftover_seconds"}))
+    assert bool(places[0].wrong) == wrong, places[0].wrong
+
+
+def test_a_wrong_hour_in_privacy_or_a_fragment_names_its_line(tmp_path):
+    """The prune's review (its finding 16): on a scratch copy, "two
+    hours" in PRIVACY.md and "a day" in the prune's fragment passed the
+    texts check and this one. Each is now found wrong, by its line."""
+    root = _scratch_copy(tmp_path)
+    fragment = FRAGMENTS + "prune-removal.md"
+    (root / fragment).parent.mkdir(parents=True, exist_ok=True)
+    shutil.copyfile(REPO / fragment, root / fragment)
+    expected = []
+    for name, right, wrong in (
+            ("PRIVACY.md", "removes it once it is an hour old",
+             "removes it once it is two hours old"),
+            (fragment, "of that folder from an hour after the prune",
+             "of that folder from a day after the prune")):
+        text = (root / name).read_text(encoding="utf-8")
+        at = text.index(right)
+        (root / name).write_text(text[:at] + wrong + text[at + len(right):],
+                                 encoding="utf-8")
+        expected.append((name, text.count("\n", 0, at) + 1))
+    outcome = check_documents(facts_from_the_code(), read_documents(root))
+    assert sorted((p.document, p.line) for p in _unknown(outcome)
+                  if p.fact == "the backups' hour") == sorted(expected)
 
 
 # A size in a scratch INSTALL.md, against a snapshot that gives `full`
@@ -2859,6 +2967,7 @@ SOURCES = {
     "import_file_seconds": (doc_import, "IMPORT_FILE_SECONDS"),
     "keep_seconds": (doc_import, "KEEP_SECONDS"),
     "read_timeout_seconds": (import_reading, "READ_TIMEOUT_SECONDS"),
+    "backup_leftover_seconds": (database, "BACKUP_LEFTOVER_SECONDS"),
     "memory_cap_bytes": (import_reading, "MEMORY_CAP_BYTES"),
     "pdf_memory_cap_bytes": (import_reading, "PDF_MEMORY_CAP_BYTES"),
     "registered_tools": (server, "STANDARD_TOOL_NAMES"),

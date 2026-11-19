@@ -249,7 +249,8 @@ def test_the_bug_form_says_what_a_conversation_and_a_copy_carry():
     (v0.15.5) as SUPPORT's "Before you report", where the form sends the
     reader, says too. The tools' answers (v0.15.5) also hold annotations
     and journal entries (read_file_with_codings; the journal resource),
-    and paths, which carry the account's name (get_current_project)."""
+    and paths, which carry the account's name (get_current_project), and
+    coder names, the researcher's, the AI's and colleagues'."""
     form = _flat(".github/ISSUE_TEMPLATE/bug_report.yml")
     # What the tools' answers in a copied conversation can hold, each
     # kind named
@@ -260,6 +261,14 @@ def test_the_bug_form_says_what_a_conversation_and_a_copy_carry():
                  "codes", "memos", "annotations", "journal entries",
                  "paths", "your account's name"):
         assert kind in answers, kind
+    # (v0.15.5, the documents' points left this week: the coder names an
+    # answer carries, the researcher's own and the AI's (get_current_
+    # project's project_info and ai_coder_name) and every owner of a code,
+    # a coding or a note, a colleague's included (compare_coders), among
+    # what to leave out of a public issue)
+    assert re.search(r"coder names[^.]*yours[^.]*the AI coder name[^.]*"
+                     r"colleagues", answers)
+    assert "each path and coder name replaced" in answers
     # (the privacy reader of v0.15.5: the warning's reason, held beside
     # the kinds)
     assert "which can identify a participant" in answers

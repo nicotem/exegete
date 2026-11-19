@@ -583,11 +583,10 @@ GitHub Issues ("Getting help", below).
 2. **Decide what to do with what stays.** Uninstalling does not touch
    your projects or their backups, and four more things stay:
    - **What uv keeps** for every program that uses it: a Python and a
-     cache of downloaded files. On a Mac they are in
-     `~/.local/share/uv` and `~/.cache/uv`, and on Windows in
-     `%APPDATA%\uv` and `%LOCALAPPDATA%\uv\cache`. If uv is on your
-     computer, the command `uv cache clean`, typed in the Terminal,
-     empties the cache.
+     cache of downloaded files. On a Mac they are in `~/.local/share/uv`
+     and `~/.cache/uv`, and on Windows in `%APPDATA%\uv` and
+     `%LOCALAPPDATA%\uv\cache`. If uv is on your computer, the command
+     `uv cache clean`, typed in the Terminal, empties the cache.
    - **Exegete's own folder**, `~/.exegete`, with the link to it under
      its earlier name, `~/.qualcoder_mcp`. It holds the coding sessions
      made before 0.15.4, and any started where a project's folder could
@@ -622,10 +621,11 @@ GitHub Issues ("Getting help", below).
        and its approvals are given again ("Coding sessions, from
        0.15.4", above).
    - **The reading folder**, where Exegete writes the pages you read on
-     your own computer, with a file's whole text and its codings, and
-     read-only copies of originals. It is
-     `~/Library/Caches/Exegete/Reading.noindex` on a Mac,
-     `%LOCALAPPDATA%\Exegete\Reading` on Windows, and
+     your own computer, with a file's whole text and its codings,
+     read-only copies of originals, and the pages for checking an
+     import's letters and for choosing occurrences of a name, which hold
+     a file's text too. It is `~/Library/Caches/Exegete/Reading.noindex`
+     on a Mac, `%LOCALAPPDATA%\Exegete\Reading` on Windows, and
      `~/.cache/exegete/reading` on Linux, or `exegete/reading` under
      `$XDG_CACHE_HOME` if it is set. Exegete tidies it only while it
      runs, so after an uninstall it stays until you delete it.

@@ -368,16 +368,25 @@ def test_the_uninstall_names_the_backups_hidden_folders():
     """A backup cut short, or what a prune could not remove, stays under
     a hidden name that only a later backup sweeps (database.py's
     `.<project>_backup_<time>_partial_<8 hex>.qda`, swept by
-    sweep_partial_backups), so after an uninstall it stays, and it can
-    hold the names list and pseudonyms.json (the lead's batch of 19
-    November, from row 17's privacy reader)."""
+    sweep_partial_backups, after BACKUP_LEFTOVER_SECONDS), so after an
+    uninstall it stays; it is part of a copy of the project, the names
+    file (private_files.NAMES_FILE) and pseudonyms.json among what it
+    can hold (the lead's batch of 19 November, from row 17's privacy
+    reader, and its readers' fix)."""
     uninstall = _between(_flat("INSTALL.md"),
                          "The backups Exegete took sit beside each project",
                          "lists everything that stays")
-    assert ".<project>_backup_<time>_partial_<8 hex>.qda" in uninstall
+    assert ".<project>_backup_<timestamp>_partial_" in uninstall
     assert database.is_partial_backup_name(
         ".study_backup_20261119_101500_partial_0123abcd.qda", "study")
-    assert "pseudonyms.json" in uninstall
+    assert "names file" in uninstall and "pseudonyms.json" in uninstall
+    assert "names list" not in uninstall
+    # the hour the sentence gives is the sweep's
+    assert re.search(r"remove what they can of such folders after an "
+                     r"hour", uninstall)
+    assert database.BACKUP_LEFTOVER_SECONDS == 3600
+    # and how to see them
+    assert "Command-Shift-full stop" in uninstall
     assert re.search(r"after an uninstall[^.]*until you delete them",
                      uninstall)
 
@@ -398,3 +407,8 @@ def test_the_openai_row_names_a_dot_beside_codex_on_mobile():
     assert re.search(r"\bdot\b[^.]*Codex", row)
     assert re.search(r"Exegete is not documented", row)
     assert "no dot access" in row
+    # (its readers' fix: the dot's access is to the computer where
+    # Exegete works, whatever is paired with a phone, and the reading
+    # is dated)
+    assert re.search(r"\bdot\b[^.]*the computer where Exegete works", row)
+    assert re.search(r"connecting a computer to a dot, " + READ_ON, row)

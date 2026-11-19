@@ -60,20 +60,24 @@
     which some personal Pro accounts get too. It says what a dot given
     your computer can do, and that Revoke access withdraws it (OpenAI's
     pages, read on 19 November 2026). The guide's row on OpenAI's apps
-    adds that a dot given access to the computer paired with a phone can
-    start Codex's work there too (whether that work can call Exegete is
-    not documented), and suggests giving no dot that access.
+    adds that a dot given access to the computer where Exegete works can
+    use that computer's files and start Codex's work there, from
+    wherever you message it (whether that work can call Exegete is not
+    documented), and suggests giving no dot that access.
 - **Backups a prune could not remove.** PRIVACY.md says what work cut
   short leaves, and how `prune_backups` can remove a file's copies. Both
   places now say that what is left of a backup whose removal stopped
   partway stays under a hidden name. For it, as for a backup cut short,
   a later backup removes what it can after an hour, and the rest is
   yours to delete. INSTALL.md's list of what stays after an uninstall
-  now names these hidden folders, which can hold the names list and
-  `pseudonyms.json`, since no later backup runs then.
+  now names these hidden folders and how to see them. Each is part of a
+  copy of the project, which can hold its documents and coding sessions,
+  and the names file and `pseudonyms.json`; no later backup runs after
+  an uninstall.
 - **Exegete, and QualCoder's own files.** PRIVACY.md calls an older copy
-  of Exegete by Exegete's name, and speaks of QualCoder's search index
-  and AI chat history only where the project has them.
+  of Exegete by Exegete's name, and says that QualCoder's search index
+  and AI chat history keep a renamed file's old name where the project
+  has them.
 
 ### For contributors
 

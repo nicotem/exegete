@@ -643,11 +643,15 @@ The backups Exegete took sit beside each project, in folders named
 those you no longer need before you uninstall, or you can remove them by
 hand afterwards. A backup cut short, or what is left of one whose
 removal by `prune_backups` stopped partway, stays beside the project
-under a hidden name, `.<project>_backup_<time>_partial_<8 hex>.qda`,
-which Finder does not show. It can hold the names list and
-`pseudonyms.json`, with the real names in them. Later backups remove
-what they can of such folders after an hour, so after an uninstall they
-stay until you delete them. Working copies made with
+under a hidden name,
+`.<project>_backup_<timestamp>_partial_<eight letters and digits>.qda`,
+which Finder and most Linux file managers do not show
+(Command-Shift-full stop shows them in Finder, Ctrl+H in most Linux file
+managers). It is part of a copy of the project, so it can hold the
+project's documents and coding sessions and, if you made them, the names
+file and `pseudonyms.json`, with the real names in them. Later backups
+remove what they can of such folders after an hour, so after an
+uninstall they stay until you delete them. Working copies made with
 `copy_project_to_workspace` are in the folder for projects, by default
 `~/Exegete projects`. If you are clearing a study's traces from the
 computer, [PRIVACY.md's

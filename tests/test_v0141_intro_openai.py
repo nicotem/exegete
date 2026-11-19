@@ -964,8 +964,9 @@ class TestPhonesAndTheWeb:
                          r"paired with the phone", table)
         assert "only through Codex on mobile" not in table
         assert re.search(r"\bdot\b[^.]*Codex's work", table)
-        assert ("this project suggests leaving that computer's remote "
-                "access off") in table
+        # (the suggestion, whatever words name the computer)
+        assert re.search(r"this project suggests leaving[^.]*remote "
+                         r"access off", table)
         assert "Remote" not in table
         # (v0.15.5, plans and readings 2: who can reach a workspace's
         # conversations, in the words of "Enterprise privacy at OpenAI",

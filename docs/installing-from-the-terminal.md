@@ -1593,13 +1593,12 @@ that last release will say plainly that it is the last.
 This part is for a copy of the source made before 0.9, whose host starts
 `venv/bin/python` with `"args": ["-m", "qualcoder_mcp.server"]`; the
 program was then called qualcoder-mcp. Updating never touches your
-projects, or the files in Exegete's own folder, which the first start
-of 0.14.1 or later moves whole from `~/.qualcoder_mcp/` to
-`~/.exegete/`; both ways below were checked to leave the projects and
-session files untouched. When 0.9 was released, a check found that
-going from 0.6, 0.7 or 0.8 straight to 0.9 needed no step to move data
-or sessions, and that a session file from 0.6 drove the whole workflow
-of 0.9.
+projects, or the files in Exegete's own folder, which the first start of
+0.14.1 or later moves whole from `~/.qualcoder_mcp/` to `~/.exegete/`;
+both ways below were checked to leave the projects and session files
+untouched. When 0.9 was released, a check found that going from 0.6, 0.7
+or 0.8 straight to 0.9 needed no step to move data or sessions, and that
+a session file from 0.6 drove the whole workflow of 0.9.
 
 **Staying on the copy of the source** needs no change to your host's
 configuration: `-m qualcoder_mcp.server` starts Exegete through a small
@@ -1627,8 +1626,9 @@ install", above). Once the new install works, you can delete the old
 copy and its environment; keeping them breaks nothing.
 
 **Reusing the old environment instead** means taking the old name's
-package out of it first, since a plain install there puts Exegete beside
-it, with your copy's folder in place of `~/Documents/qualcoder_mcp`:
+package out of it first, since a plain install there puts Exegete
+beside it, with your copy's folder in place of
+`~/Documents/qualcoder_mcp`:
 
 ```bash
 ~/Documents/qualcoder_mcp/venv/bin/pip uninstall qualcoder-mcp

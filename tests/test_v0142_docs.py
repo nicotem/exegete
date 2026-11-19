@@ -696,9 +696,11 @@ def test_install_turns_training_off_first_in_the_readmes_words():
             "Portal") in first
     # (plans and readings 2, the readability reading: the facts, either
     # setting enough and Codex covered on a personal account, by the Help
-    # Center, whatever the sentence's order)
-    assert re.search(r"Help Center[^.]*either is enough", first)
-    assert re.search(r"on a personal account[^.]*covers Codex", first)
+    # Center, in either order)
+    assert re.search(r"Help Center[^.]*[Ee]ither is enough|"
+                     r"[Ee]ither is enough[^.]*Help Center", first)
+    assert re.search(r"on a personal account[^.]*covers Codex|"
+                     r"covers Codex[^.]*on a personal account", first)
     assert "Include environments" not in first
     # before any numbered step, and the steps are the four the README
     # says follow it

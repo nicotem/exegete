@@ -192,9 +192,10 @@ def test_install_and_privacy_give_the_same_advice():
     assert WARNING.format(maker="OpenAI") in first
     assert "before participants' data" not in first
     assert RATED.format(maker="OpenAI") in first
-    # (the readability reading of plans and readings 2: the fact, whatever
-    # the sentence's order)
-    assert re.search(r"on a personal account[^.]*covers Codex", first)
+    # (the readability reading of plans and readings 2: the fact, in
+    # either order)
+    assert re.search(r"on a personal account[^.]*covers Codex|"
+                     r"covers Codex[^.]*on a personal account", first)
     assert re.search(r"Archive capture of \d{1,2} [A-Z][a-z]+ 20\d\d", first)
     for text in (rows["OpenAI"], first):
         assert "Include environments" not in text

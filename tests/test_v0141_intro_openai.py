@@ -931,11 +931,12 @@ class TestPhonesAndTheWeb:
         business = ("can view, access, export, and delete end user "
                     "conversations in the workspace")
         audit = "can access an audit log of conversations and GPTs"
-        # (the readability reading: each quote after the plan it is about,
-        # on a workspace a university or employer runs)
+        # (the readability reading: each quote in a sentence with the plan
+        # it is about, on a workspace a university or employer runs)
         assert "your university or employer" in table
-        assert re.search(r"ChatGPT Business[^.]*" + re.escape(business),
-                         table)
+        assert re.search(r"ChatGPT Business[^.]*" + re.escape(business)
+                         + r"|" + re.escape(business)
+                         + r"[^.]*ChatGPT Business", table)
         assert re.search(r"Enterprise and Edu[^.]*" + re.escape(audit), table)
         for text in (table, _privacy_openai()):
             assert business in text and audit in text

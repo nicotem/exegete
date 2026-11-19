@@ -2066,7 +2066,7 @@ participants' data in them, to train its models. The setting "Help
 improve our AI models", at
 <https://claude.ai/settings/data-privacy-controls>, switches training
 off. Your account's default is worth checking yourself. Claude's
-pricing page, <https://claude.com/pricing>, read on 10 November 2026,
+pricing page, <https://claude.com/pricing>, read on 19 November 2026,
 lists Ultra beside Free, Pro and Max under "Individual". The governing
 documents:
 
@@ -2141,10 +2141,20 @@ Anthropic, and such agreements differ. Even so, an institution's
 account is likely to give participants' data more protection than a
 personal one, since the institution agreed its terms with its own
 interests in mind. Whoever manages the account can tell you which terms
-apply. Exegete's extension is not signed, and an institution that
-manages your computer or your Claude account may block unsigned
-extensions, or extensions altogether (INSTALL.md, "Installing the
-extension"). For participants' data, this project suggests Claude
+apply. They can also reach your conversations, with what Exegete's
+tools returned in them. Anthropic's page on who manages a team's data
+(<https://support.claude.com/en/articles/9265372-who-owns-and-manages-the-data-of-my-team>,
+read on 19 November 2026) says: "Your organization's designated
+Primary Owner manages your Work account and all associated data. This
+includes the ability to request access to your user data through data
+exports, which may contain your conversations with Claude". On
+Enterprise, the Compliance API "lets your organization programmatically
+pull activity feed events, chat data, and file content"
+(<https://support.claude.com/en/articles/13015708-access-the-compliance-api>,
+read on 19 November 2026). Exegete's extension is not signed, and an
+institution that manages your computer or your Claude account may block
+unsigned extensions, or extensions altogether (INSTALL.md, "Installing
+the extension"). For participants' data, this project suggests Claude
 Desktop's chat with Exegete under that account, set up as "Assistants
 that open files by themselves" says.
 
@@ -2247,8 +2257,6 @@ less of a local model's room than the full set, and gives the steps.
 - **Commercial terms are not GDPR compliance.** Anthropic has a Data
   Processing Addendum (DPA), but it is for the institution to decide who
   is controller and who is processor, and to sign or rely on the DPA.
-- The Privacy Center now lives at privacy.claude.com. Older
-  privacy.anthropic.com links lead there.
 
 ## Checking for new versions
 

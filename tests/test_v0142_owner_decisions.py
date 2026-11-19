@@ -815,10 +815,17 @@ def test_the_readme_says_what_it_costs():
     install = _flat(GUIDE)
     assert ("for Free and Go it mentions only the desktop app, \"subject to "
             "rollout\".") in install
+    # (v0.15.5, plans and readings: the row's facts, not its words.
+    # Claude's pricing page, read on 19 November 2026, lists Free, Pro,
+    # Max and Ultra under "Individual", with Claude Code "No" on Free and
+    # "Yes" on the other three)
     row = _between(_read(GUIDE), "| **Claude consumer plans**", "\n")
-    assert row.startswith("| **Claude consumer plans** (claude.ai and Claude "
-                          "Desktop on a Free, Pro or Max plan; Claude Code "
-                          "with a Pro or Max login) |"), row
+    desktop, code = row[:row.index(") |")].split(";")
+    for plan in ("Free", "Pro", "Max", "Ultra"):
+        assert plan in desktop, (plan, desktop)
+    for plan in ("Pro", "Max", "Ultra"):
+        assert plan in code, (plan, code)
+    assert "Claude Code" in code and "Free" not in code, code
     assert "Free/Pro/Max login" not in install
     # It reports the makers' pages; it does not say a free plan is enough
     # (ruling 108 asks for the extension's working on Claude's Free plan,

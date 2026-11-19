@@ -30,8 +30,8 @@ Claude, one fully local route, and OpenAI's apps.
 
 | Route | What it means | Where to read more |
 |---|---|---|
-| **Claude consumer plans** (claude.ai and Claude Desktop on a Free, Pro or Max plan; Claude Code with a Pro or Max login) | The plans most people start with. Switch training off before participants' data: while it is on, Anthropic may use your conversations to train its models. The switch is the setting "Help improve our AI models", at [claude.ai/settings/data-privacy-controls](https://claude.ai/settings/data-privacy-controls), and its default is worth checking yourself. Claude Code opens files by itself, outside Exegete, and Cowork does in the folders you connect to it, so for participants' data this project suggests Claude Desktop's chat with the extension, with computer use off, no folder that holds your projects or transcripts connected to it, and no other extension that reads files ([PRIVACY.md, "Assistants that open files by themselves"](../PRIVACY.md#assistants-that-open-files-by-themselves)). | [PRIVACY.md](../PRIVACY.md), rung 1 |
-| **Anthropic commercial-terms routes** (Claude Code with a Console API key; Team or Enterprise accounts) | The same Claude, under other terms. A personal plan (Free, Pro or Max) comes under Anthropic's consumer terms. An account your university or employer manages comes under the agreement it made with Anthropic. Such agreements differ in what they let Anthropic do with your data. Even so, an institution's account is likely to give participants' data more protection than a personal one, since the institution agreed its terms with its own interests in mind. Whoever manages that account can tell you which terms apply. The terms do not change what Claude Code reads. Claude Code opens files by itself, outside Exegete. So for participants' data, this project suggests Claude Desktop's chat with Exegete on a Team or Enterprise account, set up as in the row above ([PRIVACY.md](../PRIVACY.md), "Assistants that open files by themselves"). | [PRIVACY.md](../PRIVACY.md), rungs 2 and 3; [the API-key recipe](#claude-code-with-an-anthropic-api-key-experimental) below |
+| **Claude consumer plans** (claude.ai and Claude Desktop on a Free, Pro, Max or Ultra plan; Claude Code with a Pro, Max or Ultra login) | The plans most people start with. Switch training off before participants' data: while it is on, Anthropic may use your conversations to train its models. The switch is the setting "Help improve our AI models", at [claude.ai/settings/data-privacy-controls](https://claude.ai/settings/data-privacy-controls), and its default is worth checking yourself. Claude Code opens files by itself, outside Exegete, and Cowork does in the folders you connect to it, so for participants' data this project suggests Claude Desktop's chat with the extension, with computer use off, no folder that holds your projects or transcripts connected to it, and no other extension that reads files ([PRIVACY.md, "Assistants that open files by themselves"](../PRIVACY.md#assistants-that-open-files-by-themselves)). | [PRIVACY.md](../PRIVACY.md), rung 1 |
+| **Anthropic commercial-terms routes** (Claude Code with a Console API key; Team or Enterprise accounts) | The same Claude, under other terms. A personal plan (Free, Pro, Max or Ultra) comes under Anthropic's consumer terms. An account your university or employer manages comes under the agreement it made with Anthropic. Such agreements differ in what they let Anthropic do with your data. Even so, an institution's account is likely to give participants' data more protection than a personal one, since the institution agreed its terms with its own interests in mind. Whoever manages that account can tell you which terms apply, and whether it allows Exegete's extension. The extension is not signed, and a university or employer that manages your computer or your Claude account may block unsigned extensions, or extensions altogether ([INSTALL.md](../INSTALL.md#installing-the-extension)). The terms do not change what Claude Code reads. Claude Code opens files by itself, outside Exegete. So for participants' data, this project suggests Claude Desktop's chat with Exegete on a Team or Enterprise account, set up as in the row above ([PRIVACY.md](../PRIVACY.md), "Assistants that open files by themselves"). | [PRIVACY.md](../PRIVACY.md), rungs 2 and 3; [the API-key recipe](#claude-code-with-an-anthropic-api-key-experimental) below |
 | **Fully local models** (LM Studio and similar hosts) | The model runs on your computer, so participants' data is not sent to an AI provider. LM Studio's LM Link, a feature still in preview, can load the model on another computer instead, where the model then reads the conversation, participants' data included (<https://lmstudio.ai/link>, read on 10 November 2026). To keep the conversation on your computer, you could check in LM Studio where the model is loaded, or leave LM Link off. We expect a local model to do the analysis less well than the hosted models, and do not know by how much, since we have evaluated neither. It is a route to consider for particular uses, such as a first pass over sensitive material, or work an agreement confines to one computer. Exegete offers its full tool set unless the host's entry asks for the smaller one, `core`. The recipe asks for `core`, which takes less of a local model's room than the full set. | [PRIVACY.md](../PRIVACY.md), rung 4; [the LM Studio recipe](#lm-studio-fully-local-experimental) below |
 | **OpenAI's apps** (the ChatGPT desktop app; Codex's command line and editor extension) | OpenAI's terms apply, and which ones depends on your plan and on how you sign in. Switch training off before participants' data: while it is on, OpenAI may use your conversations to train its models. The settings are "Improve the model for everyone" and Codex's separate "Include environments". ChatGPT in a web browser cannot use Exegete directly. On a phone, ChatGPT can use it only through OpenAI's Remote, which has the paired computer run the work; this project suggests leaving Remote off for participants' data. Codex can also read your projects' files by itself, without asking, so for participants' data this project suggests an assistant with no file access of its own, such as Claude Desktop's chat. OpenAI documents a setting, marked Beta, that can keep Codex's own commands from reading outside the folder it works in; it has not been tested with Exegete. This project has not run Exegete in any OpenAI app. | [PRIVACY.md](../PRIVACY.md), "OpenAI's apps"; [the recipe](#chatgpts-desktop-app-and-codex-experimental) below |
 
@@ -40,8 +40,8 @@ are written from official documentation and checked by Exegete's own
 tests. This project has not tried them end to end on every host, and
 has not evaluated them with local models. The recipes for OpenAI's
 apps, for LM Studio and for Claude Code with an Anthropic API key go
-step by step. Claude Code signed in with a Pro or Max plan follows
-"Claude Code", below. For another host, ask in
+step by step. Claude Code signed in with a Pro, Max or Ultra plan
+follows "Claude Code", below. For another host, ask in
 [GitHub Issues](https://github.com/nicotem/exegete/issues).
 
 **What the assistant is told (provisional).** Exegete gives the
@@ -332,8 +332,8 @@ find ~ -maxdepth 5 -name "*.qda" -type d 2>/dev/null
 
 <a id="alternative-claude-code-and-other-mcp-clients"></a>
 
-Claude Code signed in with a Pro or Max plan runs Exegete as it runs
-any MCP server; with an API key, the next section adds the key's steps.
+Claude Code signed in with a Pro, Max or Ultra plan runs Exegete like
+any other MCP server. With an API key, the next section adds its steps.
 A tester ran Exegete under Claude Code in Obsidian's side panel, in
 July 2026.
 
@@ -421,7 +421,7 @@ on `claude mcp add`, which passes settings to Exegete.
 > end to end, and its steps may change after that.
 
 Running Claude Code with an API key from the Anthropic Console, instead
-of a Pro or Max login, puts your use under other terms
+of a Pro, Max or Ultra login, puts your use under other terms
 ([PRIVACY.md](../PRIVACY.md), "Your governance options", says what that
 means for research data). The key changes the terms, not what Claude
 Code reads. Claude Code opens files by itself, outside Exegete,
@@ -478,12 +478,12 @@ claude
 
 The key is set only in that window, and only until you close it. Claude
 Code started in another window, or after a restart, has no key: it runs
-on your Pro or Max login if you have one, under the consumer terms, or
-asks you to sign in. So each time, in a new window, go to the folder
-(`cd ~/claude-exegete`), set the key again the same way, and start
-`claude` there; Exegete stays added in that folder. Claude Code asks
-once whether to use the key, and keeps your answer. If you also have a
-Pro or Max login, the
+on your Pro, Max or Ultra login if you have one, under the consumer
+terms, or asks you to sign in. So each time, in a new window, go to the
+folder (`cd ~/claude-exegete`), set the key again the same way, and
+start `claude` there; Exegete stays added in that folder. Claude Code
+asks once whether to use the key, and keeps your answer. If you also
+have a Pro, Max or Ultra login, the
 [authentication docs](https://code.claude.com/docs/en/authentication)
 say that the API key takes precedence once approved, and
 `unset ANTHROPIC_API_KEY` (in PowerShell,

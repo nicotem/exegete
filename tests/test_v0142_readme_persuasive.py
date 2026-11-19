@@ -1018,8 +1018,15 @@ def test_the_assistants_table():
     for passage in (row, step, item):
         assert "manages, rather than" in passage or \
             "employer manages" in passage, passage[:50]
-    assert "A personal plan (Free, Pro or Max) comes under Anthropic's " \
-        "consumer terms." in row
+    # (v0.15.5, plans and readings: the fact, not the sentence. Claude's
+    # pricing page, read on 19 November 2026, lists Free, Pro, Max and
+    # Ultra under "Individual", and "What is the Ultra plan?" calls Ultra
+    # a plan "for individual consumers")
+    personal = row[row.index("A personal plan ("):]
+    personal = personal[:personal.index(".") + 1]
+    for plan in ("Free", "Pro", "Max", "Ultra"):
+        assert plan in personal, (plan, personal)
+    assert "consumer terms" in personal, personal
     assert "personal account comes under" not in row
     # (v0.15.3, the fact reader of these passages: Exegete's extension is
     # not signed, and a computer or Claude account that a university or
@@ -1038,6 +1045,30 @@ def test_the_assistants_table():
                          "altogether (INSTALL.md, \"Installing the "
                          "extension\")")
     assert warning < rung.index("this project suggests")
+    # (v0.15.5, plans and readings: the guide's row gives the same warning
+    # before the same suggestion, and says whom to ask)
+    assert "The extension is not signed" in row
+    warning = row.index("may block unsigned extensions, or extensions "
+                        "altogether ([INSTALL.md](../INSTALL.md#installing-"
+                        "the-extension))")
+    assert warning < row.index("this project suggests")
+    assert "whether it allows Exegete's extension" in row
+    # (v0.15.5, plans and readings: who in the institution can reach the
+    # conversations, from Anthropic's pages, each read on a day given:
+    # the Primary Owner exports them on Team and Enterprise; Enterprise's
+    # Compliance API pulls chat data)
+    read_on = r", read on \d{1,2} [A-Z][a-z]+ 20\d\d\)"
+    for page, words in (
+            ("9265372-who-owns-and-manages-the-data-of-my-team",
+             "Primary Owner manages your Work account and all associated "
+             "data"),
+            ("13015708-access-the-compliance-api",
+             "chat data, and file content")):
+        assert re.search(r"<https://support\.claude\.com/en/articles/"
+                         + re.escape(page) + ">" + read_on, rung), page
+        assert words in rung, words
+    assert "can also reach your conversations, with what Exegete's tools " \
+        "returned in them" in rung
 
 
 # ---------------------------------------------------------------------------

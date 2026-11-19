@@ -109,11 +109,18 @@ def test_the_route_table_no_longer_asks_for_a_guide_for_lm_studio():
     sentence = install[install.index("The recipes for OpenAI's apps"):]
     sentence = sentence[:sentence.index("GitHub Issues")]
     # (v0.15.3, the readability reading: the semicolon a full stop)
-    assert sentence == ("The recipes for OpenAI's apps, for LM Studio and "
-                        "for Claude Code with an Anthropic API key go step "
-                        "by step. Claude Code signed in with a Pro or Max "
-                        "plan follows \"Claude Code\", below. For another "
-                        "host, ask in [")
+    assert sentence.startswith("The recipes for OpenAI's apps, for LM "
+                               "Studio and for Claude Code with an "
+                               "Anthropic API key go step by step. ")
+    # (v0.15.5, plans and readings: the second sentence's facts. Claude
+    # Code signed in with a plan follows its own section; Claude's pricing
+    # page, read on 19 November 2026, gives Claude Code on Pro, Max and
+    # Ultra, not Free)
+    login = sentence[sentence.index("Claude Code signed in with"):]
+    assert "follows \"Claude Code\", below." in login, login
+    for plan in ("Pro", "Max", "Ultra"):
+        assert plan in login, (plan, login)
+    assert "Free" not in login, login
     assert "## Claude Code with an Anthropic API key (Experimental)" in \
         _read(GUIDE)
 

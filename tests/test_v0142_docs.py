@@ -137,13 +137,19 @@ def test_the_recipe_sets_the_key_registers_and_starts_in_one_window():
     for words in ("**2. In one Terminal window: an empty folder, the key, "
                   "then Exegete and Claude Code.**",
                   "The key is set only in that window, and only until you "
-                  "close it. Claude Code started in another window, or "
-                  "after a restart, has no key: it runs on your Pro or Max "
-                  "login if you have one, under the consumer terms, or "
-                  "asks you to sign in.",
+                  "close it.",
                   "**3. Check the key and Exegete.**",
                   "`Remove-Item Env:ANTHROPIC_API_KEY`"):
         assert words in flat, words
+    # (v0.15.5, plans and readings: the sentence's facts, not its words.
+    # Without the key, Claude Code runs on a personal login, under the
+    # consumer terms, or asks for one; Claude's pricing page, read on
+    # 19 November 2026, gives Claude Code on Pro, Max and Ultra, not Free)
+    no_key = flat[flat.index("Claude Code started in another window"):]
+    no_key = no_key[:no_key.index("asks you to sign in.")]
+    for words in ("has no key", "Pro", "Max", "Ultra", "consumer terms"):
+        assert words in no_key, (words, no_key)
+    assert "Free" not in no_key, no_key
     for gone in ("second Terminal window", "`claude` again"):
         assert gone not in flat, gone
 

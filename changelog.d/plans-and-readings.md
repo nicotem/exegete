@@ -31,3 +31,9 @@
   reading, so PRIVACY.md quotes the policy from the Internet Archive's
   capture of 14 November 2026: what it says of training, of the content
   of business customers, and of how soon OpenAI removes what you delete.
+- **The Terminal guide's training warning.** The guide's table and its
+  first step for OpenAI's apps say what training means for
+  participants' data, then which setting switches it off, as
+  PRIVACY.md does. These passages, and PRIVACY.md's on what a deletion
+  in Codex leaves, were read again as a researcher new to Exegete
+  would read them, and their facts kept.

@@ -172,12 +172,17 @@ def test_install_and_privacy_give_the_same_advice():
     rows = {maker: _between(_read(GUIDE), row, "\n")
             for maker, row in (("Anthropic", "| **Claude consumer plans**"),
                                ("OpenAI", "| **OpenAI's apps**"))}
+    # (v0.15.5, the readability reading of the Terminal guide: its two rows
+    # and its first step give the warning as PRIVACY.md does, with the
+    # setting as the suggestion, where they gave the order; ruling 108)
     for maker, row in rows.items():
-        assert ADVICE.format(maker=maker) in row, maker
+        assert WARNING.format(maker=maker) in row, maker
+        assert ADVICE.format(maker=maker) not in row, maker
     assert "Codex's separate \"Include environments\"" in rows["OpenAI"]
-    first = _plain(_between(install, "**First, switch training off**",
+    first = _plain(_between(install, "**First, switch training off.**",
                             "**Step 1. Install Exegete.**"))
-    assert ("First, s" + ADVICE.format(maker="OpenAI")[1:]) in first
+    assert WARNING.format(maker="OpenAI") in first
+    assert "before participants' data" not in first
     assert RATED.format(maker="OpenAI") in first
     assert "turn off Codex's \"Include environments\"" in first
     assert "practice included" not in install

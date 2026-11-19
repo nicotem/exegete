@@ -384,7 +384,9 @@ def test_the_chats_three_conditions_travel_with_it():
     other = _between(_flat("README.md"), "**Other assistants.**",
                      "**Updating.**")
     assert "never start" not in other.lower()
-    assert ("started in your home folder (where a new Terminal window "
+    # (v0.15.5, the readability reading: a sentence of its own, where a
+    # semicolon joined it to the warning before it)
+    assert ("Started in your home folder (where a new Terminal window "
             "opens), Documents, your projects folder or a study's folder, "
             "it reads that study without asking.") in \
         " ".join(_read(GUIDE).split())
@@ -656,7 +658,7 @@ def test_cowork_and_trusted_folders_as_anthropic_says():
 
 def test_install_turns_training_off_first_in_the_readmes_words():
     install = " ".join(_guide_part(*OPENAI).split())
-    first = _between(install, "**First, switch training off**",
+    first = _between(install, "**First, switch training off.**",
                      "**Step 1. Install Exegete.**")
     # v0.14.2, the README rewritten to persuade: the README gives the step
     # and the first of the two switches; INSTALL.md gives both, and Codex's
@@ -668,8 +670,10 @@ def test_install_turns_training_off_first_in_the_readmes_words():
     # Anthropic; INSTALL.md keeps its own words for the same facts
     readme = _between(_flat("README.md"), "**Training.** While training is "
                       "on, OpenAI", "### A first session")
-    for words in ("before participants' data: while it is on, OpenAI may "
-                  "use your conversations to train its models.",
+    # (v0.15.5, the readability reading of the Terminal guide: the risk
+    # first, in the README's words, then the switches)
+    for words in ("While training is on, OpenAI may use your conversations, "
+                  "with the participants' data in them, to train its models.",
                   "\"Improve the model for everyone\" in ChatGPT's "
                   "Settings, Data controls",
                   "Rating a reply (thumbs up or down) can still let OpenAI "
@@ -686,14 +690,14 @@ def test_install_turns_training_off_first_in_the_readmes_words():
     assert "practice included" not in first + readme
     for words in ("choose \"Do not train on my content\" in OpenAI's "
                   "Privacy Portal",
-                  "and turn off Codex's \"Include environments\", a "
+                  "turn off Codex's \"Include environments\", a "
                   "separate setting that neither changes."):
         assert words in first, words
     # before any numbered step, and the steps are the four the README
     # says follow it
     steps = re.findall(r"\*\*Step (\d)\. ", install)
     assert steps == ["1", "2", "3", "4"]
-    assert install.index("**First, switch training off**") < \
+    assert install.index("**First, switch training off.**") < \
         install.index("**Step 1. Install Exegete.**")
     # (v0.15.2, the merge onto the integration branch: the README links
     # to the recipe in the Terminal guide, where it moved)

@@ -1186,9 +1186,12 @@ class TestWhatCodexKeepsAndTheOptOut:
         assert re.search(r"slash-commands> \(" + READ_ON + r"\)", account)
         # the suggestion is no longer to delete the session files alone
         assert "you could delete those session files" not in section
-        assert ("you could delete its conversations that way, and keep "
-                "`~/.codex` out of folders that a sync or backup service "
-                "copies.") in account
+        # (v0.15.5, the readability reading: after what the deletion
+        # leaves, the suggestion names Codex's own way of deleting, where
+        # "that way" pointed back past those facts)
+        assert ("you could delete its conversations with `/delete` or "
+                "`codex delete`, and keep `~/.codex` out of folders that a "
+                "sync or backup service copies.") in account
         # and every list of what stays names the databases too
         checklist = _between(_flat("PRIVACY.md"), "**What stays on the "
                              "computer, and for how long.**",
@@ -1902,14 +1905,16 @@ class TestAssistantsOwnFileAccess:
         signed_out = ("\"Signing out of ChatGPT turns off **Remote Control**, "
                       "but it doesn't remove your existing device "
                       "pairings.\"")
+        # (v0.15.5, the readability reading: the step first, and OpenAI's
+        # words after it, where they stood inside it)
         manage = ("(\"In the app on the host, use **Settings** > "
                   "**Connections** to manage connected devices.\", the same "
-                  "page), and remove any device paired there.")
+                  "page)")
         for text in (_install_openai_flat(), _privacy_openai()):
             assert another in text and signed_out in text
             assert manage in text
-            assert "look under Settings, Connections in the desktop app" in \
-                text
+            assert ("look under Settings, Connections in the desktop app, "
+                    "and remove any device paired there") in text
             assert "June 8, 2026" not in text
         assert "or on another computer paired with it" in _privacy_openai()
         # INSTALL quotes some of OpenAI's words and paraphrases others
@@ -2056,10 +2061,11 @@ class TestClaudeCodesRoutes:
                 "outside that folder without asking too, in every mode, "
                 "unless a setting that blocks such reads is on.",
                 # (the owner, 1 October 2026: the warning, with
-                # suggestions, in place of "never start it")
+                # suggestions, in place of "never start it"; v0.15.5, the
+                # readability reading: the places a sentence of their own)
                 "So a real study kept on the same computer is within its "
                 "reach even while you practise, and Exegete's list of "
-                "projects tells it where it is; started in your home folder "
+                "projects tells it where it is. Started in your home folder "
                 "(where a new Terminal window opens), Documents, your "
                 "projects folder or a study's folder, it reads that study "
                 "without asking. If that matters for a study, you could "

@@ -30,10 +30,10 @@ Claude, one fully local route, and OpenAI's apps.
 
 | Route | What it means | Where to read more |
 |---|---|---|
-| **Claude consumer plans** (claude.ai and Claude Desktop on a Free, Pro, Max or Ultra plan; Claude Code with a Pro, Max or Ultra login) | The plans most people start with. Switch training off before participants' data: while it is on, Anthropic may use your conversations to train its models. The switch is the setting "Help improve our AI models", at [claude.ai/settings/data-privacy-controls](https://claude.ai/settings/data-privacy-controls), and its default is worth checking yourself. Claude Code opens files by itself, outside Exegete, and Cowork does in the folders you connect to it, so for participants' data this project suggests Claude Desktop's chat with the extension, with computer use off, no folder that holds your projects or transcripts connected to it, and no other extension that reads files ([PRIVACY.md, "Assistants that open files by themselves"](../PRIVACY.md#assistants-that-open-files-by-themselves)). | [PRIVACY.md](../PRIVACY.md), rung 1 |
+| **Claude consumer plans** (claude.ai and Claude Desktop on a Free, Pro, Max or Ultra plan; Claude Code with a Pro, Max or Ultra login) | The plans most people start with. While training is on, Anthropic may use your conversations, with the participants' data in them, to train its models. The setting "Help improve our AI models", at [claude.ai/settings/data-privacy-controls](https://claude.ai/settings/data-privacy-controls), switches training off, and its default is worth checking yourself. Claude Code opens files by itself, outside Exegete, and Cowork does so in the folders you connect to it. So for participants' data, this project suggests Claude Desktop's chat with the extension, with computer use off, no folder that holds your projects or transcripts connected to it, and no other extension that reads files ([PRIVACY.md, "Assistants that open files by themselves"](../PRIVACY.md#assistants-that-open-files-by-themselves)). | [PRIVACY.md](../PRIVACY.md), rung 1 |
 | **Anthropic commercial-terms routes** (Claude Code with a Console API key; Team or Enterprise accounts) | The same Claude, under other terms. A personal plan (Free, Pro, Max or Ultra) comes under Anthropic's consumer terms. An account your university or employer manages comes under the agreement it made with Anthropic. Such agreements differ in what they let Anthropic do with your data. Even so, an institution's account is likely to give participants' data more protection than a personal one, since the institution agreed its terms with its own interests in mind. Whoever manages that account can tell you which terms apply, and whether it allows Exegete's extension. The extension is not signed, and a university or employer that manages your computer or your Claude account may block unsigned extensions, or extensions altogether ([INSTALL.md](../INSTALL.md#installing-the-extension)). The terms do not change what Claude Code reads. Claude Code opens files by itself, outside Exegete. So for participants' data, this project suggests Claude Desktop's chat with Exegete on a Team or Enterprise account, set up as in the row above ([PRIVACY.md](../PRIVACY.md), "Assistants that open files by themselves"). | [PRIVACY.md](../PRIVACY.md), rungs 2 and 3; [the API-key recipe](#claude-code-with-an-anthropic-api-key-experimental) below |
 | **Fully local models** (LM Studio and similar hosts) | The model runs on your computer, so participants' data is not sent to an AI provider. LM Studio's LM Link, a feature still in preview, can load the model on another computer instead, where the model then reads the conversation, participants' data included (<https://lmstudio.ai/link>, read on 10 November 2026). To keep the conversation on your computer, you could check in LM Studio where the model is loaded, or leave LM Link off. We expect a local model to do the analysis less well than the hosted models, and do not know by how much, since we have evaluated neither. It is a route to consider for particular uses, such as a first pass over sensitive material, or work an agreement confines to one computer. Exegete offers its full tool set unless the host's entry asks for the smaller one, `core`. The recipe asks for `core`, which takes less of a local model's room than the full set. | [PRIVACY.md](../PRIVACY.md), rung 4; [the LM Studio recipe](#lm-studio-fully-local-experimental) below |
-| **OpenAI's apps** (the ChatGPT desktop app; Codex's command line and editor extension) | OpenAI's terms apply, and which ones depends on your plan and on how you sign in. On a workspace your university or employer runs, the people who run it can reach your conversations, with what Exegete's tools returned in them. Switch training off before participants' data: while it is on, OpenAI may use your conversations to train its models. The settings are "Improve the model for everyone" and Codex's separate "Include environments". ChatGPT in a web browser cannot use Exegete directly. On a phone, ChatGPT can use it only through Codex on mobile, which has the paired computer run the work. For participants' data, this project suggests leaving that computer's remote access off. Codex can also read your projects' files by itself, without asking, so for participants' data this project suggests an assistant with no file access of its own, such as Claude Desktop's chat. OpenAI documents a setting, marked Beta, that can keep Codex's own commands from reading outside the folder it works in; it has not been tested with Exegete. This project has not run Exegete in any OpenAI app. | [PRIVACY.md](../PRIVACY.md), "OpenAI's apps"; [the recipe](#chatgpts-desktop-app-and-codex-experimental) below |
+| **OpenAI's apps** (the ChatGPT desktop app; Codex's command line and editor extension) | OpenAI's terms apply, and which ones depends on your plan and on how you sign in. On a workspace your university or employer runs, the people who run it can reach your conversations, with what Exegete's tools returned in them. While training is on, OpenAI may use your conversations, with the participants' data in them, to train its models. The settings that switch it off are "Improve the model for everyone" and Codex's separate "Include environments". ChatGPT in a web browser cannot use Exegete directly. On a phone, ChatGPT can use it only through Codex on mobile, which has the paired computer run the work. For participants' data, this project suggests leaving that computer's remote access off. Codex can also read your projects' files by itself, without asking, so for participants' data this project suggests an assistant with no file access of its own, such as Claude Desktop's chat. OpenAI documents a setting, marked Beta, that can keep Codex's own commands from reading outside the folder it works in; it has not been tested with Exegete. This project has not run Exegete in any OpenAI app. | [PRIVACY.md](../PRIVACY.md), "OpenAI's apps"; [the recipe](#chatgpts-desktop-app-and-codex-experimental) below |
 
 The `core` tool set and the recipes below are **Experimental**. They
 are written from official documentation and checked by Exegete's own
@@ -351,7 +351,7 @@ quotes Anthropic's pages and gives the names of those settings.
 
 So a real study kept on the same computer is within its reach even
 while you practise, and Exegete's list of projects tells it where it
-is; started in your home folder (where a new Terminal window opens),
+is. Started in your home folder (where a new Terminal window opens),
 Documents, your projects folder or a study's folder, it reads that
 study without asking. If that matters for a study, you could keep
 practice projects in a folder of their own, or work on that study with
@@ -481,7 +481,7 @@ Code started in another window, or after a restart, has no key: it runs
 on your Pro, Max or Ultra login if you have one, under the consumer
 terms, or asks you to sign in. So each time, in a new window, go to the
 folder (`cd ~/claude-exegete`), set the key again the same way, and
-start `claude` there; Exegete stays added in that folder. Claude Code
+start `claude` there. Exegete stays added in that folder. Claude Code
 asks once whether to use the key, and keeps your answer. If you also
 have a Pro, Max or Ultra login, the
 [authentication docs](https://code.claude.com/docs/en/authentication)
@@ -732,11 +732,12 @@ configuration for the same Codex host."
   context do not stay exclusively on the connected computer."
 - **ChatGPT on a phone**: it cannot start Exegete, but it can use it
   through Codex on mobile, which an app not yet updated calls Remote.
-  OpenAI (<https://learn.chatgpt.com/docs/mobile>, read on 19 November
-  2026): "Follow progress, approve actions, and send instructions from
-  your phone. Codex runs tasks in the cloud or on a connected
-  computer." And (<https://learn.chatgpt.com/docs/remote-connections>,
-  read on 19 November 2026): "MCP servers, skills, browser access, and
+  OpenAI's page on it (<https://learn.chatgpt.com/docs/mobile>, read on
+  19 November 2026) says: "Follow progress, approve actions, and send
+  instructions from your phone. Codex runs tasks in the cloud or on a
+  connected computer." OpenAI's page on remote connections
+  (<https://learn.chatgpt.com/docs/remote-connections>, read on
+  19 November 2026) adds: "MCP servers, skills, browser access, and
   Computer Use come from that host's configuration." and "The
   sandboxing settings, security controls, and action approvals still
   apply to the connected session." So a phone paired with a computer
@@ -754,18 +755,17 @@ configuration for the same Codex host."
   - and "Availability depends on rollout and your workspace settings."
 
   This project has not tried it, and suggests leaving remote access off
-  on a computer where Exegete works on participants' data: a phone is
+  on a computer where Exegete works on participants' data. A phone is
   easier to lose or share, and OpenAI's own advice is "Only connect
-  devices you own and trust." Not only a phone: "You can control a host
-  from ChatGPT on iOS or Android, or from another Mac or Windows device
-  when Control other devices is available." (the remote-connections
-  page), so another computer paired with it can do the same. A pairing
-  lasts: "Signing out of ChatGPT turns off **Remote Control**, but it
-  doesn't remove your existing device pairings." (the same page). To
-  check, look under Settings, Connections in the desktop app ("In the
-  app on the host, use **Settings** > **Connections** to manage
-  connected devices.", the same page), and remove any device paired
-  there.
+  devices you own and trust." Another computer paired with it can do
+  the same: "You can control a host from ChatGPT on iOS or Android, or
+  from another Mac or Windows device when Control other devices is
+  available." (the remote-connections page). A pairing lasts: "Signing
+  out of ChatGPT turns off **Remote Control**, but it doesn't remove
+  your existing device pairings." (the same page). To check, look under
+  Settings, Connections in the desktop app, and remove any device paired
+  there ("In the app on the host, use **Settings** > **Connections** to
+  manage connected devices.", the same page).
 
 **Which plans.** OpenAI's Codex pricing page
 (<https://learn.chatgpt.com/docs/pricing>, read 4 November 2026) lists
@@ -777,17 +777,17 @@ which of the two decides which of OpenAI's data policies apply
 ([PRIVACY.md](../PRIVACY.md), "OpenAI's apps: the ChatGPT desktop app and
 Codex").
 
-**First, switch training off** before participants' data: while it is
-on, OpenAI may use your conversations to train its models. On a personal
-plan (Free, Plus or Pro), turn off "Improve the model for everyone" in
-ChatGPT's Settings, Data controls, or choose "Do not train on my
-content" in OpenAI's Privacy Portal, <https://privacy.openai.com/>,
-and turn off Codex's "Include environments", a separate setting that
-neither changes. Either of the first two is enough, by OpenAI's Help
-Center, which [PRIVACY.md](../PRIVACY.md), "OpenAI's apps", quotes. On
-Go, which the Help Center does not name for this setting, you could
-check that the setting is there. Rating a reply (thumbs up or down) can
-still let OpenAI train on that conversation.
+**First, switch training off.** While training is on, OpenAI may use
+your conversations, with the participants' data in them, to train its
+models. On a personal plan (Free, Plus or Pro), turn off "Improve the
+model for everyone" in ChatGPT's Settings, Data controls, or choose "Do
+not train on my content" in OpenAI's Privacy Portal,
+<https://privacy.openai.com/>. Either is enough, by OpenAI's Help
+Center, which [PRIVACY.md](../PRIVACY.md), "OpenAI's apps", quotes.
+Then turn off Codex's "Include environments", a separate setting that
+neither changes. On Go, which the Help Center does not name for this
+setting, you could check that the setting is there. Rating a reply
+(thumbs up or down) can still let OpenAI train on that conversation.
 
 **Step 1. Install Exegete.** It needs Python 3.11 or newer ("What
 you need", above). In the Terminal (macOS or Linux):

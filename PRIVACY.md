@@ -2446,30 +2446,29 @@ own, such as Claude Desktop's chat.
 
 **Phones, through a connected computer.** OpenAI's page on Codex on
 mobile, <https://learn.chatgpt.com/docs/mobile> (read on 19 November
-2026):
-
-> "Follow progress, approve actions, and send instructions from your
-> phone. Codex runs tasks in the cloud or on a connected computer."
-
-The connected computer runs the ChatGPT desktop app on macOS or Windows,
-and the Terminal guide lists what else Codex on mobile needs.
+2026), says: "Follow progress, approve actions, and send instructions
+from your phone. Codex runs tasks in the cloud or on a connected
+computer." The connected computer runs the ChatGPT desktop app on macOS
+or Windows, and the Terminal guide lists what else Codex on mobile
+needs. OpenAI's page on remote connections,
 <https://learn.chatgpt.com/docs/remote-connections> (read on 19 November
-2026): "MCP servers, skills, browser access, and Computer Use come from
-that host's configuration.", and "You can control a host from ChatGPT
-on iOS or Android, or from another Mac or Windows device when Control
-other devices is available." So what Exegete's tools return on that
-computer can be shown on the phone, or on another computer paired with
-it. This project has not tried it, and suggests leaving the computer's
-remote access off where Exegete works on participants' data. A pairing
-lasts: "Signing out of ChatGPT turns off **Remote Control**, but it
-doesn't remove your existing device pairings." (the same page). To
-check, you could look under Settings, Connections in the desktop app
-("In the app on the host, use **Settings** > **Connections** to manage
-connected devices.", the same page), and remove any device paired
-there. For enterprise workspaces with local computer access switched on,
+2026), says: "MCP servers, skills, browser access, and Computer Use come
+from that host's configuration.", and "You can control a host from
+ChatGPT on iOS or Android, or from another Mac or Windows device when
+Control other devices is available." So what Exegete's tools return on
+that computer can be shown on the phone, or on another computer paired
+with it. This project has not tried it, and suggests leaving the
+computer's remote access off where Exegete works on participants' data.
+A pairing lasts: "Signing out of ChatGPT turns off **Remote Control**,
+but it doesn't remove your existing device pairings." (the same page).
+To check, you could look under Settings, Connections in the desktop app,
+and remove any device paired there ("In the app on the host, use
+**Settings** > **Connections** to manage connected devices.", the same
+page). On enterprise workspaces with local computer access switched on,
+OpenAI's page on that feature,
 <https://learn.chatgpt.com/docs/enterprise/cloud-local-access> (read
-4 November 2026): "Conversations, tool results, and other task context
-do not stay exclusively on the connected computer."
+4 November 2026), says: "Conversations, tool results, and other task
+context do not stay exclusively on the connected computer."
 
 **Services for individuals** (OpenAI's phrase; the page covers the
 business plans separately, below). While training is on, OpenAI may use
@@ -2573,25 +2572,27 @@ command line, `/delete` does this for the conversation you are in, and
 on these commands, <https://learn.chatgpt.com/docs/cli/slash-commands>
 (read 4 November 2026), describes `/delete` as "Permanently delete the
 current session." and `/archive` as removing a session from the lists
-"without deleting its transcript." Codex's source shows two files that
-this deletion leaves. `~/.codex/history.jsonl` keeps the text you
-typed, unless `history.persistence` is set to `"none"`. In the command
-line, Codex's log database, `~/.codex/logs_2.sqlite`, keeps pieces of
-the assistant's latest answers, word for word, and those answers can
-quote participants. By Codex's source at release 0.170.0, read on
-19 November 2026, it also keeps the answers you give to Codex's own
-questions in Plan mode. These pieces belong to no conversation, so
-deleting a conversation leaves them. Codex removes log entries once they
-are ten days old, but only while it runs. So, after any work on study
-data, you could delete its conversations that way, and keep `~/.codex`
-out of folders that a sync or backup service copies. By the same
-release, Codex's command line starts a background server by default. It
-keeps running after you quit Codex, and writes to the same log
-database. Typing `codex app-server daemon stop` in the Terminal stops
-it. With Codex quit and its background server stopped, you could also
-delete `history.jsonl` and the files whose names begin `logs_2.sqlite`.
-Codex makes them again when it needs them. These files are part of what
-stays on the computer ("How your data flows").
+"without deleting its transcript."
+
+Codex's source shows two files that this deletion leaves.
+`~/.codex/history.jsonl` keeps the text you typed, unless
+`history.persistence` is set to `"none"`. In the command line, Codex's
+log database, `~/.codex/logs_2.sqlite`, keeps pieces of the assistant's
+latest answers, word for word, and those answers can quote participants.
+By Codex's source at release 0.170.0, read on 19 November 2026, it also
+keeps the answers you give to Codex's own questions in Plan mode. These
+pieces belong to no conversation, so deleting a conversation leaves
+them. Codex removes log entries once they are ten days old, but only
+while it runs. At that release, Codex's command line starts a background
+server by default. It keeps running after you quit Codex, and writes to
+the same log database. Typing `codex app-server daemon stop` in the
+Terminal stops it. So, after any work on study data, you could delete
+its conversations with `/delete` or `codex delete`, and keep `~/.codex`
+out of folders that a sync or backup service copies. With Codex quit and
+its background server stopped, you could also delete `history.jsonl` and
+the files whose names begin `logs_2.sqlite`. Codex makes them again when
+it needs them. These files are part of what stays on the computer ("How
+your data flows").
 
 **The UK, the EEA and Switzerland.** "Europe Terms of Use",
 <https://openai.com/policies/eu-terms-of-use/> (the page shows "Updated:
@@ -2618,11 +2619,10 @@ models that power ChatGPT". Of what you delete, it says that "we will
 remove it from our systems within 30 days unless we need to retain it
 for longer as described below, or it has already been de-identified and
 disassociated from your account when you allow us to use your Content to
-improve our models". The questions of consent, of controllers and
-processors, and of special-category data are the same when the provider
-is OpenAI. "What this means for research data" and
-[the checklist](#before-you-use-real-participant-data-check-these),
-near the top of this document, set them out.
+improve our models". With OpenAI too, "What this means for research data"
+and [the checklist](#before-you-use-real-participant-data-check-these)
+set out the questions of consent, of controllers and processors, and of
+special-category data.
 
 ## Practical mitigations
 

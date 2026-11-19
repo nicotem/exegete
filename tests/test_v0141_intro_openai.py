@@ -698,8 +698,12 @@ class TestPrivacyQuotesOpenAI:
                 "To opt out, turn off Improve the model for everyone under "
                 "Settings > Data controls in ChatGPT, or select Do not "
                 "train on my content in our Privacy Portal.",
-                "Codex has a separate Include environments setting in Codex "
-                "settings for allowing training on full environments.",
+                # (v0.15.5, plans and readings 2: the article's capture of
+                # 18 November 2026 says this where it named Codex's
+                # "Include environments" setting)
+                "When you use Codex with a personal ChatGPT account, your "
+                "ChatGPT model-training preference applies to your Codex "
+                "conversations.",
                 "If you choose to provide feedback, the entire conversation "
                 "associated with that feedback may be used to train our "
                 "models.",
@@ -850,13 +854,17 @@ class TestPhonesAndTheWeb:
 
     def test_install_says_what_remote_needs_in_openais_words(self):
         section = _install_openai_flat()
+        # (v0.15.5, plans and readings: OpenAI's page is titled "Codex on
+        # mobile"; plans and readings 2, ruling 85: the feature's name and
+        # the app's labels are the fact, as the remote-connections page
+        # gives them, read on 19 November 2026: "If you don't see **Codex**
+        # on iOS or **Remote** in an app that still uses that label")
+        phone = _between(section, "**ChatGPT on a phone**", "OpenAI's page "
+                         "on it")
+        assert "it can use it through Codex on mobile" in phone
+        assert "iOS" in phone and "**Codex**" in phone
+        assert "**Remote**" in phone and "not yet updated" not in phone
         for words in (
-                # (v0.15.5, plans and readings: OpenAI's page is titled
-                # "Codex on mobile" and says "If your mobile app still shows
-                # Remote, open it instead.", read on 19 November 2026)
-                "**ChatGPT on a phone**: it cannot start Exegete, but it can "
-                "use it through Codex on mobile, which an app not yet "
-                "updated calls Remote.",
                 # (v0.15.3: the page moved, and says the cloud too)
                 "<https://learn.chatgpt.com/docs/mobile>",
                 "\"Follow progress, approve actions, and send instructions "
@@ -870,14 +878,10 @@ class TestPhonesAndTheWeb:
                 "the computer must run the ChatGPT desktop app on macOS or "
                 "Windows (\"you can't set it up from the Codex CLI or IDE "
                 "extension\")",
-                # (v0.15.5, plans and readings: the pricing page no longer
-                # says "Mobile remote control"; read on 19 November 2026,
-                # it lists for an API key "Codex in the CLI, SDK, or IDE
-                # extension", and the remote-connections page asks for the
-                # same account and workspace on both)
+                # (v0.15.5, plans and readings: the remote-connections page
+                # asks for the same account and workspace on both)
                 "you sign in to both with the same ChatGPT account and "
                 "workspace",
-                "\"Codex in the CLI, SDK, or IDE extension\"",
                 "\"Availability depends on rollout and your workspace "
                 "settings.\"",
                 "This project has not tried it, and suggests leaving remote "
@@ -889,6 +893,20 @@ class TestPhonesAndTheWeb:
         for page in ("mobile", "remote-connections"):
             assert re.search(r"<https://learn\.chatgpt\.com/docs/" + page
                              + r">, " + READ_ON + r"\)", section), page
+        # (v0.15.5, plans and readings 2: the pricing page, read on 19
+        # November 2026, lists "Mobile remote control" as available on
+        # Plus, Pro, Business and Enterprise / Education and unavailable
+        # for an API key (learn.chatgpt.com/docs/pricing.md 1063-1072);
+        # the first round's "no longer lists" was a misreading)
+        assert re.search(r"\"Mobile remote control\"[^.]*except API Key",
+                         section)
+        assert "\"Codex in the CLI, SDK, or IDE extension\"" not in section
+        # (and Codex's command line can switch remote access on: the
+        # experimental `codex remote-control`, "[experimental] Manage the
+        # app-server daemon with remote control enabled.", cli/src/main.rs
+        # 180 at rust-v0.170.0; remote_control_cmd.rs 59-67)
+        assert re.search(r"`codex remote-control` \(Codex's source at "
+                         r"release 0\.170\.0, " + READ_ON + r"\)", section)
         # The route table says the same in a line
         table = _between(_read("INSTALL.md"), "| **OpenAI's apps**", "\n")
         # (v0.15.5, the readability reading: whole sentences where the
@@ -900,13 +918,19 @@ class TestPhonesAndTheWeb:
                       "access off"):
             assert words in table, words
         assert "Remote" not in table
-        # (v0.15.5, plans and readings: on an institution's workspace, the
-        # people who run it can reach the conversations, as PRIVACY.md's
-        # reading of "Enterprise privacy at OpenAI" says)
-        reach = ("can reach your conversations, with what Exegete's tools "
-                 "returned in them")
+        # (v0.15.5, plans and readings 2: who can reach a workspace's
+        # conversations, in the words of "Enterprise privacy at OpenAI",
+        # Archive capture of 16 November 2026, and no wider: the page
+        # speaks of the workspace's admins and its end users'
+        # conversations, not of Codex's command line)
+        business = ("can view, access, export, and delete end user "
+                    "conversations in the workspace")
+        audit = "can access an audit log of conversations and GPTs"
         assert "On a workspace your university or employer runs" in table
-        assert reach in table and reach in _privacy_openai()
+        for text in (table, _privacy_openai()):
+            assert business in text and audit in text
+            assert ("can reach your conversations, with what Exegete's "
+                    "tools returned in them") not in text
 
     def test_privacy_and_the_changelog_say_the_same(self):
         section = _privacy_openai()
@@ -933,9 +957,14 @@ class TestPhonesAndTheWeb:
         readme = _readme_openai()
         assert "Enterprise" not in readme and "Work Cloud" not in readme
         section = _install_openai_flat()
-        assert ("\"When your workspace enables Local computer access with "
-                "Work Cloud, eligible ChatGPT Work conversations can "
-                "continue across desktop, mobile, and web.\"") in section
+        # (v0.15.5, plans and readings 2: the remote-connections page, read
+        # on 19 November 2026, no longer carries the sentence on "Local
+        # computer access with Work Cloud" that the guide quoted; what it
+        # says now)
+        assert ("\"Work Cloud can use approved local resources through a "
+                "connected computer.\"") in section
+        assert "\"on desktop, mobile, or web\"" in section
+        assert "eligible ChatGPT Work conversations" not in section
         assert ("Whether such a conversation can use Exegete on the "
                 "connected computer is not documented, and this project "
                 "gives no steps for it.") in section
@@ -1263,6 +1292,10 @@ class TestWhatCodexKeepsAndTheOptOut:
             for name in ("`~/.codex/history.jsonl`",
                          "`~/.codex/logs_2.sqlite`"):
                 assert name in text, name
+        # (v0.15.5, plans and readings 2: the guide's uninstall step names
+        # the answers in Plan mode and the background server, which writes
+        # to that database after Codex quits, as PRIVACY.md says)
+        assert "Plan mode" in guide and "background server" in guide
 
     def test_readme_gives_openai_users_the_opt_out_and_a_deadline(self):
         """v0.14.2, the README review: the switch is the first of OpenAI's
@@ -1272,9 +1305,12 @@ class TestWhatCodexKeepsAndTheOptOut:
         OpenAI's apps fit for such data. OpenAI's words, and the archive's
         date, are pinned on PRIVACY.md only."""
         # v0.14.2, the README rewritten to persuade: the step is said
-        # once, where the reader acts on it; the second switch and Codex's
-        # "Include environments" are INSTALL.md's
-        # (test_install_turns_training_off_first_in_the_readmes_words)
+        # once, where the reader acts on it; the second switch is
+        # INSTALL.md's
+        # (test_install_turns_training_off_first_in_the_readmes_words).
+        # (v0.15.5, plans and readings 2: OpenAI's article no longer names
+        # Codex's "Include environments"; the guide and PRIVACY.md say so,
+        # and the README's sentence waits for the owner's sitting)
         data = _readme_data()
         steps = _readme_openai()
         # v0.15.2, the opening texts: the risk, then the switches, before
@@ -1326,6 +1362,11 @@ class TestWhatCodexKeepsAndTheOptOut:
         assert ("In the page, \"this article\" links to <https://openai.com/"
                 "policies/how-your-data-is-used-to-improve-model-"
                 "performance/>.") in section
+        # (v0.15.5, plans and readings 2: "newest captures" holds for the
+        # day the pages were read, which the section's opening gives)
+        assert re.search(r"So those pages were read on \d{1,2} [A-Z][a-z]+ "
+                         r"20\d\d in the Internet Archive's newest captures",
+                         section)
         # (v0.15.5, plans and readings: what the policy says of training
         # and of what you delete, in its words; no longer "not able to
         # read")
@@ -1418,8 +1459,15 @@ class TestTheStepsANewcomerCanGetWrong:
                             "**A copy of the source**")
         assert ("`$HOME\\exegete-venv\\Scripts\\pip install --upgrade "
                 "\"exegete[pdf-epub]\"`") in updating
-        assert ("the ChatGPT desktop app: quit it; Codex on the command "
-                "line: end the session") in " ".join(updating.split())
+        # (v0.15.5, plans and readings 2: by Codex's source at
+        # rust-v0.170.0, the command line's conversation runs in the
+        # background server, which ends a conversation idle with no client
+        # after thread_unload_delay_secs, 60 by default, and with it its
+        # MCP servers: so a minute's wait, or the server stopped)
+        flat = " ".join(updating.split())
+        assert "`codex app-server daemon stop`" in flat
+        assert "a minute after you leave it" in flat
+        assert re.search(r"release 0\.170\.0, " + READ_ON, flat)
 
     def test_a_first_session_speaks_to_any_assistant(self):
         first = _between(_flat("README.md"), "### A first session",
@@ -1920,9 +1968,11 @@ class TestAssistantsOwnFileAccess:
         # INSTALL quotes some of OpenAI's words and paraphrases others
         assert "in OpenAI's words" not in _flat("PRIVACY.md")
         # (v0.15.5, plans and readings: by the feature's name on OpenAI's
-        # page, read on 19 November 2026)
-        assert ("the Terminal guide lists what else Codex on mobile needs"
-                in _privacy_openai())
+        # page, read on 19 November 2026; plans and readings 2: what it
+        # needs is the guide's, a command of Codex's command line included)
+        phones = _between(_privacy_openai(), "**Phones, through a connected "
+                          "computer.**", "**Services for individuals.**")
+        assert "Codex on mobile" in phones and "Terminal guide" in phones
 
 
 # ---------------------------------------------------------------------------

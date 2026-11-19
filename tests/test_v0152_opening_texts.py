@@ -206,7 +206,7 @@ def test_readme_points_to_the_routes_and_their_recipes():
     # memory
     codex = sections["chatgpts-desktop-app-and-codex-experimental"]
     assert re.search(r"\*\*Which plans\.\*\* OpenAI's Codex pricing page "
-                     r"\(<[^>]+>, read \d{1,2} \w+ \d{4}\)", codex)
+                     r"\(<[^>]+>, read (?:on )?\d{1,2} \w+ \d{4}\)", codex)
     assert re.search(r"16 GB (?:RAM|of memory) is a realistic minimum",
                      sections["lm-studio-fully-local-experimental"])
 

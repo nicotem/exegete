@@ -9,8 +9,11 @@ Pinned here:
   settings by name (Claude's "Help improve our AI models", the name its
   Settings, Privacy shows, read by the owner on 9 November 2026;
   ChatGPT's "Improve the
-  model for everyone" and Codex's separate "Include environments") and
-  the exception for a rated reply (README, INSTALL.md, PRIVACY.md), and
+  model for everyone", with Codex's separate "Include environments" in
+  the README, and in the Terminal guide and PRIVACY.md, since OpenAI's
+  article of 16 November 2026, that setting covering Codex on a personal
+  account) and the exception for a rated reply (README, INSTALL.md,
+  PRIVACY.md), and
   where Claude Desktop is set up (INSTALL.md's one-click section,
   QUICKSTART.md), with where what Claude reads goes, and a summary of
   the checks that promises no more than they do;
@@ -178,13 +181,21 @@ def test_install_and_privacy_give_the_same_advice():
     for maker, row in rows.items():
         assert WARNING.format(maker=maker) in row, maker
         assert ADVICE.format(maker=maker) not in row, maker
-    assert "Codex's separate \"Include environments\"" in rows["OpenAI"]
+    # (v0.15.5, plans and readings 2: OpenAI's article, in its Archive
+    # capture of 18 November 2026, no longer names Codex's "Include
+    # environments", and says that with a personal ChatGPT account the
+    # ChatGPT training preference applies to Codex conversations)
+    assert "\"Improve the model for everyone\"" in rows["OpenAI"]
+    assert "personal account" in rows["OpenAI"]
     first = _plain(_between(install, "**First, switch training off.**",
                             "**Step 1. Install Exegete.**"))
     assert WARNING.format(maker="OpenAI") in first
     assert "before participants' data" not in first
     assert RATED.format(maker="OpenAI") in first
-    assert "turn off Codex's \"Include environments\"" in first
+    assert "and covers Codex on a personal account" in first
+    assert re.search(r"Archive capture of \d{1,2} [A-Z][a-z]+ 20\d\d", first)
+    for text in (rows["OpenAI"], first):
+        assert "Include environments" not in text
     assert "practice included" not in install
     assert "practice included" not in _flat("INSTALL.md")
     # PRIVACY.md: each maker's section, and the checklist for both
@@ -192,7 +203,7 @@ def test_install_and_privacy_give_the_same_advice():
     # order until its own reading)
     rung_one = _between(privacy, "### Rung 1:", "### Rung 2:")
     assert WARNING.format(maker="Anthropic") in rung_one
-    individuals = _between(privacy, "**Services for individuals**",
+    individuals = _between(privacy, "**Services for individuals.**",
                            "**ChatGPT Business, Enterprise and Edu")
     assert WARNING.format(maker="OpenAI") in individuals
     assert "Switch training off" not in privacy
@@ -206,7 +217,7 @@ def test_install_and_privacy_give_the_same_advice():
     for words in (WARNING.format(maker="the AI provider"),
                   "\"Help improve our AI models\"",
                   "\"Improve the model for everyone\"",
-                  "\"Include environments\"",
+                  "which on a personal account covers Codex too",
                   "Rating a reply (thumbs up or down) can still let either "
                   "provider train on that conversation",
                   "(rung 1, the first of the governance options in \"Your "
@@ -818,7 +829,9 @@ def test_the_readme_says_what_it_costs():
     # INSTALL.md reads OpenAI's page the same way, and its table no
     # longer reads as if a free plan included Claude Code
     install = _flat(GUIDE)
-    assert ("for Free and Go it mentions only the desktop app, \"subject to "
+    # (v0.15.5, plans and readings 2: the page read again on 19 November
+    # 2026; its own sentence now, after the plans that have the rest)
+    assert ("Free and Go it mentions only the desktop app, \"subject to "
             "rollout\".") in install
     # (v0.15.5, plans and readings: the row's facts, not its words.
     # Claude's pricing page, read on 19 November 2026, lists Free, Pro,

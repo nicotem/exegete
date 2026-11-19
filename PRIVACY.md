@@ -85,14 +85,13 @@ officer will ask, and the summary above depends on them:
 - **Training, with either AI provider.** While training is on, the AI
   provider may use your conversations, with the participants' data in
   them, to train its models. With Anthropic, the setting "Help improve
-  our AI models" turns training off (rung 1, the first of the
-  governance options in "Your governance options", below). With OpenAI,
-  the setting is "Improve the model for everyone", and Codex has a
-  separate one, "Include environments" ("OpenAI's apps"). Rating a reply
-  (thumbs up or down) can still let either provider train on that
-  conversation ("Cross-rung cautions"; "OpenAI's apps"). By its terms,
-  Anthropic can also train on a conversation flagged for a safety review
-  (rung 1).
+  our AI models" turns training off (rung 1, the first of the governance
+  options in "Your governance options", below). With OpenAI, the setting
+  is "Improve the model for everyone", which on a personal account
+  covers Codex too ("OpenAI's apps"). Rating a reply (thumbs up or down)
+  can still let either provider train on that conversation ("Cross-rung
+  cautions"; "OpenAI's apps"). By its terms, Anthropic can also train on
+  a conversation flagged for a safety review (rung 1).
 - **Controller and processor, and a written agreement.** Your
   institution is normally the data controller, which decides how the
   data is used, and the AI provider a processor, which handles it for
@@ -2117,9 +2116,8 @@ individual is a question this document sets out without settling. To be
 sure that the Commercial Terms cover your use, you could use a Console
 account created for the institution or research group. You could also
 ask your data protection officer to read the current versions of both
-pages. The Terminal guide's recipe "Claude Code with an Anthropic API
-key" gives the steps. For participants' data under commercial terms,
-rung 3 says what this project suggests.
+pages. For participants' data under commercial terms, rung 3 says what
+this project suggests.
 
 ### Rung 3: Team/Enterprise (Claude for Work)
 
@@ -2136,27 +2134,28 @@ alone. The page shows them as a list, joined here with semicolons:
 So if your institution has a Team or Enterprise plan, using Exegete on
 it, through Claude Desktop or Claude Code, comes under the Commercial
 Terms, with no API key. Beyond those terms, what Anthropic may do with
-your data depends on the agreement your institution made with
-Anthropic, and such agreements differ. Even so, an institution's
-account is likely to give participants' data more protection than a
-personal one, since the institution agreed its terms with its own
-interests in mind. Whoever manages the account can tell you which terms
-apply. They can also reach your conversations, with what Exegete's
-tools returned in them. Anthropic's page on who manages a team's data
+your data depends on the agreement your institution made with Anthropic,
+and such agreements differ. Even so, an institution's account is likely
+to give participants' data more protection than a personal one, since
+the institution agreed its terms with its own interests in mind. Whoever
+manages the account can tell you which terms apply. Anthropic's page on
+who manages a team's data
 (<https://support.claude.com/en/articles/9265372-who-owns-and-manages-the-data-of-my-team>,
-read on 19 November 2026) says: "Your organization's designated
-Primary Owner manages your Work account and all associated data. This
-includes the ability to request access to your user data through data
-exports, which may contain your conversations with Claude". On
-Enterprise, the Compliance API "lets your organization programmatically
-pull activity feed events, chat data, and file content"
+read on 19 November 2026) says: "Your organization's designated Primary
+Owner manages your Work account and all associated data. This includes
+the ability to request access to your user data through data exports,
+which may contain your conversations with Claude". On Enterprise, the
+Compliance API "lets your organization programmatically pull activity
+feed events, chat data, and file content"
 (<https://support.claude.com/en/articles/13015708-access-the-compliance-api>,
-read on 19 November 2026). Exegete's extension is not signed, and an
-institution that manages your computer or your Claude account may block
-unsigned extensions, or extensions altogether (INSTALL.md, "Installing
-the extension"). For participants' data, this project suggests Claude
-Desktop's chat with Exegete under that account, set up as "Assistants
-that open files by themselves" says.
+read on 19 November 2026). The page says that "only your organization's
+Primary Owner can enable the Compliance API", and that "Owners can
+create keys limited to their own organization". Exegete's extension is
+not signed, and an institution that manages your computer or your Claude
+account may block unsigned extensions, or extensions altogether
+(INSTALL.md, "Installing the extension"). For participants' data, this
+project suggests Claude Desktop's chat with Exegete under that account,
+set up as "Assistants that open files by themselves" says.
 
 ### Rung 4: fully local models (Experimental)
 
@@ -2195,10 +2194,7 @@ have evaluated neither. A local model is a route to consider for
 particular uses, such as a first pass over sensitive material, or work
 an agreement confines to one computer, rather than a suggestion for
 participants' data as such. It means a narrower workflow with more
-supervision. Exegete offers its full tool set unless the host's entry
-asks for the smaller one, `core` (`EXEGETE_TOOLSET=core`). The Terminal
-guide's recipe "LM Studio (fully local)" asks for `core`, which takes
-less of a local model's room than the full set, and gives the steps.
+supervision.
 
 ### Cross-rung cautions
 
@@ -2361,13 +2357,11 @@ Codex"), what a tool returns goes to OpenAI, and OpenAI's terms apply.
 As above, OpenAI's pages are quoted word for word with their addresses,
 never described in our own words, and the linked pages govern. OpenAI's
 Help Center and openai.com refuse automated reading. So those pages were
-read in the Internet Archive's newest captures of them, its saved
-copies of the pages. Each quote below names its capture and gives the
-day the capture was made. The live page may have changed since, so you
-could open it before you rely on the quote. The recipe itself is
-Experimental, and this project has not tried it. This project gives no
-steps for ChatGPT in a web browser, or for an enterprise workspace that
-switches on local computer access; the Terminal guide says why.
+read on 19 November 2026 in the Internet Archive's newest captures of
+them, its saved copies of the pages. Each quote below names its capture
+and gives the day the capture was made. The live page may have changed
+since, so you could open it before you rely on the quote. The recipe
+itself is Experimental, and this project has not tried it.
 
 **Codex's own file access.** Besides calling Exegete's tools, Codex
 runs commands of its own, outside Exegete, which change files in the
@@ -2422,35 +2416,31 @@ already allows are not reviewed, reads among them
 (<https://learn.chatgpt.com/docs/sandboxing/auto-review>, read 4
 November 2026). "Full access" has no sandbox at all.
 
-Exegete's own answers tell Codex where the project is ("Assistants
-that open files by themselves", above). What Codex reads by itself goes
-to OpenAI without passing through Exegete, so none of Exegete's
-protections applies to it. Codex changes files in the folder it works
-in without asking. So a study's folder, the projects folder or the home
-folder given to it as that folder would be open to its changes as well
-as its reads. The Terminal guide's recipe gives it an empty folder of
-its own. That keeps a study's files out of the place Codex works in, so
-that it does not change them without asking. It does not keep Codex
-from reading them, or from searching other folders for them.
-Practising, too, leaves a real study on the same computer within its
-reach ("While you practise", above). OpenAI documents a setting, marked
-Beta, that can keep Codex's own commands from reading outside the folder
-it works in, a "permission profile"
+What Codex reads by itself goes to OpenAI without passing through
+Exegete, so none of Exegete's protections applies to it. Codex changes
+files in the folder it works in without asking. So a study's folder, the
+projects folder or the home folder given to it as that folder would be
+open to its changes as well as its reads. The Terminal guide's recipe
+gives it an empty folder of its own. That keeps a study's files out of
+the place Codex works in, so that it does not change them without
+asking. It does not keep Codex from reading them, or from searching
+other folders for them. OpenAI documents a setting, marked Beta, that
+can keep Codex's own commands from reading outside the folder it works
+in, a "permission profile"
 (<https://learn.chatgpt.com/docs/permissions>, read 4 November 2026:
 "Beta. Permission profiles are under active development and may
 change."). It has not been tested with Exegete, and this project gives
 no steps for it. If you try it, you may want to check what Codex can
 still read before bringing in participants' data. For participants'
-data, this project suggests an assistant with no file access of its
-own, such as Claude Desktop's chat.
+data, this project suggests an assistant with no file access of its own,
+such as Claude Desktop's chat.
 
 **Phones, through a connected computer.** OpenAI's page on Codex on
 mobile, <https://learn.chatgpt.com/docs/mobile> (read on 19 November
 2026), says: "Follow progress, approve actions, and send instructions
 from your phone. Codex runs tasks in the cloud or on a connected
-computer." The connected computer runs the ChatGPT desktop app on macOS
-or Windows, and the Terminal guide lists what else Codex on mobile
-needs. OpenAI's page on remote connections,
+computer." The Terminal guide lists what Codex on mobile needs. OpenAI's
+page on remote connections,
 <https://learn.chatgpt.com/docs/remote-connections> (read on 19 November
 2026), says: "MCP servers, skills, browser access, and Computer Use come
 from that host's configuration.", and "You can control a host from
@@ -2466,21 +2456,19 @@ and remove any device paired there ("In the app on the host, use
 **Settings** > **Connections** to manage connected devices.", the same
 page). On enterprise workspaces with local computer access switched on,
 OpenAI's page on that feature,
-<https://learn.chatgpt.com/docs/enterprise/cloud-local-access> (read
-4 November 2026), says: "Conversations, tool results, and other task
+<https://learn.chatgpt.com/docs/enterprise/cloud-local-access> (read on
+19 November 2026), says: "Conversations, tool results, and other task
 context do not stay exclusively on the connected computer."
 
-**Services for individuals** (OpenAI's phrase; the page covers the
-business plans separately, below). While training is on, OpenAI may use
+**Services for individuals.** While training is on, OpenAI may use
 your conversations, with the participants' data in them, to train its
-models. The settings, Codex's separate one included, and the exception
-for feedback are quoted below. Help Center, "How your data is used to
-improve model performance",
+models. The settings and the exception for feedback are quoted below.
+Help Center, "How your data is used to improve model performance",
 <https://help.openai.com/en/articles/5722486-how-your-data-is-used-to-improve-model-performance>
-(Archive capture of 1 November 2026,
-<https://web.archive.org/web/20261101232003/https://help.openai.com/en/articles/5722486-how-your-data-is-used-to-improve-model-performance>;
-it shows "Updated: 13 days ago", which the capture's own data dates to
-20 October 2026):
+(Archive capture of 18 November 2026,
+<https://web.archive.org/web/20261118030234/https://help.openai.com/en/articles/5722486-how-your-data-is-used-to-improve-model-performance>;
+it shows "Updated: yesterday", which the capture's own data dates to
+16 November 2026):
 
 > "When you use our services for individuals (Free, Plus, Pro), we may
 > use your content to train our models. You can choose
@@ -2492,9 +2480,8 @@ it shows "Updated: 13 days ago", which the capture's own data dates to
 > tasks. You don’t need to do both. After you opt out, we won’t use
 > your new conversations to improve our models."
 
-> "Codex has a separate Include environments setting in Codex settings
-> for allowing training on full environments. Changing your settings in
-> ChatGPT or the Privacy Portal does not change that setting."
+> "When you use Codex with a personal ChatGPT account, your ChatGPT
+> model-training preference applies to your Codex conversations."
 
 The same page, on feedback:
 
@@ -2515,8 +2502,8 @@ The Privacy Portal is <https://privacy.openai.com/>.
 
 "Enterprise privacy at OpenAI", <https://openai.com/enterprise-privacy/>
 (the page shows "Updated: January 8, 2026"; Archive capture of
-3 November 2026,
-<https://web.archive.org/web/20261103120300/https://openai.com/enterprise-privacy/>):
+16 November 2026,
+<https://web.archive.org/web/20261116160246/https://openai.com/enterprise-privacy/>):
 
 > "Yes, we are able to execute a Data Processing Addendum (DPA) with
 > customers for their use of ChatGPT Business, ChatGPT Enterprise, and
@@ -2528,11 +2515,9 @@ admins control how long your data is retained", and that "workspace
 admins can access an audit log of conversations and GPTs through the
 Enterprise Compliance API". On ChatGPT Business, "Workspace admins have
 control over workspaces and can view, access, export, and delete end
-user conversations in the workspace." So the people who run an
-institution's workspace can reach your conversations, with what
-Exegete's tools returned in them. As with Anthropic, whoever manages
-the account can tell you which terms apply, and who can read the
-conversations.
+user conversations in the workspace." As with Anthropic, whoever
+manages the account can tell you which terms apply, and who can read
+the conversations.
 
 **Codex: how you sign in decides.** Codex can be signed in to with a
 ChatGPT account or with an API key. <https://learn.chatgpt.com/docs/auth>
@@ -2591,8 +2576,7 @@ its conversations with `/delete` or `codex delete`, and keep `~/.codex`
 out of folders that a sync or backup service copies. With Codex quit and
 its background server stopped, you could also delete `history.jsonl` and
 the files whose names begin `logs_2.sqlite`. Codex makes them again when
-it needs them. These files are part of what stays on the computer ("How
-your data flows").
+it needs them.
 
 **The UK, the EEA and Switzerland.** "Europe Terms of Use",
 <https://openai.com/policies/eu-terms-of-use/> (the page shows "Updated:
@@ -2610,8 +2594,8 @@ In the page, "this article" links to
 <https://openai.com/policies/how-your-data-is-used-to-improve-model-performance/>.
 OpenAI's "Europe privacy policy" is a separate page,
 <https://openai.com/policies/eu-privacy-policy/> (the page shows
-"Updated: August 24, 2026"; Archive capture of 14 November 2026,
-<https://web.archive.org/web/20261114100059/https://openai.com/policies/eu-privacy-policy/>).
+"Updated: August 24, 2026"; Archive capture of 18 November 2026,
+<https://web.archive.org/web/20261118011849/https://openai.com/policies/eu-privacy-policy/>).
 It "does not apply to content that we process on behalf of customers of
 our business offerings, such as our API". It says that "we may use
 Content you provide us to improve our Services, for example to train the
@@ -2619,10 +2603,7 @@ models that power ChatGPT". Of what you delete, it says that "we will
 remove it from our systems within 30 days unless we need to retain it
 for longer as described below, or it has already been de-identified and
 disassociated from your account when you allow us to use your Content to
-improve our models". With OpenAI too, "What this means for research data"
-and [the checklist](#before-you-use-real-participant-data-check-these)
-set out the questions of consent, of controllers and processors, and of
-special-category data.
+improve our models".
 
 ## Practical mitigations
 

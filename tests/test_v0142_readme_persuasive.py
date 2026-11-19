@@ -1067,8 +1067,15 @@ def test_the_assistants_table():
         assert re.search(r"<https://support\.claude\.com/en/articles/"
                          + re.escape(page) + ">" + read_on, rung), page
         assert words in rung, words
-    assert "can also reach your conversations, with what Exegete's tools " \
-        "returned in them" in rung
+    # (v0.15.5, plans and readings 2: no wider than the pages: the
+    # Primary Owner switches the Compliance API on and Owners can create
+    # keys for their own organisation (13015708); "whoever manages the
+    # account" reaching the conversations is not on any page)
+    for words in ("only your organization's Primary Owner can enable the "
+                  "Compliance API",
+                  "Owners can create keys limited to their own organization"):
+        assert words in rung, words
+    assert "can also reach your conversations" not in rung
 
 
 # ---------------------------------------------------------------------------

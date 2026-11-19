@@ -33,7 +33,7 @@ Claude, one fully local route, and OpenAI's apps.
 | **Claude consumer plans** (claude.ai and Claude Desktop on a Free, Pro, Max or Ultra plan; Claude Code with a Pro, Max or Ultra login) | The plans most people start with. While training is on, Anthropic may use your conversations, with the participants' data in them, to train its models. The setting "Help improve our AI models", at [claude.ai/settings/data-privacy-controls](https://claude.ai/settings/data-privacy-controls), switches training off, and its default is worth checking yourself. Claude Code opens files by itself, outside Exegete, and Cowork does so in the folders you connect to it. So for participants' data, this project suggests Claude Desktop's chat with the extension, with computer use off, no folder that holds your projects or transcripts connected to it, and no other extension that reads files ([PRIVACY.md, "Assistants that open files by themselves"](../PRIVACY.md#assistants-that-open-files-by-themselves)). | [PRIVACY.md](../PRIVACY.md), rung 1 |
 | **Anthropic commercial-terms routes** (Claude Code with a Console API key; Team or Enterprise accounts) | The same Claude, under other terms. A personal plan (Free, Pro, Max or Ultra) comes under Anthropic's consumer terms. An account your university or employer manages comes under the agreement it made with Anthropic. Such agreements differ in what they let Anthropic do with your data. Even so, an institution's account is likely to give participants' data more protection than a personal one, since the institution agreed its terms with its own interests in mind. Whoever manages that account can tell you which terms apply, and whether it allows Exegete's extension. The extension is not signed, and a university or employer that manages your computer or your Claude account may block unsigned extensions, or extensions altogether ([INSTALL.md](../INSTALL.md#installing-the-extension)). The terms do not change what Claude Code reads. Claude Code opens files by itself, outside Exegete. So for participants' data, this project suggests Claude Desktop's chat with Exegete on a Team or Enterprise account, set up as in the row above ([PRIVACY.md](../PRIVACY.md), "Assistants that open files by themselves"). | [PRIVACY.md](../PRIVACY.md), rungs 2 and 3; [the API-key recipe](#claude-code-with-an-anthropic-api-key-experimental) below |
 | **Fully local models** (LM Studio and similar hosts) | The model runs on your computer, so participants' data is not sent to an AI provider. LM Studio's LM Link, a feature still in preview, can load the model on another computer instead, where the model then reads the conversation, participants' data included (<https://lmstudio.ai/link>, read on 10 November 2026). To keep the conversation on your computer, you could check in LM Studio where the model is loaded, or leave LM Link off. We expect a local model to do the analysis less well than the hosted models, and do not know by how much, since we have evaluated neither. It is a route to consider for particular uses, such as a first pass over sensitive material, or work an agreement confines to one computer. Exegete offers its full tool set unless the host's entry asks for the smaller one, `core`. The recipe asks for `core`, which takes less of a local model's room than the full set. | [PRIVACY.md](../PRIVACY.md), rung 4; [the LM Studio recipe](#lm-studio-fully-local-experimental) below |
-| **OpenAI's apps** (the ChatGPT desktop app; Codex's command line and editor extension) | OpenAI's terms apply, and which ones depends on your plan and on how you sign in. On a workspace your university or employer runs, the people who run it can reach your conversations, with what Exegete's tools returned in them. While training is on, OpenAI may use your conversations, with the participants' data in them, to train its models. The settings that switch it off are "Improve the model for everyone" and Codex's separate "Include environments". ChatGPT in a web browser cannot use Exegete directly. On a phone, ChatGPT can use it only through Codex on mobile, which has the paired computer run the work. For participants' data, this project suggests leaving that computer's remote access off. Codex can also read your projects' files by itself, without asking, so for participants' data this project suggests an assistant with no file access of its own, such as Claude Desktop's chat. OpenAI documents a setting, marked Beta, that can keep Codex's own commands from reading outside the folder it works in; it has not been tested with Exegete. This project has not run Exegete in any OpenAI app. | [PRIVACY.md](../PRIVACY.md), "OpenAI's apps"; [the recipe](#chatgpts-desktop-app-and-codex-experimental) below |
+| **OpenAI's apps** (the ChatGPT desktop app; Codex's command line and editor extension) | OpenAI's terms apply, and which ones depends on your plan and on how you sign in. On a workspace your university or employer runs, OpenAI's page on enterprise privacy says that its admins "can view, access, export, and delete end user conversations in the workspace" (ChatGPT Business). On Enterprise and Edu, they "can access an audit log of conversations and GPTs". While training is on, OpenAI may use your conversations, with the participants' data in them, to train its models. Turning off "Improve the model for everyone" stops it, and on a personal account that covers Codex too. ChatGPT in a web browser cannot use Exegete directly. On a phone, ChatGPT can use it only through Codex on mobile, which has the paired computer run the work. For participants' data, this project suggests leaving that computer's remote access off. Codex can also read your projects' files by itself, without asking, so for participants' data this project suggests an assistant with no file access of its own, such as Claude Desktop's chat. OpenAI documents a setting, marked Beta, that can keep Codex's own commands from reading outside the folder it works in; it has not been tested with Exegete. This project has not run Exegete in any OpenAI app. | [PRIVACY.md](../PRIVACY.md), "OpenAI's apps"; [the recipe](#chatgpts-desktop-app-and-codex-experimental) below |
 
 The `core` tool set and the recipes below are **Experimental**. They
 are written from official documentation and checked by Exegete's own
@@ -719,19 +719,20 @@ configuration for the same Codex host."
   developer mode), and it makes every Exegete tool callable from the
   OpenAI workspaces the tunnel is linked to. This project does not
   recommend it for a project with participants' data, and gives no
-  steps for it. One more case, for enterprise workspaces only. OpenAI
-  (<https://learn.chatgpt.com/docs/remote-connections>, read
-  4 November 2026): "When your workspace enables Local computer
-  access with Work Cloud, eligible ChatGPT Work conversations can
-  continue across desktop, mobile, and web." Whether such a
-  conversation can use Exegete on the connected computer is not
-  documented, and this project gives no steps for it. OpenAI's page on
-  that feature
+  steps for it. One more case, for enterprise workspaces only. OpenAI's
+  page on remote connections
+  (<https://learn.chatgpt.com/docs/remote-connections>, read on
+  19 November 2026) says that a Work conversation can continue "on
+  desktop, mobile, or web", and that "Work Cloud can use approved local
+  resources through a connected computer." Whether such a conversation
+  can use Exegete on the connected computer is not documented, and this
+  project gives no steps for it. OpenAI's page on that feature
   (<https://learn.chatgpt.com/docs/enterprise/cloud-local-access>, read
-  4 November 2026) says: "Conversations, tool results, and other task
-  context do not stay exclusively on the connected computer."
+  on 19 November 2026) says: "Conversations, tool results, and other
+  task context do not stay exclusively on the connected computer."
 - **ChatGPT on a phone**: it cannot start Exegete, but it can use it
-  through Codex on mobile, which an app not yet updated calls Remote.
+  through Codex on mobile. The ChatGPT app for iOS shows it as **Codex**,
+  and an app that still uses the earlier label as **Remote**.
   OpenAI's page on it (<https://learn.chatgpt.com/docs/mobile>, read on
   19 November 2026) says: "Follow progress, approve actions, and send
   instructions from your phone. Codex runs tasks in the cloud or on a
@@ -747,11 +748,11 @@ configuration for the same Codex host."
   - the computer must run the ChatGPT desktop app on macOS or Windows
     ("you can't set it up from the Codex CLI or IDE extension");
   - the phone runs ChatGPT on iOS or Android;
-  - you sign in to both with the same ChatGPT account and workspace
-    (for an API key, the pricing page, read on 19 November 2026, lists
-    only "Codex in the CLI, SDK, or IDE extension");
+  - you sign in to both with the same ChatGPT account and workspace;
   - remote access is off until you set it up in the desktop app
-    (Settings, Connections, Control this Mac or PC);
+    (Settings, Connections, Control this Mac or PC), or run the command
+    line's experimental `codex remote-control` (Codex's source at release
+    0.170.0, read on 19 November 2026);
   - and "Availability depends on rollout and your workspace settings."
 
   This project has not tried it, and suggests leaving remote access off
@@ -768,26 +769,26 @@ configuration for the same Codex host."
   manage connected devices.", the same page).
 
 **Which plans.** OpenAI's Codex pricing page
-(<https://learn.chatgpt.com/docs/pricing>, read 4 November 2026) lists
-"ChatGPT desktop app for local chats", "Codex CLI" and "IDE extension"
-for the Plus, Pro, Business, Enterprise / Education and API Key plans;
-for Free and Go it mentions only the desktop app, "subject to rollout".
+(<https://learn.chatgpt.com/docs/pricing>, read on 19 November 2026)
+lists "ChatGPT desktop app for local chats", "Codex CLI" and "IDE
+extension" for the Plus, Pro, Business, Enterprise / Education and API
+Key plans, and "Mobile remote control" for the same plans except API Key.
+For Free and Go it mentions only the desktop app, "subject to rollout".
 You sign in to Codex with a ChatGPT account or with an API key, and
 which of the two decides which of OpenAI's data policies apply
-([PRIVACY.md](../PRIVACY.md), "OpenAI's apps: the ChatGPT desktop app and
-Codex").
+([PRIVACY.md](../PRIVACY.md), "OpenAI's apps").
 
 **First, switch training off.** While training is on, OpenAI may use
 your conversations, with the participants' data in them, to train its
 models. On a personal plan (Free, Plus or Pro), turn off "Improve the
 model for everyone" in ChatGPT's Settings, Data controls, or choose "Do
 not train on my content" in OpenAI's Privacy Portal,
-<https://privacy.openai.com/>. Either is enough, by OpenAI's Help
-Center, which [PRIVACY.md](../PRIVACY.md), "OpenAI's apps", quotes.
-Then turn off Codex's "Include environments", a separate setting that
-neither changes. On Go, which the Help Center does not name for this
-setting, you could check that the setting is there. Rating a reply
-(thumbs up or down) can still let OpenAI train on that conversation.
+<https://privacy.openai.com/>. Either is enough, and covers Codex on a
+personal account, by OpenAI's Help Center (Archive capture of
+18 November 2026), which [PRIVACY.md](../PRIVACY.md), "OpenAI's apps",
+quotes. On Go, which the Help Center does not name for this setting,
+you could check that the setting is there. Rating a reply (thumbs up or
+down) can still let OpenAI train on that conversation.
 
 **Step 1. Install Exegete.** It needs Python 3.11 or newer ("What
 you need", above). In the Terminal (macOS or Linux):
@@ -815,11 +816,10 @@ folders your Terminal does. After the lines above it is
 `/home/YOUR_USERNAME/exegete-venv/bin/exegete` on Linux and
 `C:\Users\YOUR_USERNAME\exegete-venv\Scripts\exegete.exe` on Windows,
 where `YOUR_USERNAME` is your account's short name (the name of your
-home folder, which may differ from the name you see when you log in).
-To print the full path: `echo ~/exegete-venv/bin/exegete` in the
-Terminal, or `echo "$HOME\exegete-venv\Scripts\exegete.exe"` in
-PowerShell; with pipx or uv, `which exegete` (on Windows,
-`where.exe exegete`).
+home folder, which may differ from the name you see when you log in). To
+print the full path: `echo ~/exegete-venv/bin/exegete` in the Terminal,
+or `echo "$HOME\exegete-venv\Scripts\exegete.exe"` in PowerShell; with
+pipx or uv, `which exegete` (on Windows, `where.exe exegete`).
 
 **Step 2. Add Exegete to Codex's settings file.** The desktop app, the
 command line and the editor extension all read one file, `config.toml`,
@@ -837,11 +837,10 @@ Paste these lines at the end of the file. On a Mac or Linux, change
 `YOUR_USERNAME` in the `command` line to your own, and on Linux also
 `/Users` to `/home` (the full path from step 1), typing no quote marks:
 TextEdit can turn a typed quote mark into a curly one, which Codex
-cannot read. On Windows, replace the
-whole value after `command =`, its double quotes included, with your
-path between single quotes, as "What the lines do" shows below: a
-Windows path between double quotes makes the whole file unreadable.
-Then save:
+cannot read. On Windows, replace the whole value after `command =`, its
+double quotes included, with your path between single quotes, as "What
+the lines do" shows below: a Windows path between double quotes makes
+the whole file unreadable. Then save:
 
 ```toml
 [mcp_servers.exegete]
@@ -898,16 +897,15 @@ and resource (10,000 tokens for listed models), and `output_token_limit` under
 If the file already has an entry named `exegete` (because you added it
 in the app's settings screen or with `codex mcp add`, below), do not
 paste a second one: a second `[mcp_servers.exegete]` line makes the
-whole file unreadable. Add the lines it lacks to the entry that is
-there instead. An entry written from the steps before 0.15.0 may end
-with two more lines, `[mcp_servers.exegete.tools.read_pseudonym_list]`
-and `approval_mode = "prompt"` under it: that tool was removed in
-0.15.0, so you can delete both lines. A table of the same kind that you
-added for one of the three tools removed in 0.15.1 (the CHANGELOG's
-"Upgrading from 0.15.0" names them) can be deleted in the same way,
-with the lines under it, and so can one for the earlier names of the
-two renamed tools, removed in 0.15.5 (TOOLS.md, "Earlier names", lists
-them).
+whole file unreadable. Add the lines it lacks to the entry that is there
+instead. An entry written from the steps before 0.15.0 may end with two
+more lines, `[mcp_servers.exegete.tools.read_pseudonym_list]` and
+`approval_mode = "prompt"` under it: that tool was removed in 0.15.0, so
+you can delete both lines. A table of the same kind that you added for
+one of the three tools removed in 0.15.1 (the CHANGELOG's "Upgrading
+from 0.15.0" names them) can be deleted in the same way, with the lines
+under it, and so can one for the earlier names of the two renamed tools,
+removed in 0.15.5 (TOOLS.md, "Earlier names", lists them).
 
 **Other ways to add it.** The desktop app has a settings screen for
 this (Settings, MCP servers, Add server: the name `exegete`, STDIO, and
@@ -1011,34 +1009,32 @@ you may keep it there (Exegete's tools work the same). This project
 suggests leaving Full access aside.
 
 "Ask for approval" does not ask before Codex changes a file in its own
-folder, nor before it reads one, wherever the file is. OpenAI's page
-on permissions says it "lets ChatGPT work within the current workspace
-and pauses before reaching beyond that boundary": reaching beyond the
+folder, nor before it reads one, wherever the file is. OpenAI's page on
+permissions says it "lets ChatGPT work within the current workspace and
+pauses before reaching beyond that boundary": reaching beyond the
 boundary there means editing outside the folder and going online, not
 reading. OpenAI's page on approvals
-(<https://learn.chatgpt.com/docs/agent-approvals-security>, read
-4 November 2026), in the table "Common sandbox and approval
-combinations", row "Auto (preset)": "Codex can read files, make edits,
-and run commands in the workspace. Codex requires approval to edit
-outside the workspace or to access network." Even in the read-only
-mode, "Codex can read files and run commands within the read-only
-sandbox." Neither row says whether Codex may read outside the
-workspace; the same page does, in its section on the retired
-`untrusted` setting: "With `on-request`, commands allowed by the
-sandbox can run without approval, read accessible files, and use
-network access if enabled." `on-request` is the setting behind "Ask
-for approval" and the read-only mode, and in Codex's source code (its
-release 0.166.0, of 29 October 2026) both let those commands read the whole
-disk (on Windows, at least everything in your home folder but a few
-folders that hold keys). That is why step 3 keeps
-study files out of Codex's folder, and why, for participants' data,
-this project suggests an assistant with no file access of its own
-(the box at the top of this section). Codex's sandbox
-settings govern the commands the model runs, not Exegete, which reads
-and writes your
-projects whichever sandbox you choose (Codex's source code). What
-INSTALL.md's "Approving the AI's suggestions: your host's settings are
-the safeguard" says holds in Codex too.
+(<https://learn.chatgpt.com/docs/agent-approvals-security>, read 4
+November 2026), in the table "Common sandbox and approval combinations",
+row "Auto (preset)": "Codex can read files, make edits, and run commands
+in the workspace. Codex requires approval to edit outside the workspace
+or to access network." Even in the read-only mode, "Codex can read files
+and run commands within the read-only sandbox." Neither row says whether
+Codex may read outside the workspace; the same page does, in its section
+on the retired `untrusted` setting: "With `on-request`, commands allowed
+by the sandbox can run without approval, read accessible files, and use
+network access if enabled." `on-request` is the setting behind "Ask for
+approval" and the read-only mode, and in Codex's source code (its release
+0.166.0, of 29 October 2026) both let those commands read the whole disk
+(on Windows, at least everything in your home folder but a few folders
+that hold keys). That is why step 3 keeps study files out of Codex's
+folder, and why, for participants' data, this project suggests an
+assistant with no file access of its own (the box at the top of this
+section). Codex's sandbox settings govern the commands the model runs,
+not Exegete, which reads and writes your projects whichever sandbox you
+choose (Codex's source code). What INSTALL.md's "Approving the AI's
+suggestions: your host's settings are the safeguard" says holds in Codex
+too.
 
 **If Exegete does not start, or its tools are missing:**
 
@@ -1405,8 +1401,11 @@ is out, and "How do I update Exegete?" gives the steps with the version
 filled in (with the `full` tool set; with `core`, which has no check
 tool, the notice gives the address of the update page). Quit your host
 fully before updating, and open it again afterwards ("Tools missing or
-unchanged after an update", above, says why; the ChatGPT desktop app:
-quit it; Codex on the command line: end the session).
+unchanged after an update", above, says why). With Codex's command
+line, end the session and wait a minute, or stop its background server
+with `codex app-server daemon stop`. That server ends a conversation,
+and Exegete with it, a minute after you leave it (Codex's source at
+release 0.170.0, read on 19 November 2026).
 
 **An install from PyPI** is updated with the optional part for PDF and
 EPUB named, so that its libraries are brought up too:
@@ -1669,10 +1668,11 @@ environment avoids.
    `~/.codex/state_5.sqlite`), and LM Studio's log
    (`~/Library/Logs/LM Studio/main.log` on a Mac). Codex also keeps the
    text you typed (`~/.codex/history.jsonl`) and, from its command line,
-   pieces of the assistant's answers in its log database
-   (`~/.codex/logs_2.sqlite`). Like the conversation, these hold names,
-   paths and quoted text: if you are clearing a study's traces from the
-   computer, look at them too
+   pieces of the assistant's answers and your answers in Plan mode in
+   its log database (`~/.codex/logs_2.sqlite`), to which its background
+   server still writes ("Updating", above). Like the conversation, these
+   hold names, paths and quoted text: if you are clearing a study's
+   traces from the computer, look at them too
    ([PRIVACY.md's checklist](../PRIVACY.md#before-you-use-real-participant-data-check-these)
    lists what stays).
 4. **Exegete's own folder and its reading folder** stay until you

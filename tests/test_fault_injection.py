@@ -1059,7 +1059,7 @@ def _partial_copytree_patch(monkeypatch, env: Env, unrecoverable: bool = False):
     shutil.copytree and anything else by shutil.copy2.
 
     partial (default): at the first entry, copies data.qda only, then
-    raises — simulating disk-full partway through the copy.
+    raises, simulating disk-full partway through the copy.
     unrecoverable=True: the copy into the project folder raises before
     anything is made, for ANY source (so the safety-backup recovery copy
     fails too), and so does the recovery's copytree into a project folder
@@ -1211,7 +1211,7 @@ class TestRestoreBackupFaults:
             self, restore_env, monkeypatch):
         """The copy of the backup into the project fails before creating
         anything (server.py:2853-2864): the project is recovered from the
-        safety backup — fully old."""
+        safety backup, fully old."""
         env = restore_env
         pre_hash = env.hash()
         pre_state = env.state()

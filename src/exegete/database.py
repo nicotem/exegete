@@ -4198,7 +4198,10 @@ def _clear_marks(path: str, found: os.stat_result) -> None:
             pass
 
 
-def _clear_backup_marks(top: str) -> None:
+def _clear_backup_marks(
+        top: str,
+        clear: Callable[[str, os.stat_result], None] = _clear_marks
+) -> None:
     """Clear the marks that stop a removal inside a folder that
     `remove_backup_folder` has renamed (v0.15.5): from the folder itself
     down, each folder's marks before it is read, by `os.scandir` and
@@ -4207,7 +4210,9 @@ def _clear_backup_marks(top: str) -> None:
     and never a file with a second hard link (`st_nlink` read by
     `os.lstat`, for files alone: an `os.scandir` entry gives 0 on
     Windows, and a folder's is usually 2 or more elsewhere). Every
-    failure is passed over."""
+    failure is passed over. `clear` takes each entry's marks off:
+    `_clear_marks` for the prune; `clear_copy_marks` passes
+    `_clear_copy_marks`."""
     try:
         folders = [(top, os.lstat(top))]
     except OSError:
@@ -4216,7 +4221,7 @@ def _clear_backup_marks(top: str) -> None:
         folder, found = folders.pop()
         if _is_link_or_junction(found) or not stat.S_ISDIR(found.st_mode):
             continue
-        _clear_marks(folder, found)
+        clear(folder, found)
         try:
             with os.scandir(folder) as entries:
                 paths = [entry.path for entry in entries]
@@ -4232,7 +4237,48 @@ def _clear_backup_marks(top: str) -> None:
             if stat.S_ISDIR(found.st_mode):
                 folders.append((path, found))
             elif stat.S_ISREG(found.st_mode) and found.st_nlink <= 1:
-                _clear_marks(path, found)
+                clear(path, found)
+
+
+def _clear_copy_marks(path: str, found: os.stat_result) -> None:
+    """Take off a copied plain file's or folder's marks that stop
+    Exegete's changes in it (v0.15.5): those `_clear_marks` takes off,
+    then on macOS and Linux a plain file's missing owner write
+    permission. Every other permission bit and flag is kept, so a file
+    or folder only its owner may read stays so. Each failure is passed
+    over."""
+    _clear_marks(path, found)
+    if os.name == "nt" or not stat.S_ISREG(found.st_mode):
+        return
+    mode = stat.S_IMODE(found.st_mode)
+    if not mode & stat.S_IWUSR:
+        try:
+            os.chmod(path, mode | stat.S_IWUSR, **_NO_FOLLOW_CHMOD)
+        except OSError:
+            pass
+
+
+def clear_copy_marks(top: Union[str, Path]) -> None:
+    """Take the marks that stop Exegete's changes off what a copy has
+    just made, the copy whole (v0.15.5). `shutil.copytree` and
+    `shutil.copy2` give every copy its source's marks: on Windows the
+    read-only attribute, on macOS the lock and append-only flags, and on
+    macOS and Linux the permission bits; copied from a backup or from a
+    locked or read-only project, they refuse the database's writes and
+    the removals a later restore makes. A plain file at `top` with one
+    link is cleared by itself; anything else by the prune's walk
+    (`_clear_backup_marks`), which never touches a link or a junction,
+    anything through one, or a file with a second hard link. Logs
+    nothing; every failure is passed over."""
+    path = os.fspath(top)
+    try:
+        found = os.lstat(path)
+    except OSError:
+        return
+    if stat.S_ISREG(found.st_mode) and found.st_nlink <= 1:
+        _clear_copy_marks(path, found)
+    else:
+        _clear_backup_marks(path, _clear_copy_marks)
 
 
 def remove_backup_folder(path: Union[str, Path],
@@ -4642,10 +4688,16 @@ def copy_project_to_workspace(
         # Unlike a backup, it leaves out every temporary copy of the names
         # list, however young (v0.15.4): the original is only read; and
         # the project's id, so that the copy makes its own and the
-        # sessions it carries read there as having come with the project
-        _copy_project_tree(source_path, dest_path, skipped, report,
-                           leave_out_names_leftovers=True,
-                           leave_out_project_id=True)
+        # sessions it carries read there as having come with the project.
+        # The copy whole then loses the marks it took from the original
+        # (v0.15.5): a locked or read-only project gives a copy that can
+        # be changed, and one that fails can be removed
+        try:
+            _copy_project_tree(source_path, dest_path, skipped, report,
+                               leave_out_names_leftovers=True,
+                               leave_out_project_id=True)
+        finally:
+            clear_copy_marks(dest_path)
         # A copy with no ai_data gets an empty one, as create_project
         # makes (AI_DATA_FOLDER: spares QualCoder 4.0 a race on its first
         # open); one the copy carries is left as it is

@@ -197,17 +197,26 @@ class TestALinkInTheFolderIsCountedNeverNamed:
         if not _symlink(top / f"{TOKEN} link", outside):
             pytest.skip("this system makes no symbolic link here")
         project = selected.resolve()
-        real_copytree = shutil.copytree
+        # the copy of the backup's first entry into the project fails
+        # (v0.15.5: each entry is copied by itself, a folder by copytree,
+        # anything else by copy2)
+        real = {"copytree": shutil.copytree, "copy2": shutil.copy2}
+        failed = []
 
-        def failing(src, dst, *args, **kwargs):
-            if (Path(dst).resolve() == project
-                    and Path(src).resolve() == restore_point):
-                raise OSError(28, "Injected: no space left on device")
-            return real_copytree(src, dst, *args, **kwargs)
-        monkeypatch.setattr(shutil, "copytree", failing)
+        def failing_of(kind):
+            def failing(src, dst, *args, **kwargs):
+                if (Path(dst).parent.resolve() == project
+                        and Path(src).parent.resolve() == restore_point):
+                    failed.append(dst)
+                    raise OSError(28, "Injected: no space left on device")
+                return real[kind](src, dst, *args, **kwargs)
+            return failing
+        for kind in real:
+            monkeypatch.setattr(shutil, kind, failing_of(kind))
         preview = json.loads(server.restore_backup(str(restore_point)))
         answer = json.loads(server.restore_backup(
             str(restore_point), preview_token=preview["preview_token"]))
+        assert len(failed) == 1
         assert answer["error"] == (
             "Restore failed, but the project was recovered from the safety "
             "backup; nothing was lost."), answer

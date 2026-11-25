@@ -103,21 +103,24 @@ class TestRestoreNeverHalfReplaced:
         backup_state = _folder_state(backup)
         assert pre_state != backup_state
 
-        real_copytree = shutil.copytree
+        real = {"copytree": shutil.copytree, "copy2": shutil.copy2}
         calls = {"n": 0}
 
-        def flaky_copytree(src, dst, *a, **k):
-            # Fail ONLY the first copy into the live project folder (the
-            # destination swap), after leaving a partial tree; let the safety
-            # backup copy and the recovery copy succeed.
-            if Path(dst) == folder and calls["n"] == 0:
-                calls["n"] += 1
-                Path(dst).mkdir(parents=True, exist_ok=True)
-                (Path(dst) / "data.qda").write_bytes(b"PARTIAL")  # half-written
-                raise OSError("simulated disk-full mid-swap")
-            return real_copytree(src, dst, *a, **k)
+        def flaky_of(kind):
+            def flaky_copy(src, dst, *a, **k):
+                # Fail ONLY the first copy into the live project folder (the
+                # destination swap, which since v0.15.5 copies each entry by
+                # itself), after leaving a partial tree; let the safety
+                # backup copy and the recovery copy succeed.
+                if Path(dst).parent == folder and calls["n"] == 0:
+                    calls["n"] += 1
+                    (folder / "data.qda").write_bytes(b"PARTIAL")  # half-written
+                    raise OSError("simulated disk-full mid-swap")
+                return real[kind](src, dst, *a, **k)
+            return flaky_copy
 
-        monkeypatch.setattr(shutil, "copytree", flaky_copytree)
+        for kind in real:
+            monkeypatch.setattr(shutil, kind, flaky_of(kind))
         out = json.loads(H.execute_destructive(server.restore_backup, str(backup)))
         monkeypatch.undo()
 
@@ -149,21 +152,26 @@ class TestRestoreNeverHalfReplaced:
         with closing(sqlite3.connect(str(_db(qualcoder_db_path)))) as c:
             pre_dump = list(c.iterdump())
 
-        real_copytree = shutil.copytree
+        real = {"copytree": shutil.copytree, "copy2": shutil.copy2}
 
         calls = {"n": 0}
 
-        def flaky(src, dst, *a, **k):
-            if Path(dst) == folder and calls["n"] == 0:
-                calls["n"] += 1
-                Path(dst).mkdir(parents=True, exist_ok=True)
-                (Path(dst) / "data.qda").write_bytes(b"HALF")
-                raise OSError("mid-swap failure")
-            return real_copytree(src, dst, *a, **k)
+        def flaky_of(kind):
+            # the first entry copied into the project (v0.15.5: each by
+            # itself) fails, after leaving a half-written database
+            def flaky(src, dst, *a, **k):
+                if Path(dst).parent == folder and calls["n"] == 0:
+                    calls["n"] += 1
+                    (folder / "data.qda").write_bytes(b"HALF")
+                    raise OSError("mid-swap failure")
+                return real[kind](src, dst, *a, **k)
+            return flaky
 
-        monkeypatch.setattr(shutil, "copytree", flaky)
+        for kind in real:
+            monkeypatch.setattr(shutil, kind, flaky_of(kind))
         json.loads(H.execute_destructive(server.restore_backup, str(backup)))
         monkeypatch.undo()
+        assert calls["n"] == 1                       # the swap really failed
         _reload()
         with closing(sqlite3.connect(str(_db(qualcoder_db_path)))) as c:
             post_dump = list(c.iterdump())

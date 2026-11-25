@@ -89,6 +89,7 @@ from .database import (
     unclean_backup_side_files,
     backup_database_is_link,
     remove_backup_folder,
+    clear_copy_marks,
     BackupRemoval,
     disk_path,
     _partial_backup_name as partial_backup_name,
@@ -12768,9 +12769,22 @@ def _copy_around_exegete_folder(source: Path, project_folder: Path,
     of one that is gone. Nothing below the top is left out. Any other
     entry of the source that would land on something still in the
     project raises before anything is copied, rather than mixing the
-    source's files into a folder kept. Raises on any failure."""
-    top = os.path.normcase(os.path.abspath(source))
+    source's files into a folder kept. Raises on any failure.
 
+    Each entry is copied into the project folder by itself (v0.15.5): a
+    folder by `shutil.copytree`, following a link to one as copytree
+    does, anything else by `shutil.copy2`. No copy then sets the project
+    folder's own times, permissions or flags: it keeps its own, never
+    the source folder's, and one another user owns, whose times and
+    permissions only that user may set, is copied into as any other.
+    Each entry is claimed first, a folder made by `os.mkdir` and a file
+    by an exclusive open, so that a name another program takes after
+    the check stops the copy there, nothing made; and what the claim
+    made loses its copied marks (`clear_copy_marks`) as soon as its copy
+    ends or fails, so that at most the entry being copied can keep the
+    source's locks and read-only marks, which refuse the database's
+    writes and stop a later restore's removals. Nothing the copy leaves
+    out or did not make is touched."""
     def leave_out(name: str) -> bool:
         if is_media_folder_entry(source, name):
             return True
@@ -12780,17 +12794,28 @@ def _copy_around_exegete_folder(source: Path, project_folder: Path,
             return True
         return leave_out_folder and _is_exegete_entry(source, name)
 
-    for name in os.listdir(source):
-        if not leave_out(name) and os.path.lexists(project_folder / name):
+    names = [name for name in os.listdir(source) if not leave_out(name)]
+    for name in names:
+        if os.path.lexists(project_folder / name):
             raise FileExistsError(
                 errno.EEXIST, "An entry of the copy is already in the project")
 
-    def ignore(dirpath, names):
-        if os.path.normcase(os.path.abspath(dirpath)) != top:
-            return set()
-        return {name for name in names if leave_out(name)}
-    shutil.copytree(source, project_folder, ignore=ignore,
-                    dirs_exist_ok=True)
+    for name in names:
+        entry = os.path.join(source, name)
+        target = project_folder / name
+        folder = os.path.isdir(entry)
+        if folder:
+            os.mkdir(target)
+        else:
+            os.close(os.open(target, os.O_WRONLY | os.O_CREAT | os.O_EXCL,
+                             0o600))
+        try:
+            if folder:
+                shutil.copytree(entry, target, dirs_exist_ok=True)
+            else:
+                shutil.copy2(entry, target)
+        finally:
+            clear_copy_marks(target)
 
 
 def _media_kept_note(count: int) -> str:
@@ -13190,9 +13215,17 @@ def restore_backup(backup_path: str,
                     else:
                         # Another program removed the project folder, with
                         # its audio and video folders, which the safety
-                        # backup does not hold (v0.15.1, fix round 1)
+                        # backup does not hold (v0.15.1, fix round 1).
+                        # The folder made here, then the copy, then its
+                        # copied marks taken off (v0.15.5); a folder back
+                        # meanwhile stops the recovery untouched
                         folder_gone = True
-                        shutil.copytree(safety_backup, project_folder)
+                        os.makedirs(project_folder)
+                        try:
+                            shutil.copytree(safety_backup, project_folder,
+                                            dirs_exist_ok=True)
+                        finally:
+                            clear_copy_marks(project_folder)
                     recovered = True
                 except Exception as recovery_error:
                     logger.error("Recovery also failed: %s",

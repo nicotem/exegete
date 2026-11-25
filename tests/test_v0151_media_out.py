@@ -178,22 +178,42 @@ def test_a_restore_from_an_older_backup_keeps_the_projects_and_leaves_its(
     assert "note" not in preview
 
 
-def _fail_the_copy(monkeypatch, project: Path, backup: Path,
-                   recovery_too: bool = False) -> None:
-    """The copy into the project fails part-way, after the database
-    (disk full); with `recovery_too`, every copy into it fails."""
-    real = shutil.copytree
-    target = project.resolve()
+def _entry_copies(monkeypatch, step) -> None:
+    """Run `step(src, dst)` before each copy, then the copy: since v0.15.5
+    a restore copies each entry into the project by itself, a folder by
+    shutil.copytree and anything else by shutil.copy2."""
+    real = {"copytree": shutil.copytree, "copy2": shutil.copy2}
 
-    def copytree(src, dst, *args, **kwargs):
-        if Path(dst).resolve() == target:
-            if recovery_too:
-                raise OSError(28, "Injected: no space left on device")
-            if Path(src).resolve() == backup.resolve():
-                shutil.copy2(Path(src) / "data.qda", Path(dst) / "data.qda")
-                raise OSError(28, "Injected: no space left on device")
-        return real(src, dst, *args, **kwargs)
-    monkeypatch.setattr(shutil, "copytree", copytree)
+    def copy_of(kind):
+        def copy(src, dst, *args, **kwargs):
+            step(src, dst)
+            return real[kind](src, dst, *args, **kwargs)
+        return copy
+    for kind in real:
+        monkeypatch.setattr(shutil, kind, copy_of(kind))
+    return real
+
+
+def _fail_the_copy(monkeypatch, project: Path, backup: Path,
+                   recovery_too: bool = False) -> list:
+    """The copy into the project fails part-way, after the database
+    (disk full); with `recovery_too`, every copy into it fails. Returns
+    the copies the fault was put on."""
+    target, source = project.resolve(), backup.resolve()
+    failed = []
+
+    def fail(src, dst):
+        if Path(dst).parent.resolve() != target:
+            return
+        if recovery_too:
+            failed.append(dst)
+            raise OSError(28, "Injected: no space left on device")
+        if Path(src).parent.resolve() == source and not failed:
+            failed.append(dst)
+            real["copy2"](source / "data.qda", target / "data.qda")
+            raise OSError(28, "Injected: no space left on device")
+    real = _entry_copies(monkeypatch, fail)
+    return failed
 
 
 def test_a_restore_cut_short_keeps_them_and_nothing_is_lost(selected,
@@ -201,8 +221,9 @@ def test_a_restore_cut_short_keeps_them_and_nothing_is_lost(selected,
     _recordings(selected)
     backup = _backup(selected)
     kept = _media(selected)
-    _fail_the_copy(monkeypatch, selected, backup)
+    failed = _fail_the_copy(monkeypatch, selected, backup)
     _, answer = _restore(backup)
+    assert len(failed) == 1
     assert answer["error"] == RECOVERED, answer
     assert _media(selected) == kept
     safety = Path(answer["safety_backup"])
@@ -215,8 +236,9 @@ def test_when_the_recovery_fails_too_the_folder_stays_with_them(
     _recordings(selected)
     backup = _backup(selected)
     kept = _media(selected)
-    _fail_the_copy(monkeypatch, selected, backup, recovery_too=True)
+    failed = _fail_the_copy(monkeypatch, selected, backup, recovery_too=True)
     _, answer = _restore(backup)
+    assert len(failed) == 2  # the swap, then the recovery
     assert "success" not in answer
     assert _media(selected) == kept
     assert _media(Path(answer["safety_backup"])) == {}
@@ -236,17 +258,16 @@ def test_when_the_project_folder_has_gone_nothing_lost_is_not_said(
     answer says so rather than that nothing was lost."""
     _recordings(selected)
     backup = _backup(selected)
-    real = shutil.copytree
     target, source = selected.resolve(), backup.resolve()
     removed = []
 
-    def copytree(src, dst, *args, **kwargs):
-        if Path(dst).resolve() == target and Path(src).resolve() == source:
-            shutil.rmtree(dst, ignore_errors=True)
-            removed.append(not os.path.lexists(dst))
+    def remove_the_folder(src, dst):
+        if (Path(dst).parent.resolve() == target
+                and Path(src).parent.resolve() == source):
+            shutil.rmtree(target, ignore_errors=True)
+            removed.append(not os.path.lexists(target))
             raise OSError(2, "Injected: the project folder was removed")
-        return real(src, dst, *args, **kwargs)
-    monkeypatch.setattr(shutil, "copytree", copytree)
+    _entry_copies(monkeypatch, remove_the_folder)
     _, answer = _restore(backup)
     if removed != [True]:
         pytest.skip("this system kept the project folder (a file in it "

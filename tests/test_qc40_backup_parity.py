@@ -693,17 +693,25 @@ class TestSkippedSymlinksSurfacedByEveryBackupTaker:
 
     def _swap_fails(self, monkeypatch, qualcoder_db_path, restore_point,
                     recovery_too=False):
+        """The copy into the project fails before anything is made: the
+        backup's, and with `recovery_too` the safety backup's as well.
+        Since v0.15.5 the copy is made entry by entry, so the fault is put
+        on the copy as a whole. Returns the sources it failed."""
         project = Path(qualcoder_db_path).resolve()
         restore_point = Path(restore_point).resolve()
-        real_copytree = shutil.copytree
+        real_copy = server._copy_around_exegete_folder
+        failed = []
 
-        def fake(src, dst, *args, **kwargs):
-            src_p, dst_p = Path(src).resolve(), Path(dst).resolve()
-            if dst_p == project and (recovery_too or src_p == restore_point):
+        def fake(source, project_folder, **kwargs):
+            src_p = Path(source).resolve()
+            if Path(project_folder).resolve() == project and (
+                    recovery_too or src_p == restore_point):
+                failed.append(src_p)
                 raise OSError(28, "Injected: no space left on device")
-            return real_copytree(src, dst, *args, **kwargs)
+            return real_copy(source, project_folder, **kwargs)
 
-        monkeypatch.setattr(shutil, "copytree", fake)
+        monkeypatch.setattr(server, "_copy_around_exegete_folder", fake)
+        return failed
 
     def _assert_safety_report(self, out):
         assert out["safety_backup_skipped_symlinks"] == 1
@@ -718,8 +726,10 @@ class TestSkippedSymlinksSurfacedByEveryBackupTaker:
             self, setup_server, qualcoder_db_path, tmp_path, monkeypatch):
         restore_point = backup_project(qualcoder_db_path)
         link = self._plant(qualcoder_db_path, tmp_path)
-        self._swap_fails(monkeypatch, qualcoder_db_path, restore_point)
+        failed = self._swap_fails(monkeypatch, qualcoder_db_path,
+                                  restore_point)
         out = json.loads(H.execute_destructive(server.restore_backup, str(restore_point)))
+        assert len(failed) == 1
         assert "success" not in out
         assert "recovered" in out["error"]
         assert "safety backup" in out["error"]
@@ -738,9 +748,10 @@ class TestSkippedSymlinksSurfacedByEveryBackupTaker:
             self, setup_server, qualcoder_db_path, tmp_path, monkeypatch):
         restore_point = backup_project(qualcoder_db_path)
         self._plant(qualcoder_db_path, tmp_path)
-        self._swap_fails(monkeypatch, qualcoder_db_path, restore_point,
-                         recovery_too=True)
+        failed = self._swap_fails(monkeypatch, qualcoder_db_path,
+                                  restore_point, recovery_too=True)
         out = json.loads(H.execute_destructive(server.restore_backup, str(restore_point)))
+        assert len(failed) == 2  # the swap, then the recovery
         assert "success" not in out
         assert "safety backup" in out["error"]
         assert "copy its contents back" in out["error"]
@@ -752,15 +763,18 @@ class TestSkippedSymlinksSurfacedByEveryBackupTaker:
     def test_restore_failure_on_a_clean_project_keeps_the_plain_text(
             self, setup_server, qualcoder_db_path, monkeypatch):
         restore_point = backup_project(qualcoder_db_path)
-        self._swap_fails(monkeypatch, qualcoder_db_path, restore_point)
+        failed = self._swap_fails(monkeypatch, qualcoder_db_path,
+                                  restore_point)
         out = json.loads(H.execute_destructive(server.restore_backup, str(restore_point)))
+        assert len(failed) == 1
         assert "recovered" in out["error"]
         assert "nothing was lost" in out["error"]
         assert "safety_backup_skipped_symlinks" not in out
         assert "safety_backup_skipped_symlink_names" not in out
-        self._swap_fails(monkeypatch, qualcoder_db_path, restore_point,
-                         recovery_too=True)
+        failed = self._swap_fails(monkeypatch, qualcoder_db_path,
+                                  restore_point, recovery_too=True)
         out = json.loads(H.execute_destructive(server.restore_backup, str(restore_point)))
+        assert len(failed) == 2  # the swap, then the recovery
         assert "safety backup" in out["error"]
         assert "recreate" not in out["error"]
         assert "safety_backup_skipped_symlinks" not in out

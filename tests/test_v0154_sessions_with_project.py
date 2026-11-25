@@ -705,19 +705,25 @@ def _gone_mid_copy(monkeypatch):
 
 def _fail_the_copy_of(source: Path, monkeypatch, meanwhile=None):
     """The restore's copy of `source` into the project raises once, after
-    `meanwhile` (another program's step), if given."""
-    real = shutil.copytree
+    `meanwhile` (another program's step), if given: at its first entry,
+    since v0.15.5 each entry is copied by itself (a folder by
+    shutil.copytree, anything else by shutil.copy2)."""
+    real = {"copytree": shutil.copytree, "copy2": shutil.copy2}
     source = Path(source).resolve()
     failed = []
 
-    def failing(src, dst, *args, **kwargs):
-        if Path(src).resolve() == source and not failed:
-            failed.append(dst)
-            if meanwhile is not None:
-                meanwhile()
-            raise OSError(errno.ENOSPC, "Injected: no space left on device")
-        return real(src, dst, *args, **kwargs)
-    monkeypatch.setattr(shutil, "copytree", failing)
+    def failing_of(kind):
+        def failing(src, dst, *args, **kwargs):
+            if Path(src).parent.resolve() == source and not failed:
+                failed.append(dst)
+                if meanwhile is not None:
+                    meanwhile()
+                raise OSError(errno.ENOSPC,
+                              "Injected: no space left on device")
+            return real[kind](src, dst, *args, **kwargs)
+        return failing
+    for kind in real:
+        monkeypatch.setattr(shutil, kind, failing_of(kind))
     return failed
 
 
@@ -837,8 +843,9 @@ class TestBackupsRestoresAndCopies:
                 return real(*args, **kwargs)
             monkeypatch.setattr(server, "_recheck_lock_before_commit",
                                 decided_meanwhile)
-        _fail_the_copy_of(backup, monkeypatch)
+        failed = _fail_the_copy_of(backup, monkeypatch)
         _, answer = _restore(backup)
+        assert failed
         assert answer["error"] == RECOVERED, answer
         after = {name: tree(project / name) for name in (FOLDER, "Exegete")
                  if (project / name).is_dir()}
@@ -854,9 +861,11 @@ class TestBackupsRestoresAndCopies:
         backup = database.backup_project(project)
         record(sid, LATER, "Hope")
         before = tree(folder_of(project))
-        _fail_the_copy_of(backup, monkeypatch, meanwhile=lambda: shutil.rmtree(
-            folder_of(project)))
+        failed = _fail_the_copy_of(
+            backup, monkeypatch,
+            meanwhile=lambda: shutil.rmtree(folder_of(project)))
         _, answer = _restore(backup)
+        assert failed
         assert answer["error"] == RECOVERED, answer
         # the safety backup's copy, made before the swap
         assert tree(folder_of(project)) == before

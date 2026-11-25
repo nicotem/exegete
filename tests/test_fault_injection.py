@@ -1053,29 +1053,51 @@ def restore_env(fi_env):
 
 
 def _partial_copytree_patch(monkeypatch, env: Env, unrecoverable: bool = False):
-    """Make shutil.copytree fail on the backup->project swap.
+    """Make the backup->project swap fail; returns the list of the copies
+    the fault was injected into. Since v0.15.5 the swap copies each of the
+    backup's entries into the project folder by itself, a folder by
+    shutil.copytree and anything else by shutil.copy2.
 
-    partial (default): creates the destination folder, copies data.qda only,
-    then raises — simulating disk-full partway through the copy.
-    unrecoverable=True: raises immediately for ANY copy into the project
-    folder (so the safety-backup recovery copy fails too)."""
-    real_copytree = shutil.copytree
+    partial (default): at the first entry, copies data.qda only, then
+    raises — simulating disk-full partway through the copy.
+    unrecoverable=True: the copy into the project folder raises before
+    anything is made, for ANY source (so the safety-backup recovery copy
+    fails too), and so does the recovery's copytree into a project folder
+    gone."""
+    real = {"copytree": shutil.copytree, "copy2": shutil.copy2}
+    fired = []
 
-    def fake(src, dst, *args, **kwargs):
-        src_p, dst_p = Path(src), Path(dst)
-        if unrecoverable:
-            if dst_p == env.folder:
+    if unrecoverable:
+        real_copy = server._copy_around_exegete_folder
+
+        def copy_around(source, project_folder, **kwargs):
+            if Path(project_folder) == env.folder:
+                fired.append(source)
                 raise OSError(28, "Injected: no space left on device")
-            return real_copytree(src, dst, *args, **kwargs)
-        if dst_p == env.folder and src_p == env.backup_folder:
-            # the project folder itself stays since v0.15.0 (a restore
-            # clears it around its Exegete folder), so it may be there
-            dst_p.mkdir(exist_ok=True)
-            shutil.copy2(src_p / "data.qda", dst_p / "data.qda")
-            raise OSError(28, "Injected: no space left on device (mid-copy)")
-        return real_copytree(src, dst, *args, **kwargs)
+            return real_copy(source, project_folder, **kwargs)
+        monkeypatch.setattr(server, "_copy_around_exegete_folder",
+                            copy_around)
 
-    monkeypatch.setattr(shutil, "copytree", fake)
+    def fake_of(kind):
+        def fake(src, dst, *args, **kwargs):
+            src_p, dst_p = Path(src), Path(dst)
+            if unrecoverable:
+                if dst_p == env.folder:
+                    fired.append(src)
+                    raise OSError(28, "Injected: no space left on device")
+            elif (dst_p.parent == env.folder
+                    and src_p.parent == env.backup_folder and not fired):
+                fired.append(src)
+                real["copy2"](env.backup_folder / "data.qda",
+                              env.folder / "data.qda")
+                raise OSError(28,
+                              "Injected: no space left on device (mid-copy)")
+            return real[kind](src, dst, *args, **kwargs)
+        return fake
+
+    for kind in real:
+        monkeypatch.setattr(shutil, kind, fake_of(kind))
+    return fired
 
 
 class TestRestoreBackupFaults:
@@ -1187,25 +1209,31 @@ class TestRestoreBackupFaults:
 
     def test_swap_fails_before_any_copy_recovers_from_safety_backup(
             self, restore_env, monkeypatch):
-        """copytree(backup -> project) fails before creating anything
-        (server.py:2853-2864): the project is recovered from the safety
-        backup — fully old."""
+        """The copy of the backup into the project fails before creating
+        anything (server.py:2853-2864): the project is recovered from the
+        safety backup — fully old."""
         env = restore_env
         pre_hash = env.hash()
         pre_state = env.state()
         before = env.backup_names()
 
-        real_copytree = shutil.copytree
+        # v0.15.5: the copy is made entry by entry, so the fault is put
+        # on the copy as a whole, before any entry is made
+        real_copy = server._copy_around_exegete_folder
+        fired = []
 
-        def fake(src, dst, *args, **kwargs):
-            if Path(dst) == env.folder and Path(src) == env.backup_folder:
+        def fake(source, project_folder, **kwargs):
+            if (Path(project_folder) == env.folder
+                    and Path(source) == env.backup_folder):
+                fired.append(source)
                 raise OSError(28, "Injected: no space left on device")
-            return real_copytree(src, dst, *args, **kwargs)
+            return real_copy(source, project_folder, **kwargs)
 
-        monkeypatch.setattr(shutil, "copytree", fake)
+        monkeypatch.setattr(server, "_copy_around_exegete_folder", fake)
 
         result = H.execute_destructive(server.restore_backup, str(env.backup_folder))
 
+        assert fired
         data = assert_structured_error(result, "recovered")
         assert "safety_backup" in data
         assert env.folder.exists()
@@ -1225,10 +1253,11 @@ class TestRestoreBackupFaults:
         pre_state = env.state()
         backup_state = folder_state(env.backup_folder)
 
-        _partial_copytree_patch(monkeypatch, env)
+        fired = _partial_copytree_patch(monkeypatch, env)
 
         H.execute_destructive(server.restore_backup, str(env.backup_folder))
 
+        assert fired
         assert env.folder.exists()
         post = env.state()
         assert post == pre_state or post == backup_state, (
@@ -1245,10 +1274,11 @@ class TestRestoreBackupFaults:
         pre_state = env.state()
         before = env.backup_names()
 
-        _partial_copytree_patch(monkeypatch, env, unrecoverable=True)
+        fired = _partial_copytree_patch(monkeypatch, env, unrecoverable=True)
 
         result = H.execute_destructive(server.restore_backup, str(env.backup_folder))
 
+        assert len(fired) == 2  # the swap, then the recovery
         data = assert_structured_error(result, "safety backup")
         assert "safety_backup" in data
         safety = Path(data["safety_backup"])

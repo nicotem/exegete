@@ -344,25 +344,58 @@ class TestFilesBackupsLeaveOut:
         _fill(top, {name: name for name in LEFT_OUT_BY_BACKUPS})
         _fill(top, {f"sub/{name}": name for name in LEFT_OUT_BY_BACKUPS})
         kept = _tree(top)
-        _fail_the_copy_of(backup, monkeypatch)
+        failed = _fail_the_copy_of(backup, monkeypatch)
         _, answer = _restore(backup)
+        assert failed
         assert answer["error"] == RECOVERED, answer
         assert _tree(top) == kept
         assert "After the backup" in _codes(selected)
 
 
-def _fail_the_copy_of(source: Path, monkeypatch, times: int = 1):
-    """Make the copy of `source` into the project raise `times` times."""
-    real = shutil.copytree
-    source = source.resolve()
+def _no_copy_into(project: Path, monkeypatch) -> list:
+    """Make every copy into the project raise before anything is made,
+    the swap's and the recovery's: since v0.15.5 the copy is made entry
+    by entry, so the fault is put on the copy as a whole."""
+    real = server._copy_around_exegete_folder
+    project = project.resolve()
     failed = []
 
-    def failing(src, dst, *args, **kwargs):
-        if Path(src).resolve() == source and len(failed) < times:
+    def no_copy_into_the_project(source, project_folder, **kwargs):
+        if Path(project_folder).resolve() == project:
+            failed.append(source)
+            raise OSError(28, "Injected: no space left on device")
+        return real(source, project_folder, **kwargs)
+    monkeypatch.setattr(server, "_copy_around_exegete_folder",
+                        no_copy_into_the_project)
+    return failed
+
+
+def _copies_of(source: Path, monkeypatch, step) -> None:
+    """Run `step(src, dst)` before each copy of one of `source`'s entries,
+    then the copy: since v0.15.5 a restore copies each entry by itself, a
+    folder by shutil.copytree and anything else by shutil.copy2."""
+    real = {"copytree": shutil.copytree, "copy2": shutil.copy2}
+    source = source.resolve()
+
+    def copy_of(kind):
+        def copy(src, dst, *args, **kwargs):
+            if Path(src).parent.resolve() == source:
+                step(src, dst)
+            return real[kind](src, dst, *args, **kwargs)
+        return copy
+    for kind in real:
+        monkeypatch.setattr(shutil, kind, copy_of(kind))
+
+
+def _fail_the_copy_of(source: Path, monkeypatch, times: int = 1):
+    """Make the copy of `source` into the project raise `times` times."""
+    failed = []
+
+    def failing(src, dst):
+        if len(failed) < times:
             failed.append(dst)
             raise OSError(28, "Injected: no space left on device")
-        return real(src, dst, *args, **kwargs)
-    monkeypatch.setattr(shutil, "copytree", failing)
+    _copies_of(source, monkeypatch, failing)
     return failed
 
 
@@ -424,16 +457,16 @@ class TestTheFolderStaysInPlace:
         backup = _backup(selected)
         top = selected / "Exegete"
         _fill(top, {"names.txt": "kept"})
-        real = shutil.copytree
-        source = backup.resolve()
+        saved = []
 
-        def save_then_copy(src, dst, *args, **kwargs):
-            if Path(src).resolve() == source:
+        def save(src, dst):
+            if not saved:
+                saved.append(dst)
                 (top / "saved meanwhile.txt").write_text(
                     "meanwhile", encoding="utf-8")
-            return real(src, dst, *args, **kwargs)
-        monkeypatch.setattr(shutil, "copytree", save_then_copy)
+        _copies_of(backup, monkeypatch, save)
         _, answer = _restore(backup)
+        assert saved
         assert answer.get("success") is True, answer
         assert _tree(top) == {"names.txt": ("file", b"kept"),
                               "saved meanwhile.txt": ("file", b"meanwhile")}
@@ -588,8 +621,9 @@ class TestAFailureInTheSwap:
         if not _symlink(top / f"{NAME_TOKEN} link", outside):
             pytest.skip("this system makes no symbolic link here")
         kept = _tree(top)
-        _fail_the_copy_of(backup, monkeypatch)
+        failed = _fail_the_copy_of(backup, monkeypatch)
         _, answer = _restore(backup)
+        assert failed
         assert answer["error"] == RECOVERED, answer
         assert _tree(top) == kept
         assert answer["safety_backup_skipped_symlinks_in_exegete_folder"] \
@@ -610,16 +644,15 @@ class TestAFailureInTheSwap:
         _fill(top, {"names.txt": "kept"})
         if not _symlink(top / f"{NAME_TOKEN} link", outside):
             pytest.skip("this system makes no symbolic link here")
-        real = shutil.copytree
-        source = backup.resolve()
+        removed = []
 
-        def remove_the_folder_then_fail(src, dst, *args, **kwargs):
-            if Path(src).resolve() == source:
-                shutil.rmtree(top)
-                raise OSError(28, "Injected: no space left on device")
-            return real(src, dst, *args, **kwargs)
-        monkeypatch.setattr(shutil, "copytree", remove_the_folder_then_fail)
+        def remove_the_folder_then_fail(src, dst):
+            removed.append(dst)
+            shutil.rmtree(top)
+            raise OSError(28, "Injected: no space left on device")
+        _copies_of(backup, monkeypatch, remove_the_folder_then_fail)
         _, answer = _restore(backup)
+        assert len(removed) == 1
         assert ("That backup skipped the symlinks counted in "
                 "safety_backup_skipped_symlinks_in_exegete_folder, so the "
                 "recovered project no longer contains those link entries"
@@ -634,15 +667,9 @@ class TestAFailureInTheSwap:
         top = selected / "Exegete"
         _fill(top, {"names.txt": "kept", "consent.lock": "kept too"})
         kept = _tree(top)
-        real = shutil.copytree
-        project = selected.resolve()
-
-        def no_copy_into_the_project(src, dst, *args, **kwargs):
-            if Path(dst).resolve() == project:
-                raise OSError(28, "Injected: no space left on device")
-            return real(src, dst, *args, **kwargs)
-        monkeypatch.setattr(shutil, "copytree", no_copy_into_the_project)
+        failed = _no_copy_into(selected, monkeypatch)
         _, answer = _restore(backup)
+        assert len(failed) == 2  # the swap, then the recovery
         assert answer["error"] == (
             "Restore failed. The pre-restore state is preserved in the "
             "safety backup; copy its contents back into the project folder "
@@ -668,15 +695,9 @@ class TestAFailureInTheSwap:
         if not _symlink(top / f"{NAME_TOKEN} link", outside):
             pytest.skip("this system makes no symbolic link here")
         kept = _tree(top)
-        real = shutil.copytree
-        project = selected.resolve()
-
-        def no_copy_into_the_project(src, dst, *args, **kwargs):
-            if Path(dst).resolve() == project:
-                raise OSError(28, "Injected: no space left on device")
-            return real(src, dst, *args, **kwargs)
-        monkeypatch.setattr(shutil, "copytree", no_copy_into_the_project)
+        failed = _no_copy_into(selected, monkeypatch)
         _, answer = _restore(backup)
+        assert len(failed) == 2  # the swap, then the recovery
         assert answer["error"].startswith("Restore failed. "), answer
         assert "skipped the symlinks" not in answer["error"]
         assert answer["safety_backup_skipped_symlinks_note"].endswith(
@@ -1205,8 +1226,9 @@ class TestNothingLeaks:
         _fill(selected / "Exegete",
               {f"{NAME_TOKEN}.lock": f"{TEXT_TOKEN} kept"})
         backup = _backup(selected)
-        _fail_the_copy_of(backup, monkeypatch)
+        failed = _fail_the_copy_of(backup, monkeypatch)
         preview, answer = _restore(backup)
+        assert failed
         assert answer["error"] == RECOVERED, answer
         printed = capsys.readouterr()
         everything = "\n".join([

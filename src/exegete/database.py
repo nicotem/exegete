@@ -4281,6 +4281,22 @@ def clear_copy_marks(top: Union[str, Path]) -> None:
         _clear_backup_marks(path, _clear_copy_marks)
 
 
+def _refuses_changes(folder: Path) -> bool:
+    """Whether a project folder refuses the changes Exegete makes in it
+    (v0.15.5): it carries macOS's lock or append-only flag
+    (`_USER_LOCK_FLAGS`), or this account may not write in it or search
+    it, as `os.access` reads it (`project_settings.folder_is_writable`'s
+    test). On Windows `os.access` reads no folder's read-only attribute
+    and no flag is there, so this is never so; nor when the folder
+    cannot be looked at, which the copy then meets."""
+    try:
+        flags = getattr(os.stat(folder), "st_flags", 0)
+    except OSError:
+        return False
+    return bool(flags & _USER_LOCK_FLAGS) or not os.access(
+        os.fspath(folder), os.W_OK | os.X_OK)
+
+
 def remove_backup_folder(path: Union[str, Path],
                          stem: str) -> BackupRemoval:
     """Remove a backup's folder in two steps, so that a removal that
@@ -4478,6 +4494,16 @@ def start_backup(project_path: Union[str, Path],
 
     if not project_path.is_dir():
         raise ValueError(f"Project path must be a directory: {project_path}")
+
+    # A project folder Exegete cannot write in (v0.15.5) is refused
+    # before anything is swept, claimed or copied: the change a backup
+    # comes before cannot be made there, and the backup's folder would
+    # take the project folder's marks and stay beside it. The error
+    # carries no path, and its line no name.
+    if _refuses_changes(project_path):
+        logger.error("Failed to create backup: the project folder is "
+                     "locked or cannot be written to")
+        raise PermissionError(errno.EACCES, os.strerror(errno.EACCES))
 
     sweep_partial_backups(project_path)
     sweep_names_list_leftovers(project_path)

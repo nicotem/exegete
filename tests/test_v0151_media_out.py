@@ -191,7 +191,6 @@ def _entry_copies(monkeypatch, step) -> None:
         return copy
     for kind in real:
         monkeypatch.setattr(shutil, kind, copy_of(kind))
-    return real
 
 
 def _fail_the_copy(monkeypatch, project: Path, backup: Path,
@@ -200,6 +199,7 @@ def _fail_the_copy(monkeypatch, project: Path, backup: Path,
     (disk full); with `recovery_too`, every copy into it fails. Returns
     the copies the fault was put on."""
     target, source = project.resolve(), backup.resolve()
+    copy2 = shutil.copy2
     failed = []
 
     def fail(src, dst):
@@ -210,9 +210,9 @@ def _fail_the_copy(monkeypatch, project: Path, backup: Path,
             raise OSError(28, "Injected: no space left on device")
         if Path(src).parent.resolve() == source and not failed:
             failed.append(dst)
-            real["copy2"](source / "data.qda", target / "data.qda")
+            copy2(source / "data.qda", target / "data.qda")
             raise OSError(28, "Injected: no space left on device")
-    real = _entry_copies(monkeypatch, fail)
+    _entry_copies(monkeypatch, fail)
     return failed
 
 

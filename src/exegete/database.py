@@ -4480,6 +4480,9 @@ def start_backup(project_path: Union[str, Path],
         BackupWithoutDatabaseError: data.qda links outside the project
         BackupNameTooLongError: the hidden name is too long for the disk
             (`backup_name_too_long`); nothing was made
+        PermissionError: EACCES, with no path, when the project folder
+            is locked, append-only or cannot be written to (v0.15.5;
+            macOS and Linux, never on Windows); nothing was swept or made
         OSError: If the copy fails; nothing is left under the backup's
             name, and the folder is removed
     """
@@ -4598,6 +4601,9 @@ def backup_project(project_path: Union[str, Path],
 
     Raises:
         FileNotFoundError: If project doesn't exist
+        PermissionError: EACCES, as `start_backup` raises it, when the
+            project folder is locked, append-only or cannot be written
+            to; nothing was made
         OSError: If backup fails
     """
     return start_backup(project_path, report).finish()
